@@ -3,8 +3,8 @@ import java.util.Arrays;
 public class PacketManager {
 	private static byte[] RRQ = {0,1};
 	private static byte[] WRQ = {0,2};
-	private static byte validRead[] = {0,3,0,1};
-	private static byte validWrite[] = {0,4,0,0};
+	//private static byte validRead[] = {0,3,0,1};
+	//private static byte validWrite[] = {0,4,0,0};
 	private static String[] validModes = {"netascii", "octet"};
 	
 	public PacketManager(){
