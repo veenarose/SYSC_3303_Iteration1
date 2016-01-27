@@ -3,6 +3,8 @@ import java.io.*;
 public class IOManager {
 	private final int bufferSize = 512;
 	
+	public IOManager(){}
+	
 	/**
 	 * Reads a given file from a specified starting point and returns a byte[] for the data read
 	 * @param filename File to be read
