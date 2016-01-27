@@ -7,12 +7,11 @@ import java.net.*;
 //by: Damjan Markovic
 
 
-
 public class Client {
      
     private DatagramSocket sendReceiveSocket; //socket which sends and receives UDP packets
     private DatagramPacket sendPacket, receivePacket; //UDP send (request) and receive (acknowledgement) packets
-    //private PacketManager packMan;
+    private PacketManager packMan;
     private static String[] requests = {"read","write"};
     private static String[] modes = {"netascii","octet"};
     
@@ -23,6 +22,7 @@ public class Client {
              // port on the local host machine. This socket will be used to
              // send and receive UDP Datagram packets.
              sendReceiveSocket = new DatagramSocket();
+             packMan = new PacketManager();
          } catch (SocketException se) {   // Can't create the socket.
              se.printStackTrace();
              System.exit(1);
@@ -32,11 +32,19 @@ public class Client {
      
     //method which sends requests to the server. Type true is a read request
     //while type false is a write request.
-    public void sendAndReceive(int type, int mode, String filename)
+    public void sendAndReceive(int req, int mode, String filename)
     {
         
-    	byte msg[] = new byte[100];
-        //Create packet to be sent to server on port 1024 containing the request
+    	byte msg[];
+    	
+    	if(req == 1) { //a read request
+        	msg = packMan.createRead(filename, modes[mode]);
+        } else { //a write request
+        	msg = packMan.createWrite(filename, modes[mode]);
+        }
+        
+    	//Create packet to be sent to server on port 1024 
+    	//containing the request
         try {
             sendPacket = new DatagramPacket(msg, msg.length,
                                                  InetAddress.getLocalHost(), 1024);
@@ -44,15 +52,6 @@ public class Client {
             e.printStackTrace();
             System.exit(1);
         }
-         
-        //Print out request packet info
-        /*System.out.println("Client: Sending packet:");
-        System.out.println("To host: " + sendPacket.getAddress());
-        System.out.println("Destination host port: " + sendPacket.getPort());
-        int len = sendPacket.getLength();
-        System.out.println("Length: " + len);
-        System.out.print("Containing: ");
-        System.out.println(new String(sendPacket.getData(),0,len));*/
          
         //Send the request packet to the server
         try {
@@ -62,6 +61,20 @@ public class Client {
             System.exit(1);
         }
         System.out.println("Client: Packet sent.\n");
+        
+        //construct a DatagramPacket for receiving packets up 
+        //to 100 bytes long
+        
+        if (req == 1) { //a read request
+        	
+        	//in this case the client waits for data packets from the
+        	//server and sends back ack packets
+        	
+        } else { //a write request
+        	
+        }
+        byte data[] = new byte[100];
+        receivePacket = new DatagramPacket(data, data.length);
     }
      
     //method which receives a reply from the server
@@ -131,7 +144,7 @@ public class Client {
     
     public static void main( String args[] ) throws IOException
     {
-    	boolean invalidInput = true;
+    	
     	System.out.println("Hello and welcome!");
     	//prompt user to specify if the request they are making is either read or write
     	System.out.println("Enter 'read' to read from the server.\n"
