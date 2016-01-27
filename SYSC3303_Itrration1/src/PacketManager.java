@@ -1,3 +1,4 @@
+import java.io.*;
 import java.util.Arrays;
 
 public class PacketManager {
@@ -65,7 +66,39 @@ public class PacketManager {
 		
 		System.out.println("readPack  "+Arrays.toString(createRead(n,m)));
 		System.out.println("writePack "+Arrays.toString(createWrite(n,m)));
-
 	}
 
+	/**
+	 * Validates the data of a packet to determine a valid read or write request.
+	 * @param msg Data to be validated
+	 * @return Int representing the type of message 1 = Read, 2 = Write
+	 * @throws IOException
+	 */
+	public int validateRequest(byte[] msg) throws IOException {
+		IOException invalid = new IOException();
+
+		//checks leading 0 byte and read/write request byte
+		if(msg[0] != 0 || (msg[1] != 1 && msg[1] != 2)) {
+			throw invalid;
+		}
+
+		//checks if final byte is 0
+		if(msg[msg.length-1] != 0) {
+			throw invalid;
+		}
+
+		int i = 2;
+		int zeroCount = 0;
+		//makes sure there is a 0 byte between the filename and mode bytes
+		//checks if bytes are valid ascii values between 0 and 128
+		while(i < msg.length-1) {
+			System.out.println(msg[i]);
+			if(msg[i] == 0) { zeroCount++; }
+			if(msg[i] >= 128) { throw invalid; }
+			i++;
+		} if(zeroCount != 1) { throw invalid; }
+
+		//returns a value which is either a 1 for a read request or a 2 for a write request
+		return msg[1];
+	} 
 }

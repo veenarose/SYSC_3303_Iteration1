@@ -38,6 +38,5 @@ public class IOManager {
 		
 		w.write(s);
 		w.close();
-		
 	}
 }
