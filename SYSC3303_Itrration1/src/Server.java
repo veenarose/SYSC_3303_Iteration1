@@ -6,7 +6,7 @@ import java.util.Arrays;
 //This class is the server for assignment 1.
 //
 //by: Damjan Markovic
- 
+
 public class Server {
      
     DatagramSocket receiveSocket, sendSocket;
