@@ -1,0 +1,68 @@
+1)
+    Create packetManager class to handle TFTP packet formats. This class will generate them as well as perform validations.
+    
+2)
+    Multithreading on the server-side. Create an instance of a new class which will deal with the interaction 
+    of a new thread. This thread will continue communication with the client.
+
+3)
+    Create a fileIO interface to handle read requests client side and write requests server side.
+    
+4) 
+    Edit client to be able to handle responses ACTUALLY
+    
+5) 
+    UCM charts for read and write, UML
+    
+6)
+    Eventually: testing
+    
+In more detail:
+
+1)
+
+packetManager
+
+create read, write, data and ack packets, returned as byte arrays
+
+validate packets as defined above, returning booleans
+
+convert string to bytes and vice versa
+
+2)
+
+server listens on a socket, as soon as a request is received a new thread is generated to handle the request. 
+the data received is passed on to the thread.
+
+in the case of a read request instantiated by the client do the following on the server:
+
+client sends read request
+server waits to receive
+server receives data packet
+server validates the datapacket through the packetManager
+server uses the fileIO class to read 512 bytes from a file and then sends a data packet containing these bytes and block 
+number 'n' to the client
+the server then waits for an ack packet with block number 'n' 
+each consequitive packet sent by the server increases the value of n by 1
+this stops when the last packet (a packet containing either 0 or less than 512 bytes) is sent and the server receives the
+corresponding ack
+
+in the case of a write request instantiated by the client do the following on the server:
+
+client sends write request
+server waits to receive
+server receives data packet
+server validates the datapacket through the packetManager
+server uses the fileIO class to write 512 bytes to a file and then sends an ack packet containing block number 'n' 
+(block 0 if this is the first ack) to the client
+the server then waits for a data packet with block number 'n'
+each consequitive data packet sent by the server increases the value of n by 1
+this stops when the last packet (a packet containing either 0 or less than 512 bytes) is sent from the client and the server
+sends the final ack
+
+3)
+
+BufferedWriter to write to file
+BufferedReader to read from file
+
+
