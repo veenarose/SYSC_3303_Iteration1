@@ -34,7 +34,7 @@ public class IOManager {
 	public synchronized void write(String file, byte[] data) throws IOException{
 		String s = new String(data);
 		
-		BufferedWriter w = new BufferedWriter(new FileWriter(file));
+		BufferedWriter w = new BufferedWriter(new FileWriter(file,true));
 		
 		w.write(s);
 		w.close();
