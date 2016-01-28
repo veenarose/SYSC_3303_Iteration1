@@ -30,17 +30,15 @@ public class Server{
 					receiveSocket.receive(receivePacket);
 					System.out.println("Packet recieved from client at " + getTimestamp());
 					Response r = new Response(receivePacket);
-					r.start();
 				} catch(IOException e) {
 					e.printStackTrace();         
 					System.exit(1);
 				}
 			}
 		} catch(SocketException e) {
-			System.err.println("Main: Socket Exception");
+			error("Main: Socket Exception");
 			e.printStackTrace();
 		}
-		
 	}
 
 	public static void main( String args[] ){
@@ -55,23 +53,28 @@ public class Server{
 		return new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
 	}
 	
-	public void run() {
-		
+	/**
+	 * Convenience function to not have to type System.err.println();
+	 * @param s String to be printed
+	 */
+	public void error(String s){
+		System.err.println(s);
 	}
 
 	class Response extends Thread{
-		DatagramPacket packet;
-		DatagramSocket clientSocket;
-		InetAddress clientAddr;
-		int port;
-		
+		protected DatagramSocket socket;
+		protected DatagramPacket packet;
+		protected DatagramSocket clientSocket;
+		protected InetAddress clientAddr;
+		protected int port;
+		protected int packetType = -1;
 		
 		public void run(){
 			int type = -1;
 			try{
 				type = packerManager.validateRequest(packet.getData());
 			} catch(IOException e){
-				System.err.println("Packet Type could not be verifed");
+				error("Packet Type could not be verifed");
 				e.printStackTrace();
 			}
 			
@@ -79,7 +82,7 @@ public class Server{
 				try{
 					clientSocket.receive(packet);
 				} catch(IOException e){
-					System.err.println("RUN: IOException");
+					error("RUN: IOException");
 					e.printStackTrace();
 				}
 			} 
@@ -88,10 +91,34 @@ public class Server{
 			}
 		}
 		
+		/**
+		 * Takes a DatagramPacket as input. Opens a new Socket for communication with client
+		 * Verifies the packet as a legitimate packet. If the packet is a legitimate packet the thread runs this.start();
+		 * Otherwise the thread prints an error message and closes.
+		 * @param p DatagramPacket
+		 */
 		public Response(DatagramPacket p){
 			packet = p;
 			clientAddr = p.getAddress();
 			port = p.getPort();
+			int validReq = -1;
+			
+			try {
+				socket = new DatagramSocket();
+				validReq = packerManager.validateRequest(p.getData());
+			} catch (SocketException e){
+				error("Socket Exception");
+				e.printStackTrace();
+			} catch (IOException e){
+				error("IOException");
+				e.printStackTrace();
+			}
+			
+			if(validReq != -1){
+				this.start();
+			} else {
+				error("Request type could not be verified. Thread exiting");
+			}
 		}
 	}
 }
