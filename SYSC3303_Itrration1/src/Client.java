@@ -6,10 +6,16 @@ import java.net.*;
 //
 //by: Damjan Markovic
 
+
 public class Client {
 
-	DatagramSocket sendReceiveSocket; //socket which sends and receives UDP packets
-	DatagramPacket sendPacket, receivePacket; //UDP send (request) and receive (acknowledgement) packets
+	private DatagramSocket sendReceiveSocket; //socket which sends and receives UDP packets
+	private DatagramPacket sendPacket, receivePacket; //UDP send (request) and receive (acknowledgement) packets
+	private PacketManager packMan = new PacketManager();
+	private IOManager ioMan = new IOManager();
+	private static String[] requests = {"read","write"};
+	private static String[] modes = {"netascii","octet"};
+
 
 	public Client()
 	{
@@ -26,35 +32,19 @@ public class Client {
 
 	//method which sends requests to the server. Type true is a read request
 	//while type false is a write request.
-	public void send(Boolean type)
+	public void sendAndReceive(int req, int mode, String filename)
 	{
-		//Specify filename and initialize UDP read/write packet
-		String filename = "generic.txt";
-		byte msg[] = new byte[4 + "octet".length() + filename.length()];
 
-		if (type) {
-			msg[1] = 1;
-			System.out.println("Client: sending a request to read " + filename + "\n");
-		} 
-		else {
-			msg[1] = 2;
-			System.out.println("Client: sending a request to write to " + filename);
-		}
-		int i = 2;
-		byte fn[] = filename.getBytes();
-		while (i < 2 + fn.length) {
-			msg[i] = fn[i-2];
-			i++;
-		}
-		byte mode[] = "octet".getBytes();
-		i++;
-		int j = i;
-		while (i < j + mode.length) {
-			msg[i] = mode[i-j];
-			i++;
+		byte msg[];
+
+		if(req == 1) { //a read request
+			msg = packMan.createRead(filename, modes[mode]);
+		} else { //a write request
+			msg = packMan.createWrite(filename, modes[mode]);
 		}
 
-		//Create packet to be sent to server on port 1024 containing the request
+		//Create packet to be sent to server on port 1024 
+		//containing the request
 		try {
 			sendPacket = new DatagramPacket(msg, msg.length,
 					InetAddress.getLocalHost(), 1024);
@@ -62,15 +52,6 @@ public class Client {
 			e.printStackTrace();
 			System.exit(1);
 		}
-
-		//Print out request packet info
-		System.out.println("Client: Sending packet:");
-		System.out.println("To host: " + sendPacket.getAddress());
-		System.out.println("Destination host port: " + sendPacket.getPort());
-		int len = sendPacket.getLength();
-		System.out.println("Length: " + len);
-		System.out.print("Containing: ");
-		System.out.println(new String(sendPacket.getData(),0,len));
 
 		//Send the request packet to the server
 		try {
@@ -80,6 +61,95 @@ public class Client {
 			System.exit(1);
 		}
 		System.out.println("Client: Packet sent.\n");
+
+
+		//RECEIVING
+
+		int serverPort;
+		InetAddress serverHost;
+
+		if (req == 1) { //a read request
+
+			//client waits for data packets from the server
+
+			byte readData[] = new byte[516];
+
+			receivePacket = new DatagramPacket(readData, readData.length);
+			try {
+				//block until a datagram is received via sendReceiveSocket  
+				sendReceiveSocket.receive(receivePacket);
+			} catch(IOException e) {
+				e.printStackTrace();         
+				System.exit(1);
+			}
+
+			byte writeToFileData[];
+			writeToFileData = packMan.getData(readData);
+			try{
+				ioMan.write(filename, writeToFileData);
+			} catch(IOException e){
+				e.printStackTrace();
+			}
+			serverHost = receivePacket.getAddress(); //get the host address from the server
+			serverPort = receivePacket.getPort(); //get the port id
+
+			while (!packMan.lastPacket(readData)) { //receive consecutive packets
+				//create ack
+				byte[] ack = packMan.createAck(readData);
+
+				//create packet for ack
+				sendPacket = new DatagramPacket(ack, ack.length, serverHost, serverPort);
+
+
+				//send ack packet to server
+				try {
+					sendReceiveSocket.send(sendPacket);
+				} catch (IOException e) {
+					e.printStackTrace();
+					System.exit(1);
+				}
+
+				//wait for a response from the server
+				receivePacket = new DatagramPacket(readData, readData.length);
+				try {
+					//block until a datagram is received via sendReceiveSocket  
+					sendReceiveSocket.receive(receivePacket);
+				} catch(IOException e) {
+					e.printStackTrace();         
+					System.exit(1);
+				}
+
+				//write the data to the file
+				writeToFileData = packMan.getData(readData);
+				try{
+					ioMan.write(filename, writeToFileData);
+				} catch(IOException e){
+					e.printStackTrace();
+				}
+				serverHost = receivePacket.getAddress(); //get the host address from the server
+				serverPort = receivePacket.getPort(); //get the port id
+
+			}
+
+
+		} else { //a write request
+
+			//client waits for acks from the server
+			byte[] ackData = new byte[4];
+			receivePacket = new DatagramPacket(ackData, ackData.length);
+			try {
+				//block until a datagram is received via sendReceiveSocket  
+				sendReceiveSocket.receive(receivePacket);
+			} catch(IOException e) {
+				e.printStackTrace();         
+				System.exit(1);
+			}
+
+			//byte readFromFileData[] = 
+
+		}
+		byte data[] = new byte[100];
+		receivePacket = new DatagramPacket(data, data.length);
 	}
 
 	//method which receives a reply from the server
@@ -135,17 +205,56 @@ public class Client {
 
 	}
 
-	public static void main( String args[] )
+	public static int validReqInput(String in) {
+		if(in.equals(requests[0])) return 1;
+		else if(in.equals(requests[1])) return 2;
+		else return 0;
+	}
+
+	public static int validModeInput(String in) {
+		if(in.equals(modes[0])) return 0;
+		else if(in.equals(modes[1])) return 1;
+		else return 0;
+	}
+
+	public static void main( String args[] ) throws IOException
 	{
-		Client c = new Client(); //create client
-		for(int i = 0; i<5; i++) { //send and receive a response for 5 read and 5 write requests
-			c.send(true); //send a read request
-			c.receive(); //listen for the response
-			c.send(false); //send a write request
-			c.receive(); //listen for the response
+
+		System.out.println("Hello and welcome!");
+		//prompt user to specify if the request they are making is either read or write
+		System.out.println("Enter 'read' to read from the server.\n"
+				+ "Enter 'write' to write to a file on the server.");
+		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+		String request = reader.readLine();
+		while(Client.validReqInput(request) == 0) {
+			System.out.println("Please enter either 'read' or 'write'.");
+			request = reader.readLine();
 		}
-		c.sendError(); //send an error message
-		c.receive(); //listen for the response to the error
+		//prompt user to specify the mode which this request will be
+		System.out.println("Enter which mode you would like this request to be.\n"
+				+ "Enter either 'netascii' or 'octet'.");
+		String mode = reader.readLine();
+		while(Client.validModeInput(mode) == 0) {
+			System.out.println("Please enter either 'netascii' or 'octet'.");
+			mode = reader.readLine();
+		}
+		//prompt the user for a filename
+		String restOfMsg = (Client.validReqInput(request) == 1) ? "reading from:" : "writing to:";
+		System.out.println("Enter the name of the file you will be " + restOfMsg);
+		System.out.println("Make sure to include the file's extension!");
+		String filename = reader.readLine();
+		System.out.print("Sending your request");
+		for(int i = 0; i<3; i++) {
+			try {
+				Thread.sleep(1000);  
+				System.out.print(".");
+			} catch(InterruptedException ex) {
+				Thread.currentThread().interrupt();
+			}
+		}
+		Client c = new Client(); //create client
+		c.sendAndReceive(Client.validReqInput(request), Client.validModeInput(mode), filename);
 	}
 
 }
+

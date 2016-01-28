@@ -69,27 +69,6 @@ public class Server{
 		protected int port;
 		protected int packetType = -1;
 		
-		public void run(){
-			int type = -1;
-			try{
-				type = packerManager.validateRequest(packet.getData());
-			} catch(IOException e){
-				error("Packet Type could not be verifed");
-				e.printStackTrace();
-			}
-			
-			if (type == 1){//READ request
-				try{
-					clientSocket.receive(packet);
-				} catch(IOException e){
-					error("RUN: IOException");
-					e.printStackTrace();
-				}
-			} 
-			else if(type == 2){ //WRITE request
-				
-			}
-		}
 		
 		/**
 		 * Takes a DatagramPacket as input. Opens a new Socket for communication with client
@@ -101,11 +80,10 @@ public class Server{
 			packet = p;
 			clientAddr = p.getAddress();
 			port = p.getPort();
-			int validReq = -1;
 			
 			try {
 				socket = new DatagramSocket();
-				validReq = packerManager.validateRequest(p.getData());
+				packetType = packerManager.validateRequest(p.getData());
 			} catch (SocketException e){
 				error("Socket Exception");
 				e.printStackTrace();
@@ -114,10 +92,34 @@ public class Server{
 				e.printStackTrace();
 			}
 			
-			if(validReq != -1){
+			if(packetType != -1){
 				this.start();
 			} else {
 				error("Request type could not be verified. Thread exiting");
+			}
+		}
+		
+		public void run(){
+			
+			if (packetType == 1){
+				/* READ Request */
+				try{
+					clientSocket.receive(packet);
+				} catch(IOException e){
+					error("RUN: IOException");
+					e.printStackTrace();
+				}
+				
+			} 
+			else if(packetType == 2){
+				/* WRITE Request */
+			} 
+			else if(packetType == 3){
+				/* DATA Request */
+			}
+			else if(packetType == 4){
+				/* ACK Request */
+				
 			}
 		}
 	}
