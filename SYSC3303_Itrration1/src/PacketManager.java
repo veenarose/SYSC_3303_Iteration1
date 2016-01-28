@@ -122,7 +122,7 @@ public class PacketManager {
 	}
 
 	/**
-	 * This method is used to extract just the message section of the data received 
+	 * This method is used to extract just the message section of the data received from a DATA Packet
 	 * @param data byte[]: The data that is received
 	 * @return A byte array containing only the data
 	 */
@@ -135,6 +135,46 @@ public class PacketManager {
 		return byteMessage;		
 	}
 
+	/**
+	 * Returns the filename from a READ or WRITE request
+	 * @param data Data portion of the packet
+	 * @return String representation of the filename
+	 */
+	public static String getFilename(byte[] data){
+		byte[] byteMessage = new byte[data.length - 2];
+		String[] sfn;
+		byte[] delimiter = {0};
+		
+		/*Get everything past header*/
+		for(int i = 0 ; i < byteMessage.length; i++){
+			byteMessage [i] = data[i+2];			
+		}
+		/* Split the string at byte 0 to form 2 pieces: filename, mode*/
+		sfn = new String(byteMessage).split(new String(delimiter));
+		
+		return sfn[0];
+	}
+	
+	/**
+	 * Returns the mode from a READ or WRITE request
+	 * @param data Data portion of the packet
+	 * @return String representation of the mode
+	 */
+	public static String getMode(byte[] data){
+		byte[] byteMessage = new byte[data.length - 2];
+		String[] sfn;
+		byte[] delimiter = {0};
+		
+		/*Get everything past header*/
+		for(int i = 0 ; i < byteMessage.length; i++){
+			byteMessage [i] = data[i+2];			
+		}
+		/* Split the string at byte 0 to form 2 pieces: filename, mode*/
+		sfn = new String(byteMessage).split(new String(delimiter));
+		
+		return sfn[1];
+	}
+	
 	/**
 	 * This method is used to display the packet information
 	 * 

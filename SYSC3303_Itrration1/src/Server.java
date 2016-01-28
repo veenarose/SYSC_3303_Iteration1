@@ -11,13 +11,13 @@ import java.util.Date;
 public class Server{
 
 	DatagramSocket receiveSocket, sendSocket;
-	PacketManager packerManager;
+	PacketManager packetManager;
 	IOManager ioManager;
 	int readWrite;
 	static boolean serverRuning = true;
 
 	public Server(){
-		packerManager = new PacketManager();
+		packetManager = new PacketManager();
 		ioManager = new IOManager();
 		byte[] data = new byte[512];
 		
@@ -83,7 +83,7 @@ public class Server{
 			
 			try {
 				socket = new DatagramSocket();
-				packetType = packerManager.validateRequest(p.getData());
+				packetType = packetManager.validateRequest(p.getData());
 			} catch (SocketException e){
 				error("Socket Exception");
 				e.printStackTrace();
@@ -104,23 +104,47 @@ public class Server{
 			if (packetType == 1){
 				/* READ Request */
 				try{
-					clientSocket.receive(packet);
-				} catch(IOException e){
-					error("RUN: IOException");
-					e.printStackTrace();
+					handleReadReq();
+				} catch(IOException e) {
+					error("IOException on read request");
 				}
-				
 			} 
 			else if(packetType == 2){
 				/* WRITE Request */
+				
 			} 
 			else if(packetType == 3){
 				/* DATA Request */
+				
 			}
 			else if(packetType == 4){
 				/* ACK Request */
 				
 			}
+			else if(packetType == 5){
+				/* ERROR packet */
+				
+			}
+		}
+		
+		private void handleReadReq() throws IOException {
+			/* Currently only handles NETASCII */
+			byte[] data = new byte[512];
+			int offs = 0;
+			String filename = new String(PacketManager.getFilename(packet.getData()));
+			
+			do{
+				data = ioManager.read(filename, offs);
+				offs += data.length;
+				
+				packet = new DatagramPacket(packetManager.createData(data),
+											packetManager.createData(data).length,
+											clientAddr,
+											port);
+				socket.send(packet);
+				
+				socket.receive(packet);
+			} while(packetManager.lastPacket(data));
 		}
 	}
 }
