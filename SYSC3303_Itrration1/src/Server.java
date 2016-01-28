@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -20,9 +21,9 @@ public class Server{
 		packetManager = new PacketManager();
 		ioManager = new IOManager();
 		byte[] data = new byte[512];
-		
+
 		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
-		
+
 		try{
 			receiveSocket = new DatagramSocket(4488);
 			while(serverRuning){
@@ -52,7 +53,7 @@ public class Server{
 	public static String getTimestamp(){
 		return new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
 	}
-	
+
 	/**
 	 * Convenience function to not have to type System.err.println();
 	 * @param s String to be printed
@@ -68,8 +69,8 @@ public class Server{
 		protected InetAddress clientAddr;
 		protected int port;
 		protected int packetType = -1;
-		
-		
+
+
 		/**
 		 * Takes a DatagramPacket as input. Opens a new Socket for communication with client
 		 * Verifies the packet as a legitimate packet. If the packet is a legitimate packet the thread runs this.start();
@@ -80,7 +81,7 @@ public class Server{
 			packet = p;
 			clientAddr = p.getAddress();
 			port = p.getPort();
-			
+
 			try {
 				socket = new DatagramSocket();
 				packetType = packetManager.validateRequest(p.getData());
@@ -91,16 +92,16 @@ public class Server{
 				error("IOException");
 				e.printStackTrace();
 			}
-			
+
 			if(packetType != -1){
 				this.start();
 			} else {
 				error("Request type could not be verified. Thread exiting");
 			}
 		}
-		
+
 		public void run(){
-			
+
 			if (packetType == 1){
 				/* READ Request */
 				try{
@@ -111,40 +112,97 @@ public class Server{
 			} 
 			else if(packetType == 2){
 				/* WRITE Request */
-				
+
 			} 
 			else if(packetType == 3){
 				/* DATA Request */
-				
+
 			}
 			else if(packetType == 4){
 				/* ACK Request */
-				
+
 			}
 			else if(packetType == 5){
 				/* ERROR packet */
-				
+
 			}
 		}
-		
+
 		private void handleReadReq() throws IOException {
-			/* Currently only handles NETASCII */
+			/* Currently assumes requests are NETASCII */
 			byte[] data = new byte[512];
 			int offs = 0;
+			short blockNum = 1;
 			String filename = new String(PacketManager.getFilename(packet.getData()));
-			
+
+			/* Convert block number from short to byte[] */
+			ByteBuffer buffer = ByteBuffer.allocate(2);
+			buffer.putShort(blockNum);
+			byte[] block = buffer.array();
+
 			do{
 				data = ioManager.read(filename, offs);
 				offs += data.length;
-				
-				packet = new DatagramPacket(packetManager.createData(data),
-											packetManager.createData(data).length,
+
+				packet = new DatagramPacket(packetManager.createData(data, block),
+											packetManager.createData(data, block).length,
 											clientAddr,
 											port);
 				socket.send(packet);
-				
+				blockNum++;
+
 				socket.receive(packet);
-			} while(packetManager.lastPacket(data));
+				if(packetManager.isAckPacket(packet.getData())){
+					/* ACK Packet Received */
+					byte[] ackData = packet.getData();
+					ByteBuffer b = ByteBuffer.allocate(2);
+					b.put(ackData[3]);
+					b.put(ackData[4]);
+
+					short bn = b.getShort(0);
+
+					if(bn != blockNum){
+						error("ACK packet Block Number does not match current block number");
+						break;
+					}
+				}
+				else if(packetManager.validateRequest(packet.getData()) == 5){
+					/* ERROR packet received */
+					//TODO handle error packets
+					break;
+				} else {
+					error("HandleReadReq: incoming packet could not be verified as ACK or ERR");
+					break;
+				}
+			} while(!(packetManager.lastPacket(data)));
+
+			/* exit loop for last packet */
+			data = ioManager.read(filename, offs);
+			offs += data.length;
+
+			packet = new DatagramPacket(packetManager.createData(data, block),
+										packetManager.createData(data, block).length,
+										clientAddr,
+										port);
+			socket.send(packet);
+			blockNum++;
+
+			socket.receive(packet);
+			if(packetManager.isAckPacket(packet.getData())){
+				/* ACK Packet Received */
+				byte[] ackData = packet.getData();
+				ByteBuffer b = ByteBuffer.allocate(2);
+				b.put(ackData[3]);
+				b.put(ackData[4]);
+
+				short bn = b.getShort(0);
+
+				if(bn != blockNum){
+					error("ACK packet Block Number does not match current block number");
+				}
+			}
+			System.out.println("File read Succesfuly");
 		}
 	}
+	
 }

@@ -68,10 +68,11 @@ public class PacketManager {
 	/**
 	 * Creates a packet to send the server or client 
 	 * @param data Byte[] The array of data 
+	 * @param blockNum block number
 	 * @return The byte array containing the opcode to send
 	 */
-	public static byte[] createData(byte[] data){	
-		byte block[] = new byte[2];
+	public static byte[] createData(byte[] data, byte[] blockNum){	
+		byte block[] = blockNum;
 		byte dataPack[] = new byte[DRQ.length+block.length+data.length]; 
 
 		System.arraycopy(DRQ, 0, dataPack, 0, DRQ.length);
@@ -176,6 +177,18 @@ public class PacketManager {
 	}
 	
 	/**
+	 * Quick and dirty check of whether a packet is an ACK packet
+	 * @param data
+	 * @return
+	 */
+	public boolean isAckPacket(byte[] data){
+		if(data.length == 4){
+			return true;
+		}
+		return false;
+	}
+	
+	/**
 	 * This method is used to display the packet information
 	 * 
 	 * @param dPacket DatagramPacket: The packet received
@@ -245,7 +258,8 @@ public class PacketManager {
 		String n = "filename.txt";
 		String m = "ocTet";
 		byte block[] = {7,8,6,9,1,4};
-		byte lo[] = createData(block);
+		byte bn[] = {0,3};
+		byte lo[] = createData(block, bn);
 		System.out.println("test " + Arrays.toString(lo));
 		System.out.println("get data " + Arrays.toString(getData(lo)));
 		IOManager io = new IOManager();
