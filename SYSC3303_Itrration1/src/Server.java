@@ -112,22 +112,96 @@ public class Server{
 			} 
 			else if(packetType == 2){
 				/* WRITE Request */
-
+				try{
+					handleWriteReq();
+				} catch(IOException e) {
+					error("IOException on write request");
+				}
 			} 
-			else if(packetType == 3){
-				/* DATA Request */
-
-			}
-			else if(packetType == 4){
-				/* ACK Request */
-
-			}
-			else if(packetType == 5){
-				/* ERROR packet */
-
-			}
 		}
 
+		/**
+		 * Takes the DatagramPacket received for a write request and handles
+		 * the operations necessary to finish the write request
+		 * @throws IOException
+		 */
+		private void handleWriteReq()throws IOException{
+			byte[] data;
+			short blockNum = 0;
+			String filename = packetManager.getFilename(packetManager.getData(packet.getData()));
+			
+			do{
+				/* get data from packet */
+				data = packetManager.getData(packet.getData());
+				
+				/* Convert server side block number from short to byte[] */
+				ByteBuffer buffer = ByteBuffer.allocate(2);
+				buffer.putShort(blockNum);
+				byte[] block = buffer.array();
+				
+				/* create ACK Packet */
+				byte[] ack = packetManager.createAck(block);
+				
+				/* Write data received from client to file */
+				ioManager.write(filename, data);
+				
+				/* create and send ACK packet to client */
+				packet = new DatagramPacket(ack, ack.length, clientAddr, port);
+				socket.send(packet);
+				
+				/* iterate server side blockNumber */
+				blockNum++;
+				
+				/* wait for next packet */
+				socket.receive(packet);
+				
+				/* get block number from client and convert to short */
+				ByteBuffer b = ByteBuffer.allocate(2);
+				b.put(packetManager.getBlockNum(packet.getData()));
+				short bn = b.getShort(0);
+				
+				if(bn != blockNum){
+					/* if client block number and server block number do not match */
+					error("HandleWriteRequest: Block numbers between client and server do not match");
+					break;
+				}
+				
+			} while(!(packetManager.lastPacket(data)));
+			
+			/* exit loop for last packet */
+			data = packetManager.getData(packet.getData());
+			
+			/* Convert server side block number from short to byte[] */
+			ByteBuffer buffer = ByteBuffer.allocate(2);
+			buffer.putShort(blockNum);
+			byte[] block = buffer.array();
+			
+			/* create ACK Packet */
+			byte[] ack = packetManager.createAck(block);
+			
+			/* Write data received from client to file */
+			ioManager.write(filename, data);
+			
+			/* create and send ACK packet to client */
+			packet = new DatagramPacket(ack, ack.length, clientAddr, port);
+			socket.send(packet);
+			
+			/* wait for next packet */
+			socket.receive(packet);
+			
+			/* get block number from client and convert to short */
+			ByteBuffer b = ByteBuffer.allocate(2);
+			b.put(packetManager.getBlockNum(packet.getData()));
+			short bn = b.getShort(0);
+			
+			if(bn != blockNum){
+				/* if client block number and server block number do not match */
+				error("HandleWriteRequest: Block numbers between client and server do not match");
+			} else {
+				System.out.println("data written to " + filename + " succesfully");
+			}
+		}
+		
 		private void handleReadReq() throws IOException {
 			/* Currently assumes requests are NETASCII */
 			byte[] data = new byte[512];
@@ -141,19 +215,27 @@ public class Server{
 			byte[] block = buffer.array();
 
 			do{
+				/* get data from file and configure the offset*/
 				data = ioManager.read(filename, offs);
 				offs += data.length;
 
+				/* place data into packet to be sent to client */
 				packet = new DatagramPacket(packetManager.createData(data, block),
 											packetManager.createData(data, block).length,
 											clientAddr,
 											port);
+				
+				/* send packet to client */
 				socket.send(packet);
+				
+				/* iterate server side block number */
 				blockNum++;
 
+				/* wait to receive ACK confirmation */
 				socket.receive(packet);
+				
+				/* confirm validity of ACK */
 				if(packetManager.isAckPacket(packet.getData())){
-					/* ACK Packet Received */
 					byte[] ackData = packet.getData();
 					ByteBuffer b = ByteBuffer.allocate(2);
 					b.put(ackData[3]);
