@@ -251,29 +251,4 @@ public class PacketManager {
 		return msg[1]; 
 	}  
 
-	/*
-	 * The main method
-	 */
-	public static void main(String[] args) {
-		String n = "filename.txt";
-		String m = "ocTet";
-		byte block[] = {7,8,6,9,1,4};
-		byte bn[] = {0,3};
-		byte lo[] = createData(block, bn);
-		System.out.println("test " + Arrays.toString(lo));
-		System.out.println("get data " + Arrays.toString(getData(lo)));
-		IOManager io = new IOManager();
-		String file = "filename.txt";
-		try {
-			for(int i = 0; i< 10; i++){
-				io.write(file, lo);
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		System.out.println("readPack  "+Arrays.toString(createRead(n,m)));
-		System.out.println("writePack "+Arrays.toString(createWrite(n,m)));
-
-	}
-
 }
