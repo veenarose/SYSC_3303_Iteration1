@@ -25,7 +25,7 @@ public class Server{
 		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
 
 		try{
-			receiveSocket = new DatagramSocket(4488);
+			receiveSocket = new DatagramSocket(1024);
 			while(serverRuning){
 				try {
 					receiveSocket.receive(receivePacket);
