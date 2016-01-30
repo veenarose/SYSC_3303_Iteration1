@@ -96,6 +96,20 @@ public class PacketManager {
 	}
 	
 	/**
+	 * This method is used to extract the Ack code from the data received
+	 * @param data byte[]: The data that is received
+	 * @return A byte array containing the Ack code
+	 */
+	public static byte[] extractAck(byte[] data){
+		byte[] ack = new byte[4];
+		ack[0] = 0; 
+		ack[1] = 4;
+		ack[2] = data[2];
+		ack[3] = data[3];
+		return ack;
+	}
+	
+	/**
 	 * This method is used to extract the Block number from the data received
 	 * @param data byte[]: The data that is received
 	 * @return A byte array containing the Block code
@@ -189,6 +203,31 @@ public class PacketManager {
 	}
 	
 	/**
+	 * Takes two byte numbers and returns there associated int value
+	 * @param leftByte
+	 * @param rightByte
+	 * @return
+	 */
+	public int twoBytesToInt(byte leftByte, byte rightByte) {
+		return ((leftByte << 8) & 0x0000ff00) | (rightByte & 0x000000ff);
+	}
+	
+	/**
+	 * Splits an int into two byte values
+	 * @param leftByte
+	 * @param rightByte
+	 * @return
+	 */
+	public byte[] intToBytes(int i) {
+		byte[] data = new byte[2];
+		
+		data[0] = (byte)((i >> 8) & 0xFF);
+		data[1] = (byte)(i & 0xFF);
+		
+		return data;
+	}
+	
+	/**
 	 * This method is used to display the packet information
 	 * 
 	 * @param dPacket DatagramPacket: The packet received
@@ -233,22 +272,22 @@ public class PacketManager {
 			throw invalid; 
 		} 
 
-		int i = 2; 
 
 		int zeroCount = 0; 
 
 		//makes sure there is a 0 byte between the filename and mode bytes 
 		//checks if bytes are valid ascii values between 0 and 128 
-		while(i < msg.length-1) { 
-			System.out.println(msg[i]); 
+		for(int i=2; i< msg.length-1; i++) { 
+			//System.out.println("msg 1 val: " + msg[i]); 
 			if(msg[i] == 0) { zeroCount++; } 
-			if(msg[i] >= 128) { throw invalid; } 
+			if(msg[i] >= 128) { 
+				throw invalid;
+			} 
 			i++; 
-		} if(zeroCount != 1) { throw invalid; } 
+		} if(zeroCount <= 1) { throw invalid; } 
 
 
 		//returns a value which is either a 1 for a read request or a 2 for a write request 
 		return msg[1]; 
 	}  
-
 }

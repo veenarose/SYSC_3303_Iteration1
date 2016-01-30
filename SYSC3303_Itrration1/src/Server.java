@@ -93,7 +93,8 @@ public class Server{
 				e.printStackTrace();
 			}
 
-			if(packetType != -1){
+			if(packetType != 0){
+				System.out.println("Packet type verified as " + packetType + ". Starting thread.");
 				this.start();
 			} else {
 				error("Request type could not be verified. Thread exiting");

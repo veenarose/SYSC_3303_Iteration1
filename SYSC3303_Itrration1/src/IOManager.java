@@ -39,4 +39,8 @@ public class IOManager {
 		w.write(s);
 		w.close();
 	}
+	
+	public synchronized int getBufferSize() {
+		return bufferSize;
+	}
 }
