@@ -29,7 +29,7 @@ public class Server{
 			while(serverRuning){
 				try {
 					receiveSocket.receive(receivePacket);
-					System.out.println("Packet recieved from client at " + getTimestamp());
+					print("Packet recieved from client at " + getTimestamp());
 					Response r = new Response(receivePacket);
 				} catch(IOException e) {
 					e.printStackTrace();         
@@ -62,6 +62,10 @@ public class Server{
 		System.err.println(s);
 	}
 
+	public void print(String s){
+		System.out.println(s);
+	}
+	
 	class Response extends Thread{
 		protected DatagramSocket socket;
 		protected DatagramPacket packet;
@@ -84,7 +88,10 @@ public class Server{
 
 			try {
 				socket = new DatagramSocket();
+				print("socket created");
+				
 				packetType = packetManager.validateRequest(p.getData());
+				print("req validated");
 			} catch (SocketException e){
 				error("Socket Exception");
 				e.printStackTrace();
@@ -94,10 +101,10 @@ public class Server{
 			}
 
 			if(packetType != 0){
-				System.out.println("Packet type verified as " + packetType + ". Starting thread.");
+				print("Packet type verified as " + packetType + ". Starting thread. " + getTimestamp());
 				this.start();
 			} else {
-				error("Request type could not be verified. Thread exiting");
+				error("Request type could not be verified. Thread exiting " + getTimestamp());
 			}
 		}
 
@@ -106,6 +113,7 @@ public class Server{
 			if (packetType == 1){
 				/* READ Request */
 				try{
+					print("calling read handler");
 					handleReadReq();
 				} catch(IOException e) {
 					error("IOException on read request");
@@ -127,40 +135,51 @@ public class Server{
 		 * @throws IOException
 		 */
 		private void handleWriteReq()throws IOException{
+			print("1");
 			byte[] data;
 			short blockNum = 0;
-			String filename = packetManager.getFilename(packetManager.getData(packet.getData()));
+			String filename = "test.txt";
 			
+			print("2");
 			do{
+				print("3");
 				/* get data from packet */
-				data = packetManager.getData(packet.getData());
+				data = packet.getData();
 				
+				print("4");
 				/* Convert server side block number from short to byte[] */
 				ByteBuffer buffer = ByteBuffer.allocate(2);
 				buffer.putShort(blockNum);
 				byte[] block = buffer.array();
 				
+				print("5");
 				/* create ACK Packet */
 				byte[] ack = packetManager.createAck(block);
 				
+				print("6");
 				/* Write data received from client to file */
 				ioManager.write(filename, data);
 				
+				print("7");
 				/* create and send ACK packet to client */
 				packet = new DatagramPacket(ack, ack.length, clientAddr, port);
 				socket.send(packet);
 				
+				print("8");
 				/* iterate server side blockNumber */
 				blockNum++;
 				
+				print("9");
 				/* wait for next packet */
 				socket.receive(packet);
 				
+				print("10");
 				/* get block number from client and convert to short */
 				ByteBuffer b = ByteBuffer.allocate(2);
 				b.put(packetManager.getBlockNum(packet.getData()));
 				short bn = b.getShort(0);
 				
+				print("11");
 				if(bn != blockNum){
 					/* if client block number and server block number do not match */
 					error("HandleWriteRequest: Block numbers between client and server do not match");
@@ -199,42 +218,51 @@ public class Server{
 				/* if client block number and server block number do not match */
 				error("HandleWriteRequest: Block numbers between client and server do not match");
 			} else {
-				System.out.println("data written to " + filename + " succesfully");
+				print("data written to " + filename + " succesfully");
 			}
 		}
 		
 		private void handleReadReq() throws IOException {
 			/* Currently assumes requests are NETASCII */
-			byte[] data = new byte[512];
-			int offs = 0;
-			short blockNum = 1;
-			String filename = new String(PacketManager.getFilename(packet.getData()));
+			byte[] data = new byte[512]; print(" 1 ");
+			int offs = 0; print(" 2 ");
+			short blockNum = 1; print(" 3 ");
+			String filename = new String("test.txt"); print(" 4 ");
 
+			
+			print(" 5 ");
 			/* Convert block number from short to byte[] */
 			ByteBuffer buffer = ByteBuffer.allocate(2);
 			buffer.putShort(blockNum);
 			byte[] block = buffer.array();
 
 			do{
+				
+				print(" 6 ");
 				/* get data from file and configure the offset*/
 				data = ioManager.read(filename, offs);
 				offs += data.length;
 
+				print(" 7 ");
 				/* place data into packet to be sent to client */
 				packet = new DatagramPacket(packetManager.createData(data, block),
 											packetManager.createData(data, block).length,
 											clientAddr,
 											port);
 				
+				print(" 8 ");
 				/* send packet to client */
 				socket.send(packet);
 				
+				print(" 9 ");
 				/* iterate server side block number */
 				blockNum++;
 
+				print(" 10 ");
 				/* wait to receive ACK confirmation */
 				socket.receive(packet);
 				
+				print(" 11 ");
 				/* confirm validity of ACK */
 				if(packetManager.isAckPacket(packet.getData())){
 					byte[] ackData = packet.getData();
@@ -284,7 +312,7 @@ public class Server{
 					error("ACK packet Block Number does not match current block number");
 				}
 			}
-			System.out.println("File read Succesfuly");
+			print("File read Succesfuly");
 		}
 	}
 	
