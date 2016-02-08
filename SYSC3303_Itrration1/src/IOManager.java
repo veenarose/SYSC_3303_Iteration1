@@ -13,9 +13,15 @@ public class IOManager {
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 */
-	public synchronized byte[] read(String filename, int offset) throws FileNotFoundException, IOException{
+	public synchronized byte[] read(String fn, int offset) throws FileNotFoundException, IOException{
+		File filename = new File(fn);
+		File f2 = filename.getCanonicalFile();
+		String s = f2.getAbsolutePath();
+		
+		FileInputStream fis = new FileInputStream(s);
+		
 		byte[] data = new byte[bufferSize];
-		BufferedInputStream reader = new BufferedInputStream(new FileInputStream(filename));
+		BufferedInputStream reader = new BufferedInputStream(fis);
 
 		/* Read 512 bytes from file starting at the offset*/
 		reader.read(data, offset, bufferSize);
@@ -34,9 +40,13 @@ public class IOManager {
 	public synchronized void write(String file, byte[] data) throws IOException{
 		String s = new String(data);
 		
-		BufferedWriter w = new BufferedWriter(new FileWriter(file));
+		BufferedWriter w = new BufferedWriter(new FileWriter(file,true));
 		
 		w.write(s);
 		w.close();
+	}
+	
+	public synchronized int getBufferSize() {
+		return bufferSize;
 	}
 }
