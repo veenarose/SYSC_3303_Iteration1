@@ -68,7 +68,7 @@ public class Server{
 	
 	class Response extends Thread{
 		protected DatagramSocket socket;
-		protected DatagramPacket packet;
+		DatagramPacket packet;
 		protected DatagramSocket clientSocket;
 		protected InetAddress clientAddr;
 		protected int port;
@@ -88,10 +88,7 @@ public class Server{
 
 			try {
 				socket = new DatagramSocket();
-				print("socket created");
-				
 				packetType = packetManager.validateRequest(p.getData());
-				print("req validated");
 			} catch (SocketException e){
 				error("Socket Exception");
 				e.printStackTrace();
@@ -136,15 +133,14 @@ public class Server{
 		 */
 		private void handleWriteReq()throws IOException{
 			print("1");
-			byte[] data;
+			byte[] data = packet.getData();
 			short blockNum = 0;
 			String filename = "test.txt";
 			
 			print("2");
 			do{
 				print("3");
-				/* get data from packet */
-				data = packet.getData();
+				
 				
 				print("4");
 				/* Convert server side block number from short to byte[] */
@@ -185,6 +181,9 @@ public class Server{
 					error("HandleWriteRequest: Block numbers between client and server do not match");
 					break;
 				}
+				
+				/* get data from packet */
+				data = packet.getData();
 				
 			} while(!(packetManager.lastPacket(data)));
 			
