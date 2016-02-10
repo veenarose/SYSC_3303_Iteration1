@@ -4,11 +4,6 @@ import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-//Server.java
-//This class is the server for assignment 1.
-//
-//by: Damjan Markovic
-
 public class Server{
 
 	DatagramSocket receiveSocket, sendSocket;
@@ -30,6 +25,7 @@ public class Server{
 				try {
 					receiveSocket.receive(receivePacket);
 					print("Packet recieved from client at " + getTimestamp());
+					print("packet info " + new String(receivePacket.getData()));
 					Response r = new Response(receivePacket);
 				} catch(IOException e) {
 					e.printStackTrace();         
@@ -67,12 +63,12 @@ public class Server{
 	}
 	
 	class Response extends Thread{
-		protected DatagramSocket socket;
-		DatagramPacket packet;
-		protected DatagramSocket clientSocket;
-		protected InetAddress clientAddr;
-		protected int port;
-		protected int packetType = -1;
+		private DatagramSocket socket;
+		private final DatagramPacket packet;
+		private DatagramSocket clientSocket;
+		private InetAddress clientAddr;
+		private int port;
+		private int packetType = -1;
 
 
 		/**
@@ -86,9 +82,13 @@ public class Server{
 			clientAddr = p.getAddress();
 			port = p.getPort();
 
+			print("p " + new String(packet.getData()));
+			
 			try {
 				socket = new DatagramSocket();
+				print("socket created");
 				packetType = packetManager.validateRequest(p.getData());
+				print("req validated");
 			} catch (SocketException e){
 				error("Socket Exception");
 				e.printStackTrace();
@@ -119,7 +119,8 @@ public class Server{
 			else if(packetType == 2){
 				/* WRITE Request */
 				try{
-					handleWriteReq();
+					print("p2 "+ packet.getData().toString());
+					handleWriteReq(packet);
 				} catch(IOException e) {
 					error("IOException on write request");
 				}
@@ -131,16 +132,18 @@ public class Server{
 		 * the operations necessary to finish the write request
 		 * @throws IOException
 		 */
-		private void handleWriteReq()throws IOException{
+		public void handleWriteReq(DatagramPacket p)throws IOException{
 			print("1");
-			byte[] data = packet.getData();
+			//print("packet info " + new String(packet.getData()));
+			print(p.getData().toString());
+			byte[] data;
 			short blockNum = 0;
-			String filename = "test.txt";
-			
+			String filename = packetManager.getFilename(packet.getData());
 			print("2");
 			do{
 				print("3");
-				
+				/* get data from packet */
+				data = packet.getData();
 				
 				print("4");
 				/* Convert server side block number from short to byte[] */
@@ -158,8 +161,8 @@ public class Server{
 				
 				print("7");
 				/* create and send ACK packet to client */
-				packet = new DatagramPacket(ack, ack.length, clientAddr, port);
-				socket.send(packet);
+				DatagramPacket pp = new DatagramPacket(ack, ack.length, clientAddr, port);
+				socket.send(pp);
 				
 				print("8");
 				/* iterate server side blockNumber */
@@ -182,9 +185,6 @@ public class Server{
 					break;
 				}
 				
-				/* get data from packet */
-				data = packet.getData();
-				
 			} while(!(packetManager.lastPacket(data)));
 			
 			/* exit loop for last packet */
@@ -200,10 +200,8 @@ public class Server{
 			
 			/* Write data received from client to file */
 			ioManager.write(filename, data);
-			
-			/* create and send ACK packet to client */
-			packet = new DatagramPacket(ack, ack.length, clientAddr, port);
-			socket.send(packet);
+			DatagramPacket p3= new DatagramPacket(ack, ack.length, clientAddr, port);
+			socket.send(p3);
 			
 			/* wait for next packet */
 			socket.receive(packet);
@@ -244,14 +242,14 @@ public class Server{
 
 				print(" 7 ");
 				/* place data into packet to be sent to client */
-				packet = new DatagramPacket(packetManager.createData(data, block),
+				DatagramPacket p1 = new DatagramPacket(packetManager.createData(data, block),
 											packetManager.createData(data, block).length,
 											clientAddr,
 											port);
 				
 				print(" 8 ");
 				/* send packet to client */
-				socket.send(packet);
+				socket.send(p1);
 				
 				print(" 9 ");
 				/* iterate server side block number */
@@ -290,11 +288,11 @@ public class Server{
 			data = ioManager.read(filename, offs);
 			offs += data.length;
 
-			packet = new DatagramPacket(packetManager.createData(data, block),
+			DatagramPacket p = new DatagramPacket(packetManager.createData(data, block),
 										packetManager.createData(data, block).length,
 										clientAddr,
 										port);
-			socket.send(packet);
+			socket.send(p);
 			blockNum++;
 
 			socket.receive(packet);

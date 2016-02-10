@@ -1,6 +1,5 @@
 import java.io.*;
 import java.net.*;
-import java.nio.ByteBuffer;
 
 /**
  * Client.java
@@ -288,20 +287,9 @@ public class Client { //the client class
     	String filename = reader.readLine();
     	System.out.print("Sending your request");
     	
-    	//wait 3 seconds
-    	for(int i = 0; i<3; i++) {
-    		try {
-    		    Thread.sleep(1000);  
-    		    System.out.print(".");
-    		} catch(InterruptedException ex) {
-    		    Thread.currentThread().interrupt();
-    		}
-    	}
-    	
     	Client c = new Client(); 
         c.sendAndReceive(Client.validReqInput(request), Client.validModeInput(mode), filename);
     
     } //end of main
  
 } //end of client class
-
