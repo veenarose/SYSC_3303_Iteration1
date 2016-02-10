@@ -3,6 +3,15 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+
+//Server.java
+//This class is the server for assignment 1.
+//
+//by: Damjan Markovic
+
+//DONT FORGET ABOUT CONCURRENCY LATER
 
 public class Server{
 
@@ -11,6 +20,13 @@ public class Server{
 	IOManager ioManager;
 	int readWrite;
 	static boolean serverRuning = true;
+	
+	private final static String ServerDirectory =  
+			(System.getProperty("user.dir") + "/src/ServerData/");
+	
+	private final static String[] files = 
+		{"originServer1.txt", "originServer2.txt"}; //names of files local to the client
+    private Set<String> fileNames = new HashSet<String>(); //java set to store file names
 
 	public Server(){
 		packetManager = new PacketManager();
@@ -25,7 +41,8 @@ public class Server{
 				try {
 					receiveSocket.receive(receivePacket);
 					print("Packet recieved from client at " + getTimestamp());
-					print("packet info " + new String(receivePacket.getData()));
+					fileNames.add(files[0]);
+		            fileNames.add(files[1]);
 					Response r = new Response(receivePacket);
 				} catch(IOException e) {
 					e.printStackTrace();         
@@ -63,12 +80,13 @@ public class Server{
 	}
 	
 	class Response extends Thread{
-		private DatagramSocket socket;
-		private final DatagramPacket packet;
-		private DatagramSocket clientSocket;
-		private InetAddress clientAddr;
-		private int port;
-		private int packetType = -1;
+		protected DatagramSocket socket;
+		protected DatagramPacket packet;
+		protected DatagramSocket clientSocket;
+		protected InetAddress clientAddr;
+		protected int clientPort;
+		protected int packetType = -1;
+		protected byte[] contents;
 
 
 		/**
@@ -80,15 +98,12 @@ public class Server{
 		public Response(DatagramPacket p){
 			packet = p;
 			clientAddr = p.getAddress();
-			port = p.getPort();
+			clientPort = p.getPort();
+			contents = p.getData();
 
-			print("p " + new String(packet.getData()));
-			
 			try {
 				socket = new DatagramSocket();
-				print("socket created");
 				packetType = packetManager.validateRequest(p.getData());
-				print("req validated");
 			} catch (SocketException e){
 				error("Socket Exception");
 				e.printStackTrace();
@@ -119,8 +134,7 @@ public class Server{
 			else if(packetType == 2){
 				/* WRITE Request */
 				try{
-					print("p2 "+ packet.getData().toString());
-					handleWriteReq(packet);
+					handleWriteReq();
 				} catch(IOException e) {
 					error("IOException on write request");
 				}
@@ -132,100 +146,67 @@ public class Server{
 		 * the operations necessary to finish the write request
 		 * @throws IOException
 		 */
-		public void handleWriteReq(DatagramPacket p)throws IOException{
+		
+		private void handleWriteReq()throws IOException{
 			print("1");
-			//print("packet info " + new String(packet.getData()));
-			print(p.getData().toString());
-			byte[] data;
-			short blockNum = 0;
-			String filename = packetManager.getFilename(packet.getData());
-			print("2");
-			do{
-				print("3");
-				/* get data from packet */
-				data = packet.getData();
-				
-				print("4");
-				/* Convert server side block number from short to byte[] */
-				ByteBuffer buffer = ByteBuffer.allocate(2);
-				buffer.putShort(blockNum);
-				byte[] block = buffer.array();
-				
-				print("5");
-				/* create ACK Packet */
-				byte[] ack = packetManager.createAck(block);
-				
-				print("6");
-				/* Write data received from client to file */
-				ioManager.write(filename, data);
-				
-				print("7");
-				/* create and send ACK packet to client */
-				DatagramPacket pp = new DatagramPacket(ack, ack.length, clientAddr, port);
-				socket.send(pp);
-				
-				print("8");
-				/* iterate server side blockNumber */
-				blockNum++;
+			byte[] inboundDatapacket = new byte[ioManager.getBufferSize() + 4];
+			byte[] rawData; 
+			short blockNum = 1;
+			String filename = packetManager.getFilename(contents); print(" 4 ");
+			System.out.println("Attempting to read from file: " + filename);
+			
+			File writeTo = new File(ServerDirectory + filename);
+        	System.out.println("writeTo exists?: " +  writeTo.exists());
+			
+        	byte[] ack = packetManager.createAck(new byte[]{0,0,0,0});
+        	
+        	do{
+        		rawData = new byte[ioManager.getBufferSize()];
+        		/* create and send ACK packet to client */
+				packet = new DatagramPacket(ack, ack.length, clientAddr, clientPort);
+				socket.send(packet);
 				
 				print("9");
 				/* wait for next packet */
+				packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
 				socket.receive(packet);
 				
-				print("10");
-				/* get block number from client and convert to short */
-				ByteBuffer b = ByteBuffer.allocate(2);
-				b.put(packetManager.getBlockNum(packet.getData()));
-				short bn = b.getShort(0);
+				ack = packetManager.createAck(inboundDatapacket);
 				
-				print("11");
-				if(bn != blockNum){
-					/* if client block number and server block number do not match */
-					error("HandleWriteRequest: Block numbers between client and server do not match");
-					break;
-				}
+				rawData = packetManager.getData(inboundDatapacket);
+				packetManager.printTFTPPacketData(inboundDatapacket);
+				packetManager.printTFTPPacketData(rawData);
+				ioManager.write(writeTo, rawData);
 				
-			} while(!(packetManager.lastPacket(data)));
+			} while(!(packetManager.lastPacket(rawData)));
 			
-			/* exit loop for last packet */
-			data = packetManager.getData(packet.getData());
+        	/* create and send ACK packet to client */
+			packet = new DatagramPacket(ack, ack.length, clientAddr, clientPort);
+			socket.send(packet);
 			
-			/* Convert server side block number from short to byte[] */
-			ByteBuffer buffer = ByteBuffer.allocate(2);
-			buffer.putShort(blockNum);
-			byte[] block = buffer.array();
-			
-			/* create ACK Packet */
-			byte[] ack = packetManager.createAck(block);
-			
-			/* Write data received from client to file */
-			ioManager.write(filename, data);
-			DatagramPacket p3= new DatagramPacket(ack, ack.length, clientAddr, port);
-			socket.send(p3);
-			
+			print("10");
 			/* wait for next packet */
+			packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
 			socket.receive(packet);
 			
-			/* get block number from client and convert to short */
-			ByteBuffer b = ByteBuffer.allocate(2);
-			b.put(packetManager.getBlockNum(packet.getData()));
-			short bn = b.getShort(0);
+			ack = packetManager.createAck(inboundDatapacket);
 			
-			if(bn != blockNum){
-				/* if client block number and server block number do not match */
-				error("HandleWriteRequest: Block numbers between client and server do not match");
-			} else {
-				print("data written to " + filename + " succesfully");
-			}
+			rawData = packetManager.getData(inboundDatapacket);
+			ioManager.write(writeTo, rawData);
+			
+			print("write complete!!!");
 		}
 		
 		private void handleReadReq() throws IOException {
+			
 			/* Currently assumes requests are NETASCII */
-			byte[] data = new byte[512]; print(" 1 ");
-			int offs = 0; print(" 2 ");
+			byte[] data; 
 			short blockNum = 1; print(" 3 ");
-			String filename = new String("test.txt"); print(" 4 ");
+			String filename = packetManager.getFilename(contents); print(" 4 ");
+			System.out.println("Attempting to read from file: " + filename);
 
+			BufferedInputStream reader = new BufferedInputStream
+					(new FileInputStream(ServerDirectory + filename));
 			
 			print(" 5 ");
 			/* Convert block number from short to byte[] */
@@ -234,22 +215,23 @@ public class Server{
 			byte[] block = buffer.array();
 
 			do{
-				
+				data = new byte[512]; print(" 1 ");
 				print(" 6 ");
 				/* get data from file and configure the offset*/
-				data = ioManager.read(filename, offs);
-				offs += data.length;
+				
+				reader.read(data, 0, data.length);
+				
 
 				print(" 7 ");
 				/* place data into packet to be sent to client */
-				DatagramPacket p1 = new DatagramPacket(packetManager.createData(data, block),
+				packet = new DatagramPacket(packetManager.createData(data, block),
 											packetManager.createData(data, block).length,
 											clientAddr,
-											port);
+											clientPort);
 				
 				print(" 8 ");
 				/* send packet to client */
-				socket.send(p1);
+				socket.send(packet);
 				
 				print(" 9 ");
 				/* iterate server side block number */
@@ -274,25 +256,24 @@ public class Server{
 						break;
 					}
 				}
-				else if(packetManager.validateRequest(packet.getData()) == 5){
-					/* ERROR packet received */
+				/*else if(packetManager.validateRequest(packet.getData()) == 5){
+					
 					//TODO handle error packets
 					break;
 				} else {
 					error("HandleReadReq: incoming packet could not be verified as ACK or ERR");
 					break;
-				}
+				}*/
 			} while(!(packetManager.lastPacket(data)));
 
 			/* exit loop for last packet */
-			data = ioManager.read(filename, offs);
-			offs += data.length;
-
-			DatagramPacket p = new DatagramPacket(packetManager.createData(data, block),
+			reader.read(data, 0, data.length);
+			reader.close();
+			packet = new DatagramPacket(packetManager.createData(data, block),
 										packetManager.createData(data, block).length,
 										clientAddr,
-										port);
-			socket.send(p);
+										clientPort);
+			socket.send(packet);
 			blockNum++;
 
 			socket.receive(packet);

@@ -1,15 +1,17 @@
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.util.Arrays;
 
 /**
  * Class is used to handle the read / write packets between the clients and server
  */
 public class PacketManager {
-	private final byte[] RRQ = {0,1}; // Read opcode
-	private final byte[] WRQ = {0,2}; // Write opcode
-	private final byte[] DRQ = {0,3}; //data request
+	private static byte[] RRQ = {0,1}; // Read opcode
+	private static byte[] WRQ = {0,2}; // Write opcode
+	private static byte[] DRQ = {0,3}; //data request
 
-	private final String[] validModes = {"netascii", "octet"};// The modes
+	private static String[] validModes = {"netascii", "octet"};// The modes
 
 	/**
 	 * Constructor
@@ -22,7 +24,7 @@ public class PacketManager {
 	 *@param mode The valid mode either netascii or octet
 	 *@return an array of bytes that sends a request to read a file on the server 
 	 */
-	public byte[] createRead(String message, String mode){
+	public static byte[] createRead(String message, String mode){
 
 		byte file[] = message.getBytes();
 		byte modes[] = mode.getBytes();
@@ -39,13 +41,25 @@ public class PacketManager {
 		return readPack;
 	}
 	
+	public static void printTFTPPacketData(byte[] p) {
+		int length = p.length;
+		System.out.print("[");
+		for(int i = 0; i < length; i++) {
+			if(i != length-1) {
+				System.out.print(p[i] + ", ");
+			} else {
+				System.out.print(p[i] + "]\n");
+			}
+		}
+	}
+	
 	/**
 	 * This method is used to create a write request to send to the server
 	 *@param message String: The name of the file
 	 *@param mode String: The valid mode either netascii or octet
 	 *@return an array of bytes that sends a request to write a file on the server 
 	 */
-	public byte[] createWrite(String message, String mode){
+	public static byte[] createWrite(String message, String mode){
 
 		byte file[] = message.getBytes();
 		byte modes[] = mode.getBytes();
@@ -69,7 +83,7 @@ public class PacketManager {
 	 * @param blockNum block number
 	 * @return The byte array containing the opcode to send
 	 */
-	public byte[] createData(byte[] data, byte[] blockNum){	
+	public static byte[] createData(byte[] data, byte[] blockNum){	
 		byte block[] = blockNum;
 		byte dataPack[] = new byte[DRQ.length+block.length+data.length]; 
 
@@ -84,7 +98,7 @@ public class PacketManager {
 	 * @param data byte[]: The data that is received
 	 * @return A byte array containing the Ack code
 	 */
-	public byte[] createAck(byte[] data){
+	public static byte[] createAck(byte[] data){
 		byte[] ack = new byte[4];
 		ack[0] = 0; 
 		ack[1] = 4;
@@ -98,7 +112,7 @@ public class PacketManager {
 	 * @param data byte[]: The data that is received
 	 * @return A byte array containing the Ack code
 	 */
-	public byte[] extractAck(byte[] data){
+	public static byte[] extractAck(byte[] data){
 		byte[] ack = new byte[4];
 		ack[0] = 0; 
 		ack[1] = 4;
@@ -112,7 +126,7 @@ public class PacketManager {
 	 * @param data byte[]: The data that is received
 	 * @return A byte array containing the Block code
 	 */
-	public byte[] getBlockNum(byte[] data){
+	public static byte[] getBlockNum(byte[] data){
 		byte[] blk = {data[2],data[3]};
 		return blk;
 	}
@@ -139,7 +153,7 @@ public class PacketManager {
 	 * @param data byte[]: The data that is received
 	 * @return A byte array containing only the data
 	 */
-	public byte[] getData(byte [] data){
+	public static byte[] getData(byte [] data){
 		byte[] byteMessage = new byte[data.length-4];
 		for(int i = 0 ; i < byteMessage.length; i++){
 			byteMessage [i] = data[i+4];			
@@ -153,7 +167,7 @@ public class PacketManager {
 	 * @param data Data portion of the packet
 	 * @return String representation of the filename
 	 */
-	public String getFilename(byte[] data){
+	public static String getFilename(byte[] data){
 		byte[] byteMessage = new byte[data.length - 2];
 		String[] sfn;
 		byte[] delimiter = {0};
@@ -164,6 +178,7 @@ public class PacketManager {
 		}
 		/* Split the string at byte 0 to form 2 pieces: filename, mode*/
 		sfn = new String(byteMessage).split(new String(delimiter));
+		
 		return sfn[0];
 	}
 	
@@ -172,7 +187,7 @@ public class PacketManager {
 	 * @param data Data portion of the packet
 	 * @return String representation of the mode
 	 */
-	public String getMode(byte[] data){
+	public static String getMode(byte[] data){
 		byte[] byteMessage = new byte[data.length - 2];
 		String[] sfn;
 		byte[] delimiter = {0};
@@ -231,7 +246,7 @@ public class PacketManager {
 	 * @param host String: The host the message is received from
 	 * @param isSending boolean: Used to identify if it is a read or write request
 	 */
-	public void displayPacketInfo(DatagramPacket dPacket, String host, boolean isSending) {
+	static public void displayPacketInfo(DatagramPacket dPacket, String host, boolean isSending) {
 		String direction = isSending ? "sent" : "received";
 		String preHost   = isSending ? "To" : "From";
 
@@ -243,7 +258,7 @@ public class PacketManager {
 	}
 
 	@SuppressWarnings("unused")
-	private boolean hasValidMode(String mode) {
+	static private boolean hasValidMode(String mode) {
 		int minModeLen = Integer.min(validModes[0].length(), validModes[1].length());
 
 		return false;
@@ -267,8 +282,9 @@ public class PacketManager {
 		//checks if final byte is 0
 		if(msg[msg.length-1] != 0) { 
 			throw invalid; 
-		}
-		
+		} 
+
+
 		int zeroCount = 0; 
 
 		//makes sure there is a 0 byte between the filename and mode bytes 

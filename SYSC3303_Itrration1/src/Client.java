@@ -1,5 +1,10 @@
+import java.util.List;
+import java.util.Set;
 import java.io.*;
 import java.net.*;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashSet;
 
 /**
  * Client.java
@@ -17,6 +22,13 @@ public class Client { //the client class
     private final static String[] requests = {"read","write"};  //the valid requests which can be made by the server
     private final static String[] modes = {"netascii","octet"}; //the valid modes for the corresponding requests
     
+    private final static String ClientDirectory =  
+    		(System.getProperty("user.dir") + "/src/ClientData/");
+    
+    private final static String[] files = 
+    	{"originClient1.txt", "originClient2.txt"}; //names of files local to the client
+    private Set<String> fileNames = new HashSet<String>(); //java set to store file names
+    
     /**
      * client constructor
      */
@@ -26,6 +38,9 @@ public class Client { //the client class
              //construct a datagram socket to be used to send and receive UDP Datagram requests and bind it to any available 
              //port on the local host machine. 
              sendReceiveSocket = new DatagramSocket();
+             //populate fileNames list
+             fileNames.add(files[0]);
+             fileNames.add(files[1]);
          } catch (SocketException se) {   //unable to create socket
              se.printStackTrace();
              System.exit(1);
@@ -69,8 +84,9 @@ public class Client { //the client class
      * can take value of either 'netascii' or 'octet'
      * @param filename
      * name of the file to be either read from or written to
+     * @throws FileNotFoundException 
      */
-    public void sendAndReceive(int req, int mode, String filename)
+    public void sendAndReceive(int req, int mode, String filename, String origfile) throws FileNotFoundException
     {
         
     	byte request[]; //the request 
@@ -109,25 +125,32 @@ public class Client { //the client class
         	//variable to store the read requests data, 2 bytes for the opcode, 2 for the block number, 512 for the raw data
         	byte readData[] = new byte[ioMan.getBufferSize() + 4]; 
         	
+        	System.out.println("About to receive data from Server 1");
         	//receive data from the server
         	receivePacket = new DatagramPacket(readData, readData.length);
         	receivePacket(receivePacket, sendReceiveSocket);
+        	System.out.println("Recieved data from Server 2");
+        	
+        	//create a new file with name filename which will be written to
+        	File writeTo = new File(ClientDirectory + filename);
+        	System.out.println("writeTo exists?: " +  writeTo.exists() + " 3");
         	
         	//write the data to local file with name filename
         	byte writeToFileData[];
         	writeToFileData = packMan.getData(readData);
         	try {
-				ioMan.write(filename, writeToFileData);
+				ioMan.write(writeTo, writeToFileData);
 			} catch (IOException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
-        	
+        	System.out.println("wrote to file 4");
         	serverHost = receivePacket.getAddress(); //get the host address from the server
         	serverPort = receivePacket.getPort(); //get the port id
         	
         	//send ack packets and receive data until last packet is reached
-        	while (!packMan.lastPacket(readData)) { 
+        	System.out.println("Last packet?: " + packMan.lastPacket(writeToFileData) + " 5");
+        	while (!packMan.lastPacket(writeToFileData)){ 
         		
         		//create ack
         		byte[] ack = packMan.createAck(readData);
@@ -136,67 +159,69 @@ public class Client { //the client class
         		sendPacket = new DatagramPacket(ack, ack.length,
 				                                     serverHost, serverPort);
         		sendPacket(sendPacket, sendReceiveSocket);
+        		System.out.println("sent the packet 6");
         		
         		//receive data from server
         		receivePacket = new DatagramPacket(readData, readData.length);
         		receivePacket(receivePacket, sendReceiveSocket);
+        		System.out.println("received the packet 7");
             	
             	//write the data to the file
             	writeToFileData = packMan.getData(readData);
             	try {
-					ioMan.write(filename, writeToFileData);
+					ioMan.write(writeTo, writeToFileData);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
         		
-        	} //end read request loop
+        	}  //end read request loop
         	
         	
         } else { //a write request
         	
+        	BufferedInputStream reader = new BufferedInputStream
+					(new FileInputStream(ClientDirectory + origfile));
         	//byte buffer for incoming ack packets
         	byte[] ackData = new byte[4];
         	
-        	//to be incremented by 512 for each read of the file
-        	int bufferOffset = 0; 
-        	
-        	//receive the ack packet from the server
+        	//receive the ack packet from the server, should be block number 0
         	receivePacket = new DatagramPacket(ackData, ackData.length);
         	receivePacket(receivePacket, sendReceiveSocket);
         	
+        	//get block number from the ack and increment it
+        	int blockNumAsInt = packMan.twoBytesToInt(ackData[2], ackData[3]); 
+        	System.out.println(blockNumAsInt);
+    		blockNumAsInt++; //increment the block number
+    		System.out.println(blockNumAsInt);
+    		//convert int back to two bytes
+    		byte blockNum[] = packMan.intToBytes(blockNumAsInt);
+    		System.out.println(blockNum[0] + " " + blockNum[1]);
+        	
         	//byte buffer to be filled with data from local file
-        	byte readFromFileData[]; 
+        	byte readFromFileData[] = new byte[ioMan.getBufferSize()]; 
         	
         	//byte buffer for write requests
         	byte writeData[] = new byte[516]; 
         	
-        	//block number 1, to be used in sent udp write packet
-        	byte[] block1 = new byte[2]; 
-        	block1[0] = 0;
-        	block1[1] = 1; //block number 1
         	serverHost = receivePacket.getAddress(); //get the host address from the server
         	serverPort = receivePacket.getPort(); //get the port id
         	
-        	//read 512 bytes from local file and create a data packet to send these to-be-written bytes to the server
         	try {
-				readFromFileData = ioMan.read(filename, bufferOffset); //read 512 bytes from file
-				writeData = packMan.createData(readFromFileData, block1); //creates proper write data udp packet
-				
-        	} catch (IOException e) {
+				reader.read(readFromFileData, 0, ioMan.getBufferSize());
+				writeData = packMan.createData(readFromFileData, blockNum);
+				packMan.printTFTPPacketData(writeData);
+			} catch (IOException e1) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e1.printStackTrace();
 			}
-        	
-        	//increment the buffer read offset by 512
-        	bufferOffset += ioMan.getBufferSize(); 
         	
         	//send the packet containing the data to be written to the server
 			sendPacket = new DatagramPacket(writeData, writeData.length, serverHost, serverPort); 
         	sendPacket(sendPacket, sendReceiveSocket);
         	
         	//receive ack packets and send data until there is no more data to send
-			while (!packMan.lastPacket(writeData)) { 
+			while (!packMan.lastPacket(readFromFileData)) { 
         		
         		//wait to receive the acknowledgement just sent
         		//wait for a response from the server
@@ -204,22 +229,22 @@ public class Client { //the client class
         		receivePacket(receivePacket, sendReceiveSocket);
         		
         		//get the two-byte block number from the ack and convert it to an int
-            	int blockNumAsInt = packMan.twoBytesToInt(ackData[2], ackData[3]); 
+            	blockNumAsInt = packMan.twoBytesToInt(ackData[2], ackData[3]); 
+            	System.out.println(blockNumAsInt);
         		blockNumAsInt++; //increment the block number
+        		System.out.println(blockNumAsInt);
         		//convert int back to two bytes
-        		byte blockNum[] = packMan.intToBytes(blockNumAsInt);
+        		blockNum = packMan.intToBytes(blockNumAsInt);
+        		System.out.println(blockNum[0] + " " + blockNum[1]);
         		
         		//read 512 bytes from local file and create a data packet to send these to-be-written bytes to the server
         		try {
-    				readFromFileData = ioMan.read(filename, bufferOffset); //read 512 bytes from file
-    				writeData = packMan.createData(readFromFileData, blockNum); //creates proper write data udp packet
-            	} catch (IOException e) {
+    				reader.read(readFromFileData, 0, ioMan.getBufferSize());
+    				writeData = packMan.createData(readFromFileData, blockNum);
+    			} catch (IOException e1) {
     				// TODO Auto-generated catch block
-    				e.printStackTrace();
+    				e1.printStackTrace();
     			}
-        		
-        		//increment the buffer read offset by 512
-        		bufferOffset += ioMan.getBufferSize();
         		
         		//send data to-be-written on the server
         		sendPacket = new DatagramPacket(writeData, writeData.length, serverHost, serverPort); //the packet to be sent
@@ -281,15 +306,26 @@ public class Client { //the client class
     	}
     	
     	//prompt the user for a filename
-    	String restOfMsg = (Client.validReqInput(request) == 1) ? "reading from:" : "writing to:";
-    	System.out.println("Enter the name of the file you will be " + restOfMsg);
-    	System.out.println("Make sure to include the file's extension!");
-    	String filename = reader.readLine();
+    	String ofilename, filename;
+    	if(Client.validReqInput(request) == 1) { //read request
+    		System.out.println("Enter the name of the file you will be reading from "
+    				+ "(Make sure to include the file's extension!):");
+    		filename = reader.readLine();
+    		ofilename = "";
+    	} else { //write request
+    		System.out.println("Enter the name of the file you will be writing to "
+    				+ "(Make sure to include the file's extension!): ");
+    		filename = reader.readLine();
+    		System.out.println("Enter the name of the local file from which the "
+    				+ "write data will be read from: ");
+    		ofilename = reader.readLine();
+    	}
     	System.out.print("Sending your request");
     	
     	Client c = new Client(); 
-        c.sendAndReceive(Client.validReqInput(request), Client.validModeInput(mode), filename);
+        c.sendAndReceive(Client.validReqInput(request), Client.validModeInput(mode), filename, ofilename);
     
     } //end of main
  
 } //end of client class
+
