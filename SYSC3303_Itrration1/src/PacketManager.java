@@ -246,7 +246,7 @@ public class PacketManager {
 	 * @param host String: The host the message is received from
 	 * @param isSending boolean: Used to identify if it is a read or write request
 	 */
-	static public void displayPacketInfo(DatagramPacket dPacket, String host, boolean isSending) {
+	public void displayPacketInfo(DatagramPacket dPacket, String host, boolean isSending) {
 		String direction = isSending ? "sent" : "received";
 		String preHost   = isSending ? "To" : "From";
 
@@ -275,8 +275,10 @@ public class PacketManager {
 		IOException invalid = new IOException(); 
 
 		//checks leading 0 byte and read/write request byte
+		//if(msg[0] != 0 || (msg[1] != 1 && msg[1] != 2)) {
 		if(msg[0] != 0 || (msg[1] != 1 && msg[1] != 2)) { 
-			throw invalid; 
+
+			//throw invalid; 
 		} 
 
 		//checks if final byte is 0
@@ -303,3 +305,4 @@ public class PacketManager {
 		return msg[1]; 
 	}  
 }
+	
