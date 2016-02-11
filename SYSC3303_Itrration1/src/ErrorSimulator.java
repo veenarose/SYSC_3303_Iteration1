@@ -13,7 +13,7 @@ public class ErrorSimulator {
 	static DatagramSocket receiveSocket; //socket which receives requests from client on port 1024
 	static DatagramSocket sendReceiveSocket; //socket which sends and receives UDP packets from the server
 	DatagramPacket sendPacket; //packet which relays request from client to server
-	static PacketManager packetManager; // The object that controls all the packets transferred
+	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
 	public ErrorSimulator() {
 		try {
 			//construct a datagram socket and bind it to any available port on the local machine
@@ -29,7 +29,7 @@ public class ErrorSimulator {
 	//method which: 
 	//receives requests from the client and responses from the server
 	//sends requests to the server and responses to the client
-	public void receiveAndSend() {
+	public static void receiveAndSend() {
 		byte data[] = new byte[100];
 		int clientPort; //port from which receiving client packet came from
 		DatagramPacket receiveSendPacket = new DatagramPacket(data, data.length);
@@ -144,15 +144,15 @@ public class ErrorSimulator {
 			e.printStackTrace();         
 			System.exit(1);
 		}
-
-		//set the port for the packet to be that of the servers receive socket
-		receiveSendPacket.setPort(69);
 		System.out.println("Setting up invalid packet");
-
+		
 		String s = "Error Simulator";
 		//print out data from socket to be relayed to the server
 		packetManager.displayPacketInfo(receiveSendPacket, s, true);
 
+		//set the port for the packet to be that of the servers receive socket
+		receiveSendPacket.setPort(69);
+		
 		//relay the socket to the server
 		try {
 			sendReceiveSocket.send(receiveSendPacket);
@@ -161,7 +161,7 @@ public class ErrorSimulator {
 			System.exit(1);
 		}
 		System.out.println("Invalid Packet Sent");
-
+		
 		return receiveSendPacket;
 	} 
 
@@ -206,7 +206,7 @@ public class ErrorSimulator {
 		if (receiveSendPacket.getData()[1] == 1){// Read Request
 			receiveSendPacket.getData()[1] = 8; //setting an invalid opcode
 			System.out.println("Containing: "+ new String (receiveSendPacket.getData()));
-			//receiveServerPacket();
+			receiveServerPacket();
 		}else if (receiveSendPacket.getData()[1] == 2){// Write Request
 			receiveSendPacket.getData()[1] = 8; //setting an invalid opcode
 			System.out.println("Containing: "+ new String (receiveSendPacket.getData()));
@@ -262,21 +262,38 @@ public class ErrorSimulator {
 		}
 	}
 
-	public static void main( String args[] )
+	public void startErr()
 	{
 		@SuppressWarnings("resource")
 		Scanner keyboard = new Scanner(System.in);
-		ErrorSimulator h = new ErrorSimulator();
-
-		System.out.println("Welcome to Error Simulator.");
-		System.out.println("\nChoose your mode:");
-		System.out.println("	(1) Error Code 4");
-		System.out.println("	(2) Error Code 5");
-		System.out.println("	(3) No error");
+		boolean validInput;
+		String input;
 		
-		for(int j = 0; j<11; j++) {
-			String input = keyboard.next();
-			if (input.equals("1")){
+		do
+		{
+			validInput = true;
+			System.out.println("Welcome to Error Simulator.");
+			System.out.println("\nChoose your mode:");
+			System.out.println("	(1) Error Code 4");
+			System.out.println("	(2) Error Code 5");
+			System.out.println("	(3) No error");
+			input = keyboard.next();
+			
+			if(input.equals("1") || input.equals("2") || input.equals("3")){
+				validInput = true;
+			}else{
+				System.out.println("Please enter a value from 1 to 3, thank you");
+				validInput = false;
+			}
+			if(input.equals("3")){
+				System.out.println("Error simulator not running..");
+				receiveAndSend(); //receive and send requests/responses
+			}
+		} while (!validInput);
+		
+		if (input.equals("1")){
+			do
+			{
 				System.out.println("\nYou have chosen error code 4, please select an error from below.");
 				System.out.println("	(1)Invalid read request (RRQ)");
 				System.out.println("	(2)Invalid write request (WRQ)");
@@ -322,11 +339,14 @@ public class ErrorSimulator {
 						break;
 					}
 				}
-			}else if(input.equals("3")){
-				System.out.println("Error simulator not running..");
-				h.receiveAndSend(); //receive and send requests/responses
-			}
+				
+			}while (!validInput);
 		}
 	}
-
+	
+	public static void main( String args[] )
+	{
+		ErrorSimulator h = new ErrorSimulator();
+		h.startErr();
+	}
 }
