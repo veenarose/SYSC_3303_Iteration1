@@ -13,6 +13,9 @@ public class ErrorSimulator {
 	static DatagramSocket receiveSocket; //socket which receives requests from client on port 1024
 	static DatagramSocket sendReceiveSocket; //socket which sends and receives UDP packets from the server
 	DatagramPacket sendPacket; //packet which relays request from client to server
+	private int errorSelected;
+	private int errorData;
+	private int errorAck;
 	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
 	public ErrorSimulator() {
 		try {
@@ -24,6 +27,9 @@ public class ErrorSimulator {
 			se.printStackTrace();
 			System.exit(1);
 		}
+		errorSelected = -1;
+		errorData = -1;
+		errorAck = -1;
 	}
 
 	//method which: 
@@ -40,14 +46,12 @@ public class ErrorSimulator {
 			e.printStackTrace();         
 			System.exit(1);
 		}
-
-		//print out client request info
-		System.out.println("Intermediate Host: Packet received:");
-		System.out.println("From host: " + receiveSendPacket.getAddress());
 		clientPort = receiveSendPacket.getPort();
-		System.out.println("Host port: " + clientPort);
 		int len = receiveSendPacket.getLength();
-		System.out.println("Length: " + len);
+
+		String host = "Error Simulator";
+		//display packet received info from the Client to the console
+		packetManager.displayPacketInfo(receiveSendPacket, host, false);
 		System.out.print("Containing: ");
 
 		//form a string from the byte array and print out the byte array
@@ -65,12 +69,8 @@ public class ErrorSimulator {
 
 		//set the port for the packet to be that of the servers receive socket
 		receiveSendPacket.setPort(69);
-
-		//print out data from socket to be relayed to the server
-		System.out.println("Intermediate Host: Packet being sent to sever:");
-		System.out.println("To host: " + receiveSendPacket.getAddress());
-		System.out.println("Destination host port: " + receiveSendPacket.getPort());
-		System.out.println("Length: " + len);
+		//display packet info being sent to Server to the console
+		packetManager.displayPacketInfo(receiveSendPacket, host, true);
 		System.out.print("Containing: ");
 		System.out.println(new String(receiveSendPacket.getData(),0,len));
 
@@ -81,7 +81,6 @@ public class ErrorSimulator {
 			e.printStackTrace();
 			System.exit(1);
 		}
-		System.out.println("Intermediate Host: Packet sent to server.\n");
 
 		//create packet in which to store server response
 		byte respData[] = new byte[100];
@@ -94,28 +93,16 @@ public class ErrorSimulator {
 			e.printStackTrace();         
 			System.exit(1);
 		}
-
-		//print out the received packet's information
-		System.out.println("Intermediate Host: Response received:");
-		System.out.println("From host: " + responsePacket.getAddress());
-		System.out.println("Host port: " + responsePacket.getPort());
 		len = responsePacket.getLength();
-		System.out.println("Length: " + len);
-		System.out.print("Containing: ");
-
+		packetManager.displayPacketInfo(responsePacket, host, false);
 		//form a string from the byte array.
 		String response = new String(data,0,len);   
 		System.out.println(response + "\n");
 
 		//set the response packet's port destination to that of the client's sendReceive socket
 		responsePacket.setPort(clientPort);
-
-		//print out response info to be relayed to the client
-		System.out.println("Intermediate Host: Response being relayed to client:");
-		System.out.println("To host: " + responsePacket.getAddress());
-		System.out.println("Destination host port: " + responsePacket.getPort());
 		len = responsePacket.getLength();
-		System.out.println("Length: " + len);
+		packetManager.displayPacketInfo(responsePacket, host, true);
 		System.out.print("Containing: ");
 		System.out.println(new String(responsePacket.getData(),0,len));
 
@@ -129,7 +116,6 @@ public class ErrorSimulator {
 			e.printStackTrace();         
 			System.exit(1);
 		}
-		System.out.println("Response from server relayed to client.\n");
 
 	}
 
@@ -144,15 +130,27 @@ public class ErrorSimulator {
 			e.printStackTrace();         
 			System.exit(1);
 		}
-		System.out.println("Setting up invalid packet");
-		
+		int len = receiveSendPacket.getLength();
+		System.out.println("Setting up invalid packet..");
+
 		String s = "Error Simulator";
 		//print out data from socket to be relayed to the server
 		packetManager.displayPacketInfo(receiveSendPacket, s, true);
-
+		System.out.print("Containing: ");
+		String received = new String(data,0,len);   
+		System.out.println(received);
+		System.out.print("As bytes: [");
+		for(int i = 0; i < len; i++) {
+			if (i == len-1) {
+				System.out.print(data[i]);
+			} else {
+				System.out.print(data[i] + ",");
+			}
+		}
+		System.out.println("]");
 		//set the port for the packet to be that of the servers receive socket
 		receiveSendPacket.setPort(69);
-		
+
 		//relay the socket to the server
 		try {
 			sendReceiveSocket.send(receiveSendPacket);
@@ -160,8 +158,8 @@ public class ErrorSimulator {
 			e.printStackTrace();
 			System.exit(1);
 		}
-		System.out.println("Invalid Packet Sent");
-		
+		System.out.println("\nInvalid Packet Sent");
+
 		return receiveSendPacket;
 	} 
 
@@ -201,16 +199,21 @@ public class ErrorSimulator {
 	/*
 	 * Creates an invalid read/write request packet
 	 */
-	public static void createInvalidPacket(){
+	public void createInvalidPacket(){
 		DatagramPacket receiveSendPacket = receiveClientPacket();
-		if (receiveSendPacket.getData()[1] == 1){// Read Request
+		if (errorSelected == 1){
+			System.out.println("Creating an invalid opcode Packet.");
 			receiveSendPacket.getData()[1] = 8; //setting an invalid opcode
 			System.out.println("Containing: "+ new String (receiveSendPacket.getData()));
 			receiveServerPacket();
-		}else if (receiveSendPacket.getData()[1] == 2){// Write Request
-			receiveSendPacket.getData()[1] = 8; //setting an invalid opcode
-			System.out.println("Containing: "+ new String (receiveSendPacket.getData()));
-			receiveServerPacket();
+		}
+		if(errorSelected == 2){
+			System.out.println("Creating an invalid mode Packet.");
+			//String invalidMode = "invalidMode";
+			//byte[] mode = invalidMode.getBytes();
+		}
+		if (errorSelected == 3){
+
 		}
 	}
 
@@ -262,89 +265,144 @@ public class ErrorSimulator {
 		}
 	}
 
-	public void startErr()
+	public void startErr() throws IOException
 	{
-		@SuppressWarnings("resource")
 		Scanner keyboard = new Scanner(System.in);
 		boolean validInput;
-		String input;
-		
+		String inputMenu, inputCode, inputData, inputAck;
+		//get user to simulate error or without errors
 		do
 		{
 			validInput = true;
 			System.out.println("Welcome to Error Simulator.");
 			System.out.println("\nChoose your mode:");
-			System.out.println("	(1) Error Code 4");
-			System.out.println("	(2) Error Code 5");
-			System.out.println("	(3) No error");
-			input = keyboard.next();
-			
-			if(input.equals("1") || input.equals("2") || input.equals("3")){
+			System.out.println("	(1) - Error Code 4");
+			System.out.println("	(2) - Error Code 5");
+			System.out.println("	(3) - No error");
+			inputMenu = keyboard.next();
+
+			if(inputMenu.equals("1") || inputMenu.equals("2") || inputMenu.equals("3")){
 				validInput = true;
 			}else{
 				System.out.println("Please enter a value from 1 to 3, thank you");
 				validInput = false;
 			}
-			if(input.equals("3")){
+			if (inputMenu.equals("2")){
+				System.out.println("Error code 5 (UNKNOWN TID) simulated.\n");
+			}
+			if(inputMenu.equals("3")){
 				System.out.println("Error simulator not running..");
 				receiveAndSend(); //receive and send requests/responses
 			}
 		} while (!validInput);
-		
-		if (input.equals("1")){
+
+		//simulate error code 4
+		if (inputMenu.equals("1")){
 			do
 			{
 				System.out.println("\nYou have chosen error code 4, please select an error from below.");
-				System.out.println("	(1)Invalid read request (RRQ)");
-				System.out.println("	(2)Invalid write request (WRQ)");
-				System.out.println("	(3)Client sends invalid DATA ");
-				System.out.println("	(4)Client sends invalid ACK");
-				System.out.println("	(5)Server sends invalid DATA");
-				System.out.println("	(6)Server sends invalid ACK");
-				System.out.println("	Please type X to exit");
+				System.out.println("	(1) - Invalid opcode");
+				System.out.println("	(2) - Invalid mode");
+				System.out.println("	(3) - Missing filename");
+				System.out.println("	(4) - No termination after ending 0");
+				System.out.println("	(5) - No ending 0");
+				System.out.println("	(6) - Invalid DATA");
+				System.out.println("	(7) - Invalid ACK");
+				inputCode = keyboard.next();
 
-				String input1 = keyboard.next();
-				switch(input1){
-					case "X":{
-						break;
-					} 
-					case "1":{
-						System.out.println("You selected Invalid RRQ\n");
-						createInvalidPacket();
-						break;
+				errorSelected = Integer.valueOf(inputCode);
+
+				if ((errorSelected < 1) || (errorSelected > 7)){
+					System.out.println("Please enter a value from 1 to 5");
+					validInput = false;
+				}
+				switch(errorSelected){
+				case 1:{
+					System.out.println("Sending invalid opcode.\n");
+					createInvalidPacket();
+					break;
+				}
+				case 2:{
+					System.out.println("Sending invalid mode.\n");
+					createInvalidPacket();
+					break;
+				}
+				case 3:{
+					System.out.println("Missing filename error.\n");
+					createInvalidPacket();
+					break;
+				}
+				case 4:{
+					System.out.println("No termination on packet error.\n");
+					createInvalidPacket();
+					break;
+				}
+				case 5:{
+					System.out.println("Invalid ending on packet.\n");
+					createInvalidPacket();
+					break;
+				}
+				}
+			}while (!validInput);
+			if (errorSelected == 6){
+				do
+				{
+					System.out.println("\nWhich host is going to send invalid DATA.");
+					System.out.println("	(1) - Client sends DATA");
+					System.out.println("	(2) - Server sends DATA");
+					inputData = keyboard.next();
+
+					errorData = Integer.valueOf(inputData);
+					if ((errorData < 1) || (errorData > 2)){
+						System.out.println("Please enter a value from 1 to 2");
+						validInput = false;
 					}
-					case "2":{
-						System.out.println("You selected Invalid WRQ\n");
-						createInvalidPacket();
-						break;
-	
-					}case "3":{
-						System.out.println("You selected Invalid DATA\n");
+					switch(errorData){
+					case 1:{
+						System.out.println("Client sending invalid DATA..\n");
 						createInvalidDataPacket();
 						break;
-	
-					}case "4":{
-						System.out.println("You selected Invalid ACK\n");
-						createInvalidAckPacket();
-						break;
-	
-				 	}case "5":{
-						System.out.println("You chose Server sends invalid DATA\n");
+					}
+					case 2:{
+						System.out.println("Server sending invalid DATA..\n");
 						createInvalidServerDataPacket();
 						break;
-	
-					}case "6":{
-						System.out.println("You chose Server sends invalid ACK\n");
+					}
+					}
+				}while (!validInput);
+			}
+			if (errorSelected == 7){
+				do
+				{
+					System.out.println("\nWhich host is going to send invalid ACK.");
+					System.out.println("	(1) - Client sends ACK");
+					System.out.println("	(2) - Server sends ACK");
+					inputAck = keyboard.next();
+					
+					errorAck = Integer.valueOf(inputAck);
+					if ((errorAck < 1) || (errorAck > 2)){
+						System.out.println("Please enter a value from 1 to 2");
+						validInput = false;
+					}
+					switch(errorAck){
+					case 1:{
+						System.out.println("Client sending invalid ACK..\n");
+						createInvalidAckPacket();
+						break;
+					}
+					case 2:{
+						System.out.println("Server sending invalid ACK..\n");
 						createInvalidServerAckPacket();
 						break;
 					}
-				}
-				
-			}while (!validInput);
+					}
+				}while (!validInput);
+			}	
 		}
+		keyboard.close();
 	}
-	
-	public static void main( String args[] )
+
+	public static void main( String args[] ) throws IOException
 	{
 		ErrorSimulator h = new ErrorSimulator();
 		h.startErr();
