@@ -245,7 +245,7 @@ public class ErrorSimulator {
 	}
 	
 	/*
-	 * Creates an invalid Client and Server  DATA packet 
+	 * Creates an invalid Client and Server DATA packet 
 	 */
 	private void createInvalidDataPacket(){
 		DatagramPacket receivePacket = receiveClientPacket();
@@ -257,7 +257,7 @@ public class ErrorSimulator {
 	}
 	
 	/*
-	 * Creates an invalid Client ACK packet 
+	 * Creates an invalid Client and Server ACK packet 
 	 */
 	private void createInvalidAckPacket(){
 		DatagramPacket receiveSendPacket = receiveClientPacket();
