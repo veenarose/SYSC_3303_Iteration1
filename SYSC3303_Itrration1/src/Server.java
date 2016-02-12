@@ -148,7 +148,10 @@ public class Server{
 				} catch(IOException e) {
 					error("IOException on write request");
 				}
-			} 
+			} else {
+				// Not read or write request do nothing
+				handleErrReq();
+			}
 		}
 
 		/**
@@ -301,6 +304,20 @@ public class Server{
 				}
 			}
 			print("File read Succesfuly");
+		}
+		
+		private void handleErrReq(){
+			byte[] errCode = {0,4};
+			String errMsg = "Invalid Request Type";
+			byte[] err = packetManager.createError(errCode, errMsg);
+			
+			packet = new DatagramPacket(err,err.length,clientAddr,clientPort);
+			
+			try {
+				socket.send(packet);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
