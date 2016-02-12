@@ -137,11 +137,11 @@ public class Server{
 
 		public void run(){
 			if (mode != "octet" || mode != "netascii"){
-				handleErrReq(0);
+				handleErrReq(0 ,clientAddr, clientPort);
 			}
 
 			if (filename == ""){
-				handleErrReq(1);
+				handleErrReq(1 ,clientAddr, clientPort);
 			}
 
 			if (packetType == 1){
@@ -163,14 +163,14 @@ public class Server{
 			} 
 			else if(packetType == 100) {
 				//no termination after 0
-				handleErrReq(3);
+				handleErrReq(3 ,clientAddr, clientPort);
 			} 
 			else if(packetType == 200){
 				//Final byte is not 0
-				handleErrReq(4);
+				handleErrReq(4 ,clientAddr, clientPort);
 			} else {
 				// Not read or write request do nothing
-				handleErrReq(2);
+				handleErrReq(2 ,clientAddr, clientPort);
 			}
 		}
 
@@ -185,11 +185,12 @@ public class Server{
 			byte[] inboundDatapacket = new byte[ioManager.getBufferSize() + 4];
 			byte[] rawData; 
 			short blockNum = 1;
-			String filename = packetManager.getFilename(contents); print(" 4 ");
-			System.out.println("Attempting to read from file: " + filename);
+			String filename = packetManager.getFilename(contents); 
+			print("4");
+			print("Attempting to read from file: " + filename);
 
 			File writeTo = new File(ServerDirectory + filename);
-			System.out.println("writeTo exists?: " +  writeTo.exists());
+			print("writeTo exists?: " +  writeTo.exists());
 
 			byte[] ack = packetManager.createAck(new byte[]{0,0,0,0});
 
@@ -203,7 +204,13 @@ public class Server{
 				/* wait for next packet */
 				packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
 				socket.receive(packet);
-
+				
+				//If Packet arrives from an unknown TID
+				if(verifyClient(packet) == false){
+					handleErrReq(5 , packet.getAddress(), packet.getPort());
+					continue; //go back and wait for client packet
+				}
+				
 				ack = packetManager.createAck(inboundDatapacket);
 
 				rawData = packetManager.getData(inboundDatapacket);
@@ -231,12 +238,10 @@ public class Server{
 		}
 
 		private void handleReadReq() throws IOException {
-
-			/* Currently assumes requests are NETASCII */
 			byte[] data; 
 			short blockNum = 1; print(" 3 ");
 			String filename = packetManager.getFilename(contents); print(" 4 ");
-			System.out.println("Attempting to read from file: " + filename);
+			print("Attempting to read from file: " + filename);
 
 			BufferedInputStream reader = new BufferedInputStream
 					(new FileInputStream(ServerDirectory + filename));
@@ -248,12 +253,11 @@ public class Server{
 			byte[] block = buffer.array();
 
 			do{
-				data = new byte[512]; print(" 1 ");
+				data = new byte[512];
 				print(" 6 ");
 				/* get data from file and configure the offset*/
 
 				reader.read(data, 0, data.length);
-
 
 				print(" 7 ");
 				/* place data into packet to be sent to client */
@@ -274,6 +278,10 @@ public class Server{
 				/* wait to receive ACK confirmation */
 				socket.receive(packet);
 
+				if(verifyClient(packet) == false){
+					handleErrReq(5, packet.getAddress(), packet.getPort());
+				}
+				
 				print(" 11 ");
 				/* confirm validity of ACK */
 				if(packetManager.isAckPacket(packet.getData())){
@@ -326,17 +334,24 @@ public class Server{
 			print("File read Succesfuly");
 		}
 
-		private void handleErrReq(int i){
+		/**
+		 * Sends an Error Packet to the fiven Address
+		 * @param i	Error message ID
+		 * @param addr Address to send the error
+		 * @param port Port
+		 */
+		private void handleErrReq(int i, InetAddress addr, int port){
 			byte[] errCode = {0,4};
 			String[] errMsg = {	"Invalid Mode", 
 					"Filename not found", 
 					"Invalid Request Type", 
 					"Packet message continues after terminating 0",
-					"Packet did not terminate with 0"
+					"Packet did not terminate with 0",
+					"Error has occoured"
 			};
 
 			byte[] err = packetManager.createError(errCode, errMsg[i]);
-			packet = new DatagramPacket(err,err.length,clientAddr,clientPort);
+			packet = new DatagramPacket(err,err.length,addr,port);
 
 			try {
 				socket.send(packet);
@@ -345,6 +360,17 @@ public class Server{
 				e.printStackTrace();
 			}
 		}
+		
+		/**
+		 * Verifies that that client is the original client which the thread was made for
+		 * @param p Packet received thats is to be verified
+		 * @return boolean
+		 */
+		private boolean verifyClient(DatagramPacket p){
+			if(p.getAddress() == clientAddr && p.getPort() == clientPort){
+				return true;
+			}
+			return false;
+		}
 	}
-
 }

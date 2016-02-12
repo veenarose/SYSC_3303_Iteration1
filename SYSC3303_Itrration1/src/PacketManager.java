@@ -290,34 +290,35 @@ public class PacketManager {
 	 */ 
 	public int validateRequest(byte[] msg) throws IOException {
 		IOException invalid = new IOException(); 
-
+		int zeroCount = 0; 	
+		String[] sfn;
+		byte[] delimiter = {0};
+		
 		//checks leading 0 byte and read/write request byte
-		//if(msg[0] != 0 || (msg[1] != 1 && msg[1] != 2)) {
-		if(msg[0] != 0 || (msg[1] != 1 && msg[1] != 2)) { 
-
-			//throw invalid; 
-		} 
+		if(msg[0] != 0 || (msg[1] != 1 && msg[1] != 2)) {} 
 
 		//checks if final byte is 0
 		if(msg[msg.length-1] != 0) { 
 			return 200;
-		} 
-
-
-		int zeroCount = 0; 
+		}
 
 		//makes sure there is a 0 byte between the filename and mode bytes 
 		//checks if bytes are valid ascii values between 0 and 128 
 		for(int i=2; i< msg.length-1; i++) { 
-			//System.out.println("msg 1 val: " + msg[i]); 
 			if(msg[i] == 0) { zeroCount++; } 
 			if(msg[i] >= 128) { 
 				throw invalid;
 			} 
 			i++; 
 		} if(zeroCount <= 1) { throw invalid; } 
-
-
+		
+		/* Split the string at byte 0 to form 2 pieces: filename, mode*/
+		sfn = new String(msg).split(new String(delimiter));
+		
+		if (sfn.length > 3){
+			return 200;
+		}
+		
 		//returns a value which is either a 1 for a read request or a 2 for a write request 
 		return msg[1]; 
 	}  
