@@ -285,6 +285,7 @@ public class PacketManager {
 	 *  
 	 * @param msg Data to be validated 
 	 * @return Int representing the type of message 1 = Read, 2 = Write 
+	 * 		   100 = no termination after 0, 200 = no terminating 0 
 	 * @throws IOException 
 	 */ 
 	public int validateRequest(byte[] msg) throws IOException {
@@ -299,7 +300,7 @@ public class PacketManager {
 
 		//checks if final byte is 0
 		if(msg[msg.length-1] != 0) { 
-			throw invalid; 
+			return 200;
 		} 
 
 

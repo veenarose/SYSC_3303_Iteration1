@@ -13,18 +13,17 @@ import java.util.Date;
 
 public class Server{
 
-	private DatagramSocket receiveSocket, sendSocket;
+	private DatagramSocket receiveSocket;
 	private PacketManager packetManager;
 	private IOManager ioManager;
-	private int readWrite;
 	private static boolean serverRuning = true;
 	private ProfileData pd = new ProfileData();
-	
+
 	private final static String ServerDirectory =  
 			(System.getProperty("user.dir") + "/src/ServerData/");//the directory path of the server files
 	private final static String[] files = 
 		{"originServer1.txt", "originServer2.txt"}; //names of files local to the client
-    //private Set<String> fileNames = new HashSet<String>(); //java set to store file names
+	//private Set<String> fileNames = new HashSet<String>(); //java set to store file names
 
 	/*
 	 * Server constructor. Creates new PacketManager and IOManager classes to 
@@ -35,7 +34,7 @@ public class Server{
 		packetManager = new PacketManager();
 		ioManager = new IOManager();
 		byte[] data = new byte[512];
-		
+
 		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
 
 		try{
@@ -45,7 +44,7 @@ public class Server{
 					receiveSocket.receive(receivePacket);//receive the request from the client
 					print("Packet recieved from client at " + getTimestamp());
 					//fileNames.add(files[0]);
-		            //fileNames.add(files[1]);
+					//fileNames.add(files[1]);
 					Response r = new Response(receivePacket); //dispatch new thread to handle the response, pass to it the request packet
 				} catch(IOException e) {
 					e.printStackTrace();         
@@ -81,7 +80,7 @@ public class Server{
 	public void print(String s){
 		System.out.println(s);
 	}
-	
+
 	/*
 	 * Response class. Extends thread, handles requests coming into the server
 	 * and generates an appropriate response. Each Response class continues
@@ -89,13 +88,16 @@ public class Server{
 	 *
 	 */
 	class Response extends Thread{
+
 		protected DatagramSocket socket;
 		protected DatagramPacket packet;
 		protected DatagramSocket clientSocket;
 		protected InetAddress clientAddr;
 		protected int clientPort;
 		protected int packetType = -1;
+		protected String mode;
 		protected byte[] contents;
+		protected String filename = "";
 
 		/**
 		 * Takes a DatagramPacket as input. Opens a new Socket for communication with client
@@ -111,7 +113,12 @@ public class Server{
 
 			try {
 				socket = new DatagramSocket();
-				packetType = packetManager.validateRequest(p.getData());
+
+				//Error handling data collection
+				packetType = packetManager.validateRequest(contents);
+				mode = packetManager.getMode(contents);
+				filename = packetManager.getFilename(contents);
+
 			} catch (SocketException e){
 				error("Socket Exception");
 				e.printStackTrace();
@@ -129,6 +136,13 @@ public class Server{
 		}
 
 		public void run(){
+			if (mode != "octet" || mode != "netascii"){
+				handleErrReq(0);
+			}
+
+			if (filename == ""){
+				handleErrReq(1);
+			}
 
 			if (packetType == 1){
 				/* READ Request */
@@ -146,9 +160,17 @@ public class Server{
 				} catch(IOException e) {
 					error("IOException on write request");
 				}
+			} 
+			else if(packetType == 100) {
+				//no termination after 0
+				handleErrReq(3);
+			} 
+			else if(packetType == 200){
+				//Final byte is not 0
+				handleErrReq(4);
 			} else {
 				// Not read or write request do nothing
-				handleErrReq();
+				handleErrReq(2);
 			}
 		}
 
@@ -157,7 +179,7 @@ public class Server{
 		 * the operations necessary to finish the write request
 		 * @throws IOException
 		 */
-		
+
 		private void handleWriteReq()throws IOException{
 			print("1");
 			byte[] inboundDatapacket = new byte[ioManager.getBufferSize() + 4];
@@ -165,51 +187,51 @@ public class Server{
 			short blockNum = 1;
 			String filename = packetManager.getFilename(contents); print(" 4 ");
 			System.out.println("Attempting to read from file: " + filename);
-			
+
 			File writeTo = new File(ServerDirectory + filename);
-        	System.out.println("writeTo exists?: " +  writeTo.exists());
-			
-        	byte[] ack = packetManager.createAck(new byte[]{0,0,0,0});
-        	
-        	do{
-        		rawData = new byte[ioManager.getBufferSize()];
-        		/* create and send ACK packet to client */
+			System.out.println("writeTo exists?: " +  writeTo.exists());
+
+			byte[] ack = packetManager.createAck(new byte[]{0,0,0,0});
+
+			do{
+				rawData = new byte[ioManager.getBufferSize()];
+				/* create and send ACK packet to client */
 				packet = new DatagramPacket(ack, ack.length, clientAddr, clientPort);
 				socket.send(packet);
-				
+
 				print("9");
 				/* wait for next packet */
 				packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
 				socket.receive(packet);
-				
+
 				ack = packetManager.createAck(inboundDatapacket);
-				
+
 				rawData = packetManager.getData(inboundDatapacket);
 				packetManager.printTFTPPacketData(inboundDatapacket);
 				packetManager.printTFTPPacketData(rawData);
 				ioManager.write(writeTo, rawData);
-				
+
 			} while(!(packetManager.lastPacket(rawData)));
-			
-        	/* create and send ACK packet to client */
+
+			/* create and send ACK packet to client */
 			packet = new DatagramPacket(ack, ack.length, clientAddr, clientPort);
 			socket.send(packet);
-			
+
 			print("10");
 			/* wait for next packet */
 			packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
 			socket.receive(packet);
-			
+
 			ack = packetManager.createAck(inboundDatapacket);
-			
+
 			rawData = packetManager.getData(inboundDatapacket);
 			ioManager.write(writeTo, rawData);
-			
+
 			print("write complete!!!");
 		}
-		
+
 		private void handleReadReq() throws IOException {
-			
+
 			/* Currently assumes requests are NETASCII */
 			byte[] data; 
 			short blockNum = 1; print(" 3 ");
@@ -218,7 +240,7 @@ public class Server{
 
 			BufferedInputStream reader = new BufferedInputStream
 					(new FileInputStream(ServerDirectory + filename));
-			
+
 			print(" 5 ");
 			/* Convert block number from short to byte[] */
 			ByteBuffer buffer = ByteBuffer.allocate(2);
@@ -229,21 +251,21 @@ public class Server{
 				data = new byte[512]; print(" 1 ");
 				print(" 6 ");
 				/* get data from file and configure the offset*/
-				
+
 				reader.read(data, 0, data.length);
-				
+
 
 				print(" 7 ");
 				/* place data into packet to be sent to client */
 				packet = new DatagramPacket(packetManager.createData(data, block),
-											packetManager.createData(data, block).length,
-											clientAddr,
-											clientPort);
-				
+						packetManager.createData(data, block).length,
+						clientAddr,
+						clientPort);
+
 				print(" 8 ");
 				/* send packet to client */
 				socket.send(packet);
-				
+
 				print(" 9 ");
 				/* iterate server side block number */
 				blockNum++;
@@ -251,7 +273,7 @@ public class Server{
 				print(" 10 ");
 				/* wait to receive ACK confirmation */
 				socket.receive(packet);
-				
+
 				print(" 11 ");
 				/* confirm validity of ACK */
 				if(packetManager.isAckPacket(packet.getData())){
@@ -268,7 +290,7 @@ public class Server{
 					}
 				}
 				/*else if(packetManager.validateRequest(packet.getData()) == 5){
-					
+
 					//TODO handle error packets
 					break;
 				} else {
@@ -281,9 +303,9 @@ public class Server{
 			reader.read(data, 0, data.length);
 			reader.close();
 			packet = new DatagramPacket(packetManager.createData(data, block),
-										packetManager.createData(data, block).length,
-										clientAddr,
-										clientPort);
+					packetManager.createData(data, block).length,
+					clientAddr,
+					clientPort);
 			socket.send(packet);
 			blockNum++;
 
@@ -303,14 +325,19 @@ public class Server{
 			}
 			print("File read Succesfuly");
 		}
-		
-		private void handleErrReq(){
+
+		private void handleErrReq(int i){
 			byte[] errCode = {0,4};
-			String errMsg = "Invalid Request Type";
-			byte[] err = packetManager.createError(errCode, errMsg);
-			
+			String[] errMsg = {	"Invalid Mode", 
+					"Filename not found", 
+					"Invalid Request Type", 
+					"Packet message continues after terminating 0",
+					"Packet did not terminate with 0"
+			};
+
+			byte[] err = packetManager.createError(errCode, errMsg[i]);
 			packet = new DatagramPacket(err,err.length,clientAddr,clientPort);
-			
+
 			try {
 				socket.send(packet);
 			} catch (IOException e) {
@@ -319,5 +346,5 @@ public class Server{
 			}
 		}
 	}
-	
+
 }
