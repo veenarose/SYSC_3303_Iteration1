@@ -3,8 +3,6 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
 
 //Server.java
 //This class is the server for assignment 1.
@@ -20,7 +18,7 @@ public class Server{
 	private IOManager ioManager;
 	private int readWrite;
 	private static boolean serverRuning = true;
-	
+	private ProfileData pd = new ProfileData();
 	
 	private final static String ServerDirectory =  
 			(System.getProperty("user.dir") + "/src/ServerData/");//the directory path of the server files
@@ -41,7 +39,7 @@ public class Server{
 		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
 
 		try{
-			receiveSocket = new DatagramSocket(1024); //socket listening on port 1024
+			receiveSocket = new DatagramSocket(pd.getServerPort()); //socket listening on port 1025
 			while(serverRuning){
 				try {
 					receiveSocket.receive(receivePacket);//receive the request from the client
@@ -68,7 +66,7 @@ public class Server{
 	 * Makes time stamp of current time as YYYY.MM.DD.HH.MM.SS
 	 * @return String representation of time stamp
 	 */
-	public static String getTimestamp(){
+	public String getTimestamp(){
 		return new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
 	}
 
@@ -316,6 +314,7 @@ public class Server{
 			try {
 				socket.send(packet);
 			} catch (IOException e) {
+
 				e.printStackTrace();
 			}
 		}

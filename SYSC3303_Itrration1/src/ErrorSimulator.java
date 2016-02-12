@@ -18,13 +18,14 @@ public class ErrorSimulator {
 	private int errorData;
 	private int errorAck;
 	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
+	private static ProfileData pd = new ProfileData();
 	
 	public ErrorSimulator() {
 		try {
 			//construct a datagram socket and bind it to any available port on the local machine
 			sendReceiveSocket = new DatagramSocket();
 			//construct a datagram socket and bind it to port 1024 on the local machine
-			receiveSocket = new DatagramSocket(68);
+			receiveSocket = new DatagramSocket(pd.getIntermediatePort());
 		} catch (SocketException se) {   //can't create a socket.
 			se.printStackTrace();
 			System.exit(1);
@@ -58,7 +59,7 @@ public class ErrorSimulator {
 		packetManager.printTFTPPacketData(receiveSendPacket.getData());
 		
 		//set the port for the packet to be that of the servers receive socket
-		receiveSendPacket.setPort(69);
+		receiveSendPacket.setPort(pd.getServerPort());
 		//display packet info being sent to Server to the console
 		packetManager.displayPacketInfo(receiveSendPacket, host, true);
 		System.out.print("Containing: ");
@@ -124,7 +125,7 @@ public class ErrorSimulator {
 		System.out.println("Setting up invalid packet..");
 
 		//set the port for the packet to be that of the servers receive socket
-		receiveSendPacket.setPort(69);
+		receiveSendPacket.setPort(pd.getServerPort());
 
 		//relay the socket to the server
 		try {
