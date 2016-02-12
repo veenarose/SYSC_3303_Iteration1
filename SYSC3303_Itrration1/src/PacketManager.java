@@ -183,7 +183,7 @@ public class PacketManager {
 	 * @param data Data portion of the packet
 	 * @return String representation of the filename
 	 */
-	public static String getFilename(byte[] data){
+	public String getFilename(byte[] data){
 		byte[] byteMessage = new byte[data.length - 2];
 		String[] sfn;
 		byte[] delimiter = {0};
@@ -203,7 +203,7 @@ public class PacketManager {
 	 * @param data Data portion of the packet
 	 * @return String representation of the mode
 	 */
-	public static String getMode(byte[] data){
+	public String getMode(byte[] data){
 		byte[] byteMessage = new byte[data.length - 2];
 		String[] sfn;
 		byte[] delimiter = {0};
