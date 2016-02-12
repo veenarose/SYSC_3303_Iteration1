@@ -1,7 +1,5 @@
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
-import java.util.Arrays;
 
 /**
  * Class is used to handle the read / write packets between the clients and server
@@ -10,7 +8,8 @@ public class PacketManager {
 	private static byte[] RRQ = {0,1}; // Read opcode
 	private static byte[] WRQ = {0,2}; // Write opcode
 	private static byte[] DRQ = {0,3}; //data request
-
+	private static byte[] ERC = {0,5}; //error opcode
+	
 	private static String[] validModes = {"netascii", "octet"};// The modes
 
 	/**
@@ -24,7 +23,7 @@ public class PacketManager {
 	 *@param mode The valid mode either netascii or octet
 	 *@return an array of bytes that sends a request to read a file on the server 
 	 */
-	public static byte[] createRead(String message, String mode){
+	public byte[] createRead(String message, String mode){
 
 		byte file[] = message.getBytes();
 		byte modes[] = mode.getBytes();
@@ -41,7 +40,7 @@ public class PacketManager {
 		return readPack;
 	}
 	
-	public static void printTFTPPacketData(byte[] p) {
+	public void printTFTPPacketData(byte[] p) {
 		int length = p.length;
 		System.out.print("[");
 		for(int i = 0; i < length; i++) {
@@ -59,7 +58,7 @@ public class PacketManager {
 	 *@param mode String: The valid mode either netascii or octet
 	 *@return an array of bytes that sends a request to write a file on the server 
 	 */
-	public static byte[] createWrite(String message, String mode){
+	public byte[] createWrite(String message, String mode){
 
 		byte file[] = message.getBytes();
 		byte modes[] = mode.getBytes();
@@ -122,6 +121,23 @@ public class PacketManager {
 	}
 	
 	/**
+	 * Creates a packet to send the server or client 
+	 * @param errCode Byte[] The that contains the Error code 04/05 
+	 * @param errMessage String The error message
+	 * @return The byte array containing the the error packet
+	 */
+	public static byte[] createError(byte[] errCode, String errMessage){	
+		byte[] msg = errMessage.getBytes();
+		byte arr[] = {0};
+		byte dataPack[] = new byte[ERC.length+errCode.length+msg.length+arr.length]; 
+		
+		System.arraycopy(ERC, 0, dataPack, 0, ERC.length);
+		System.arraycopy(errCode, 0, dataPack, ERC.length, errCode.length);
+		System.arraycopy(msg, 0, dataPack, errCode.length+ERC.length, msg.length);
+		return dataPack;
+	}
+	
+	/**
 	 * This method is used to extract the Block number from the data received
 	 * @param data byte[]: The data that is received
 	 * @return A byte array containing the Block code
@@ -153,7 +169,7 @@ public class PacketManager {
 	 * @param data byte[]: The data that is received
 	 * @return A byte array containing only the data
 	 */
-	public static byte[] getData(byte [] data){
+	static public byte[] getData(byte [] data){
 		byte[] byteMessage = new byte[data.length-4];
 		for(int i = 0 ; i < byteMessage.length; i++){
 			byteMessage [i] = data[i+4];			
@@ -246,7 +262,7 @@ public class PacketManager {
 	 * @param host String: The host the message is received from
 	 * @param isSending boolean: Used to identify if it is a read or write request
 	 */
-	static public void displayPacketInfo(DatagramPacket dPacket, String host, boolean isSending) {
+	public void displayPacketInfo(DatagramPacket dPacket, String host, boolean isSending) {
 		String direction = isSending ? "sent" : "received";
 		String preHost   = isSending ? "To" : "From";
 
@@ -275,8 +291,10 @@ public class PacketManager {
 		IOException invalid = new IOException(); 
 
 		//checks leading 0 byte and read/write request byte
+		//if(msg[0] != 0 || (msg[1] != 1 && msg[1] != 2)) {
 		if(msg[0] != 0 || (msg[1] != 1 && msg[1] != 2)) { 
-			throw invalid; 
+
+			//throw invalid; 
 		} 
 
 		//checks if final byte is 0
@@ -303,3 +321,4 @@ public class PacketManager {
 		return msg[1]; 
 	}  
 }
+	
