@@ -15,35 +15,40 @@ import java.util.Set;
 
 public class Server{
 
-	DatagramSocket receiveSocket, sendSocket;
-	PacketManager packetManager;
-	IOManager ioManager;
-	int readWrite;
-	static boolean serverRuning = true;
+	private DatagramSocket receiveSocket, sendSocket;
+	private PacketManager packetManager;
+	private IOManager ioManager;
+	private int readWrite;
+	private static boolean serverRuning = true;
+	
 	
 	private final static String ServerDirectory =  
-			(System.getProperty("user.dir") + "/src/ServerData/");
-	
+			(System.getProperty("user.dir") + "/src/ServerData/");//the directory path of the server files
 	private final static String[] files = 
 		{"originServer1.txt", "originServer2.txt"}; //names of files local to the client
-    private Set<String> fileNames = new HashSet<String>(); //java set to store file names
+    //private Set<String> fileNames = new HashSet<String>(); //java set to store file names
 
+	/*
+	 * Server constructor. Creates new PacketManager and IOManager classes to 
+	 * handle UDP packets and writing to files respectively. Receive client requests
+	 * and pass them onto to new response handler threads.
+	 */
 	public Server(){
 		packetManager = new PacketManager();
 		ioManager = new IOManager();
 		byte[] data = new byte[512];
-
+		
 		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
 
 		try{
-			receiveSocket = new DatagramSocket(1024);
+			receiveSocket = new DatagramSocket(1024); //socket listening on port 1024
 			while(serverRuning){
 				try {
-					receiveSocket.receive(receivePacket);
+					receiveSocket.receive(receivePacket);//receive the request from the client
 					print("Packet recieved from client at " + getTimestamp());
-					fileNames.add(files[0]);
-		            fileNames.add(files[1]);
-					Response r = new Response(receivePacket);
+					//fileNames.add(files[0]);
+		            //fileNames.add(files[1]);
+					Response r = new Response(receivePacket); //dispatch new thread to handle the response, pass to it the request packet
 				} catch(IOException e) {
 					e.printStackTrace();         
 					System.exit(1);
@@ -56,7 +61,7 @@ public class Server{
 	}
 
 	public static void main( String args[] ){
-		new Server();
+		new Server(); //instantiate the server
 	}
 
 	/**
@@ -79,6 +84,12 @@ public class Server{
 		System.out.println(s);
 	}
 	
+	/*
+	 * Response class. Extends thread, handles requests coming into the server
+	 * and generates an appropriate response. Each Response class continues
+	 * communication with a client
+	 *
+	 */
 	class Response extends Thread{
 		protected DatagramSocket socket;
 		protected DatagramPacket packet;
@@ -87,7 +98,6 @@ public class Server{
 		protected int clientPort;
 		protected int packetType = -1;
 		protected byte[] contents;
-
 
 		/**
 		 * Takes a DatagramPacket as input. Opens a new Socket for communication with client

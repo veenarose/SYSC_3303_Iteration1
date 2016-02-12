@@ -182,6 +182,7 @@ public class Client { //the client class
         	
         	BufferedInputStream reader = new BufferedInputStream
 					(new FileInputStream(ClientDirectory + origfile));
+        	
         	//byte buffer for incoming ack packets
         	byte[] ackData = new byte[4];
         	
@@ -222,7 +223,9 @@ public class Client { //the client class
         	
         	//receive ack packets and send data until there is no more data to send
 			while (!packMan.lastPacket(readFromFileData)) { 
-        		
+				
+				readFromFileData = new byte[ioMan.getBufferSize()];
+				
         		//wait to receive the acknowledgement just sent
         		//wait for a response from the server
         		receivePacket = new DatagramPacket(ackData, ackData.length);
@@ -237,7 +240,8 @@ public class Client { //the client class
         		blockNum = packMan.intToBytes(blockNumAsInt);
         		System.out.println(blockNum[0] + " " + blockNum[1]);
         		
-        		//read 512 bytes from local file and create a data packet to send these to-be-written bytes to the server
+        		//read 512 bytes from local file and create a data packet to send 
+        		//these to-be-written bytes to the server
         		try {
     				reader.read(readFromFileData, 0, ioMan.getBufferSize());
     				writeData = packMan.createData(readFromFileData, blockNum);
