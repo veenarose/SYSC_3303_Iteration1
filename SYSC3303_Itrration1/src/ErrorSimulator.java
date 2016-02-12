@@ -270,11 +270,10 @@ public class ErrorSimulator {
 		Scanner keyboard = new Scanner(System.in);
 		boolean validInput;
 		String inputMenu, inputCode, inputData, inputAck;
+		System.out.println("Welcome to Error Simulator.");
 		//get user to simulate error or without errors
 		do
 		{
-			validInput = true;
-			System.out.println("Welcome to Error Simulator.");
 			System.out.println("\nChoose your mode:");
 			System.out.println("	(1) - Error Code 4");
 			System.out.println("	(2) - Error Code 5");
@@ -313,7 +312,7 @@ public class ErrorSimulator {
 				errorSelected = Integer.valueOf(inputCode);
 
 				if ((errorSelected < 1) || (errorSelected > 7)){
-					System.out.println("Please enter a value from 1 to 5");
+					System.out.println("Please enter a value from 1 to 5, thank you");
 					validInput = false;
 				}
 				switch(errorSelected){
@@ -354,7 +353,7 @@ public class ErrorSimulator {
 
 					errorData = Integer.valueOf(inputData);
 					if ((errorData < 1) || (errorData > 2)){
-						System.out.println("Please enter a value from 1 to 2");
+						System.out.println("Please enter a value from 1 to 2, thank you");
 						validInput = false;
 					}
 					switch(errorData){
@@ -381,7 +380,7 @@ public class ErrorSimulator {
 					
 					errorAck = Integer.valueOf(inputAck);
 					if ((errorAck < 1) || (errorAck > 2)){
-						System.out.println("Please enter a value from 1 to 2");
+						System.out.println("Please enter a value from 1 to 2, thank you");
 						validInput = false;
 					}
 					switch(errorAck){
