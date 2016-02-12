@@ -10,13 +10,15 @@ import java.util.Scanner;
 
 public class ErrorSimulator {
 
-	static DatagramSocket receiveSocket; //socket which receives requests from client on port 1024
+	static DatagramSocket receiveSocket;	 //socket which receives requests from client on port 1024
 	static DatagramSocket sendReceiveSocket; //socket which sends and receives UDP packets from the server
-	DatagramPacket sendPacket; //packet which relays request from client to server
+	static DatagramSocket unknownSocket;	 //socket which sends unknown packets to client
+	DatagramPacket sendPacket;				 //packet which relays request from client to server
 	private int errorSelected;
 	private int errorData;
 	private int errorAck;
 	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
+	
 	public ErrorSimulator() {
 		try {
 			//construct a datagram socket and bind it to any available port on the local machine
@@ -53,20 +55,8 @@ public class ErrorSimulator {
 		//display packet received info from the Client to the console
 		packetManager.displayPacketInfo(receiveSendPacket, host, false);
 		System.out.print("Containing: ");
-
-		//form a string from the byte array and print out the byte array
-		String received = new String(data,0,len);   
-		System.out.println(received);
-		System.out.print("As bytes: [");
-		for(int i = 0; i < len; i++) {
-			if (i == len-1) {
-				System.out.print(data[i]);
-			} else {
-				System.out.print(data[i] + ",");
-			}
-		}
-		System.out.println("]\n");
-
+		packetManager.printTFTPPacketData(receiveSendPacket.getData());
+		
 		//set the port for the packet to be that of the servers receive socket
 		receiveSendPacket.setPort(69);
 		//display packet info being sent to Server to the console
@@ -130,24 +120,9 @@ public class ErrorSimulator {
 			e.printStackTrace();         
 			System.exit(1);
 		}
-		int len = receiveSendPacket.getLength();
+		
 		System.out.println("Setting up invalid packet..");
 
-		String s = "Error Simulator";
-		//print out data from socket to be relayed to the server
-		packetManager.displayPacketInfo(receiveSendPacket, s, true);
-		System.out.print("Containing: ");
-		String received = new String(data,0,len);   
-		System.out.println(received);
-		System.out.print("As bytes: [");
-		for(int i = 0; i < len; i++) {
-			if (i == len-1) {
-				System.out.print(data[i]);
-			} else {
-				System.out.print(data[i] + ",");
-			}
-		}
-		System.out.println("]");
 		//set the port for the packet to be that of the servers receive socket
 		receiveSendPacket.setPort(69);
 
@@ -158,8 +133,6 @@ public class ErrorSimulator {
 			e.printStackTrace();
 			System.exit(1);
 		}
-		System.out.println("\nInvalid Packet Sent");
-
 		return receiveSendPacket;
 	} 
 
@@ -167,6 +140,7 @@ public class ErrorSimulator {
 	 * 
 	 */
 	private static DatagramPacket receiveServerPacket(){
+		System.out.println("\nWaiting for a response..");
 		//create packet in which to store server response
 		byte respData[] = new byte[100];
 		DatagramPacket responsePacket = new DatagramPacket(respData, respData.length);
@@ -179,10 +153,7 @@ public class ErrorSimulator {
 			System.exit(1);
 		}
 		System.out.println("Response received:");
-		String s = "Error Simulator";
-		//print out data from socket to be relayed to the server
-		packetManager.displayPacketInfo(responsePacket, s, false);
-
+		
 		//relay response packet to client
 		try {
 			DatagramSocket relayToClient = new DatagramSocket();
@@ -193,18 +164,19 @@ public class ErrorSimulator {
 			e.printStackTrace();         
 			System.exit(1);
 		}
-		System.out.println("Response from server relayed to client.\n");
 		return responsePacket;
 	}
 	/*
 	 * Creates an invalid read/write request packet
 	 */
-	public void createInvalidPacket(){
+	private void createInvalidPacket(){
 		DatagramPacket receiveSendPacket = receiveClientPacket();
 		if (errorSelected == 1){
-			System.out.println("Creating an invalid opcode Packet.");
+			System.out.println("Created an invalid opcode Packet.");
 			receiveSendPacket.getData()[1] = 8; //setting an invalid opcode
-			System.out.println("Containing: "+ new String (receiveSendPacket.getData()));
+			System.out.print("Containing: ");
+			packetManager.printTFTPPacketData(receiveSendPacket.getData());
+			System.out.println("Invalid packet sent.");
 			receiveServerPacket();
 		}
 		if(errorSelected == 2){
@@ -220,7 +192,7 @@ public class ErrorSimulator {
 	/*
 	 * Creates an invalid Client DATA packet 
 	 */
-	public static void createInvalidDataPacket(){
+	private static void createInvalidDataPacket(){
 		DatagramPacket receiveSendPacket = receiveClientPacket();
 		if (receiveSendPacket.getData()[1] == 3){
 			receiveSendPacket.getData()[1] = 9;
@@ -232,7 +204,7 @@ public class ErrorSimulator {
 	/*
 	 * Creates an invalid Client ACK packet 
 	 */
-	public static void createInvalidAckPacket(){
+	private static void createInvalidAckPacket(){
 		DatagramPacket receiveSendPacket = receiveClientPacket();
 		if (receiveSendPacket.getData()[1] == 4){
 			receiveSendPacket.getData()[1] = 7;
@@ -244,7 +216,7 @@ public class ErrorSimulator {
 	/*
 	 * Creates an invalid Server DATA packet 
 	 */
-	public static void createInvalidServerDataPacket(){
+	private static void createInvalidServerDataPacket(){
 		DatagramPacket receiveSendPacket = receiveServerPacket();
 		if (receiveSendPacket.getData()[1] == 3){
 			receiveSendPacket.getData()[1] = 7;
@@ -256,7 +228,7 @@ public class ErrorSimulator {
 	/*
 	 * Creates an invalid Server DATA packet 
 	 */
-	public static void createInvalidServerAckPacket(){
+	private static void createInvalidServerAckPacket(){
 		DatagramPacket receiveSendPacket = receiveServerPacket();
 		if (receiveSendPacket.getData()[1] == 4){
 			receiveSendPacket.getData()[1] = 7;
@@ -264,8 +236,21 @@ public class ErrorSimulator {
 			receiveClientPacket();
 		}
 	}
-
-	public void startErr() throws IOException
+	/*
+	 * Creates an Unknown Transfer ID
+	 */
+	private static void unknownTID(){
+		try {
+			unknownSocket = new DatagramSocket();
+		} catch (SocketException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/*
+	 * Error Simulation
+	 */
+	private void startErr() throws IOException
 	{
 		Scanner keyboard = new Scanner(System.in);
 		boolean validInput;
@@ -288,6 +273,7 @@ public class ErrorSimulator {
 			}
 			if (inputMenu.equals("2")){
 				System.out.println("Error code 5 (UNKNOWN TID) simulated.\n");
+				unknownTID();
 			}
 			if(inputMenu.equals("3")){
 				System.out.println("Error simulator not running..");
@@ -317,12 +303,12 @@ public class ErrorSimulator {
 				}
 				switch(errorSelected){
 				case 1:{
-					System.out.println("Sending invalid opcode.\n");
+					System.out.println("You selected, invalid opcode error.\n");
 					createInvalidPacket();
 					break;
 				}
 				case 2:{
-					System.out.println("Sending invalid mode.\n");
+					System.out.println("You selected, invalid mode error.\n");
 					createInvalidPacket();
 					break;
 				}
