@@ -403,11 +403,13 @@ public class ErrorSimulator {
 					case 1:{
 						System.out.println("Client sending invalid DATA..\n");
 						createInvalidDataPacket();
+						serverResponse();
 						break;
 					}
 					case 2:{
 						System.out.println("Server sending invalid DATA..\n");
 						createInvalidDataPacket();
+						serverResponse();
 						break;
 					}
 					}
@@ -430,11 +432,13 @@ public class ErrorSimulator {
 					case 1:{
 						System.out.println("Client sending invalid ACK..\n");
 						createInvalidAckPacket();
+						serverResponse();
 						break;
 					}
 					case 2:{
 						System.out.println("Server sending invalid ACK..\n");
 						createInvalidAckPacket();
+						serverResponse();
 						break;
 					}
 					}
