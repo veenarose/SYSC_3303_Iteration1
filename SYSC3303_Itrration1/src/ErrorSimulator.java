@@ -21,14 +21,14 @@ public class ErrorSimulator {
 	private int errorAck;				 	 //
 	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
 	private static int clientPort;
-	private static InetAddress clientIP;
-	ProfileData pd = new ProfileData();
+	private static InetAddress clientAddr;
+	static ProfileData pd = new ProfileData();
 	public ErrorSimulator() {
 		try {
 			//construct a datagram socket and bind it to any available port on the local machine
 			sendReceiveSocket = new DatagramSocket();
 			//construct a datagram socket and bind it to port 68 on the local machine
-			receiveSocket = new DatagramSocket(68);
+			receiveSocket = new DatagramSocket(pd.getIntermediatePort());
 			//construct a datagram socket and bind it to any available port on the local machine
 			unknownSocket = new DatagramSocket();
 		} catch (SocketException se) {   //can't create a socket.
@@ -46,7 +46,6 @@ public class ErrorSimulator {
 	 */	
 	public static void receiveAndSend() {
 		byte data[] = new byte[100];
-		//int clientPort; //port from which receiving client packet came from
 		DatagramPacket receiveSendPacket = new DatagramPacket(data, data.length);
 		try {
 			//block until a datagram is received via sendReceiveSocket.  
@@ -56,7 +55,7 @@ public class ErrorSimulator {
 			System.exit(1);
 		}
 		clientPort = receiveSendPacket.getPort();
-		clientIP = receiveSendPacket.getAddress();
+		clientAddr = receiveSendPacket.getAddress();
 		int len = receiveSendPacket.getLength();
 
 		String host = "Error Simulator";
@@ -66,7 +65,7 @@ public class ErrorSimulator {
 		packetManager.printTFTPPacketData(receiveSendPacket.getData());
 
 		//set the port for the packet to be that of the servers receive socket
-		receiveSendPacket.setPort(69);
+		receiveSendPacket.setPort(pd.getServerPort());
 		//display packet info being sent to Server to the console
 		packetManager.displayPacketInfo(receiveSendPacket, host, true);
 		System.out.print("Containing: ");
@@ -126,7 +125,7 @@ public class ErrorSimulator {
 
 		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
 		clientPort = receivePacket.getPort();
-		clientIP = receivePacket.getAddress();
+		clientAddr = receivePacket.getAddress();
 		try {
 			//block until a datagram is received via sendReceiveSocket.  
 			receiveSocket.receive(receivePacket);
@@ -143,7 +142,7 @@ public class ErrorSimulator {
 	 */
 	private static DatagramPacket sendPacket(DatagramPacket po){
 		//set the port for the packet to be that of the servers receive socket
-		po.setPort(69);
+		po.setPort(pd.getServerPort());
 
 		//relay the socket to the server
 		try {
@@ -180,12 +179,11 @@ public class ErrorSimulator {
 	 * @return the DatagramPacket we are sending 
 	 */
 	private static DatagramPacket sendPacketToClient(DatagramPacket po){
-		po.setPort(clientPort);
-		po.setAddress(clientIP);
 		//relay response packet to client
+		DatagramPacket p = new DatagramPacket(po.getData(),po.getData().length, clientAddr, clientPort);
 		try {
 			DatagramSocket relayToClient = new DatagramSocket();
-			relayToClient.send(po);
+			relayToClient.send(p);
 			relayToClient.close();
 
 		} catch (IOException e) {
