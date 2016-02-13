@@ -122,7 +122,7 @@ public class ErrorSimulator {
 	 */
 	private static DatagramPacket receiveClientPacket(){
 		byte data[] = new byte[100];
-		
+
 		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
 		clientPort = receivePacket.getPort();
 		clientIP = receivePacket.getAddress();
@@ -143,7 +143,7 @@ public class ErrorSimulator {
 	private static DatagramPacket sendPacket(DatagramPacket po){
 		//set the port for the packet to be that of the servers receive socket
 		po.setPort(69);
-		
+
 		//relay the socket to the server
 		try {
 			sendReceiveSocket.send(po);
@@ -162,7 +162,7 @@ public class ErrorSimulator {
 		//create packet in which to store server response
 		byte respData[] = new byte[100];
 		DatagramPacket lo = new DatagramPacket(respData, respData.length);
-		
+
 		try {
 			//block until a packet is received via sendReceiveSocket from server  
 			sendReceiveSocket.receive(lo);
@@ -305,7 +305,7 @@ public class ErrorSimulator {
 		}
 		receiveClientPacket();
 	}
-	
+
 	/*
 	 * 
 	 */
