@@ -1,4 +1,3 @@
-
 import java.io.*;
 import java.net.*;
 import java.util.Scanner;
@@ -21,7 +20,7 @@ public class ErrorSimulator {
 	private int errorAck;				 	 //
 	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
 	private static int clientPort;
-	private static InetAddress clientAddr;
+	private static InetAddress clientIP;
 	static ProfileData pd = new ProfileData();
 	public ErrorSimulator() {
 		try {
@@ -55,7 +54,7 @@ public class ErrorSimulator {
 			System.exit(1);
 		}
 		clientPort = receiveSendPacket.getPort();
-		clientAddr = receiveSendPacket.getAddress();
+		clientIP = receiveSendPacket.getAddress();
 		int len = receiveSendPacket.getLength();
 
 		String host = "Error Simulator";
@@ -67,6 +66,7 @@ public class ErrorSimulator {
 		//set the port for the packet to be that of the servers receive socket
 		receiveSendPacket.setPort(pd.getServerPort());
 		//display packet info being sent to Server to the console
+		System.out.println();
 		packetManager.displayPacketInfo(receiveSendPacket, host, true);
 		System.out.print("Containing: ");
 		System.out.println(new String(receiveSendPacket.getData(),0,len));
@@ -94,7 +94,7 @@ public class ErrorSimulator {
 		packetManager.displayPacketInfo(responsePacket, host, false);
 		//form a string from the byte array.
 		String response = new String(data,0,len);   
-		System.out.println(response + "\n");
+		System.out.println(response);
 
 		//set the response packet's port destination to that of the client's sendReceive socket
 		responsePacket.setPort(clientPort);
@@ -125,7 +125,7 @@ public class ErrorSimulator {
 
 		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
 		clientPort = receivePacket.getPort();
-		clientAddr = receivePacket.getAddress();
+		clientIP = receivePacket.getAddress();
 		try {
 			//block until a datagram is received via sendReceiveSocket.  
 			receiveSocket.receive(receivePacket);
@@ -171,6 +171,7 @@ public class ErrorSimulator {
 			System.exit(1);
 		}
 		System.out.println("Response received:");
+		System.out.println("Contains: " + new String(lo.getData()));
 		return lo;
 	}
 
@@ -180,7 +181,7 @@ public class ErrorSimulator {
 	 */
 	private static DatagramPacket sendPacketToClient(DatagramPacket po){
 		//relay response packet to client
-		DatagramPacket p = new DatagramPacket(po.getData(),po.getData().length, clientAddr, clientPort);
+		DatagramPacket p = new DatagramPacket(po.getData(),po.getData().length, clientIP, clientPort);
 		try {
 			DatagramSocket relayToClient = new DatagramSocket();
 			relayToClient.send(p);
@@ -198,6 +199,8 @@ public class ErrorSimulator {
 	 */
 	private void createInvalidPacket(){
 		DatagramPacket receivePacket = receiveClientPacket();
+		clientPort = receivePacket.getPort();
+		clientIP = receivePacket.getAddress();
 		//setting an invalid opcode error
 		if (errorSelected == 1){
 			System.out.println("Created an invalid opcode packet.");
@@ -263,6 +266,7 @@ public class ErrorSimulator {
 	private void serverResponse(){
 		System.out.println("\nWaiting for a response..");
 		DatagramPacket serverPacket = receiveServerPacket();
+		serverPacket.setPort(clientPort);
 		sendPacketToClient(serverPacket);
 	}
 
