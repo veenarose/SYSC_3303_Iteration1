@@ -142,7 +142,7 @@ public class Server{
 		}
 
 		public void run(){
-			if (mode != "octet" || mode != "netascii"){
+			if (!mode.equals("octet") && !mode.equals("netascii")){
 				handleErrReq(0 ,clientAddr, clientPort);
 			}
 
