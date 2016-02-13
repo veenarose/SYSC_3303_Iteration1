@@ -18,6 +18,7 @@ public class Client { //the client class
     
     private PacketManager packMan = new PacketManager(); //instance of the PacketManager class, used to handle read/write packets
     private IOManager ioMan = new IOManager(); //instance of the IOManager class, used to read/write to files
+    private ProfileData pd = new ProfileData(); //profile data for port numbers
     
     private final static String[] requests = {"read","write"};  //the valid requests which can be made by the server
     private final static String[] modes = {"netascii","octet"}; //the valid modes for the corresponding requests
@@ -114,7 +115,7 @@ public class Client { //the client class
     	//containing the request
         try {
             sendPacket = new DatagramPacket(request, request.length,
-                                                 InetAddress.getLocalHost(), 1024);
+                                                 InetAddress.getLocalHost(), pd.getIntermediatePort());
         } catch (UnknownHostException e) {
             e.printStackTrace();
             System.exit(1);
@@ -181,6 +182,14 @@ public class Client { //the client class
 		        		//receive data from server
 		        		receivePacket = new DatagramPacket(readData, readData.length);
 		        		receivePacket(receivePacket, sendReceiveSocket);
+		        		byte[] err = packMan.createError(new byte[]{0, 5}, "Unknown PID.");
+		        		while(receivePacket.getPort() != serverPort) {
+		        			sendPacket = new DatagramPacket(err, err.length,
+		        					receivePacket.getAddress(), receivePacket.getPort());
+		        			sendPacket(sendPacket, sendReceiveSocket);
+		        			receivePacket = new DatagramPacket(readData, readData.length);
+			        		receivePacket(receivePacket, sendReceiveSocket);
+			        	}
 		        		
 		        		if(packMan.twoBytesToInt(data[2], data[3]) != 
 		        				expectedBlockNumber) {
@@ -234,7 +243,7 @@ public class Client { //the client class
 		        	//byte buffer to be filled with data from local file
 		        	byte readFromFileData[] = new byte[ioMan.getBufferSize()]; 
 		        	
-		        	//byte buffer for write requests
+		        	//byte buffer for write data packets
 		        	byte writeData[] = new byte[516];
 		        	
 		        	try {
@@ -256,10 +265,29 @@ public class Client { //the client class
 						
 						readFromFileData = new byte[ioMan.getBufferSize()];
 						
+						expectedBlockNumber ++;
+						
 		        		//wait to receive the acknowledgement just sent
 		        		//wait for a response from the server
 		        		receivePacket = new DatagramPacket(ackData, ackData.length);
 		        		receivePacket(receivePacket, sendReceiveSocket);
+		        		receivePacket(receivePacket, sendReceiveSocket);
+		        		byte[] err = packMan.createError(new byte[]{0, 5}, "Unknown PID.");
+		        		while(receivePacket.getPort() != serverPort) {
+		        			sendPacket = new DatagramPacket(err, err.length,
+		        					receivePacket.getAddress(), receivePacket.getPort());
+		        			sendPacket(sendPacket, sendReceiveSocket);
+		        			receivePacket = new DatagramPacket(ackData, ackData.length);
+			        		receivePacket(receivePacket, sendReceiveSocket);
+			        	}
+		        		
+		        		if(packMan.twoBytesToInt(ackData[2], ackData[3]) != 
+		        				expectedBlockNumber) {
+		        			handleInvalidBlock(sendReceiveSocket, 
+			        				expectedBlockNumber, 
+			        				packMan.twoBytesToInt(ackData[2], ackData[3]));
+		        			break;
+		        		}
 		        		
 		        		//get the two-byte block number from the ack and convert it to an int
 		            	blockNumAsInt = packMan.twoBytesToInt(ackData[2], ackData[3]); 
