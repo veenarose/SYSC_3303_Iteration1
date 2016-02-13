@@ -334,4 +334,3 @@ public class PacketManager {
 		return p[1] == 5;
 	}
 }
-	
