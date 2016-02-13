@@ -231,6 +231,13 @@ public class PacketManager {
 		return false;
 	}
 	
+	public boolean isDataPacket(byte[] data) {
+		if(data[1] != 4) { return false; }
+		int bufferSize = 516;
+		if(data.length != bufferSize) { return false; }
+		return true;
+	}
+	
 	/**
 	 * Takes two byte numbers and returns there associated int value
 	 * @param leftByte

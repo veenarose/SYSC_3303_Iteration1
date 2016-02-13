@@ -77,6 +77,14 @@ public class Client { //the client class
         }
     }
     
+    public void handleInvalidAckPacket() {
+    	
+    }
+    
+    public void handleInvalidDataPacket() {
+    	
+    }
+    
     public void handleInvalidBlock(DatagramSocket socket, int expected, int found) {
     	System.out.println("Unexpected block number detected, "
 				+ "terminating connection and sending error packet");
