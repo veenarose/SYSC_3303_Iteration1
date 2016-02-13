@@ -9,8 +9,6 @@ import java.util.Date;
 //
 //by: Damjan Markovic
 
-//DONT FORGET ABOUT CONCURRENCY LATER
-
 public class Server{
 
 	private DatagramSocket receiveSocket;
@@ -18,7 +16,7 @@ public class Server{
 	private IOManager ioManager;
 	private static boolean serverRuning = true;
 	private ProfileData pd = new ProfileData();
-
+	private final byte[] shutdown = {1,1};
 	private final static String ServerDirectory =  
 			(System.getProperty("user.dir") + "/src/ServerData/");//the directory path of the server files
 	private final static String[] files = 
@@ -34,7 +32,6 @@ public class Server{
 		packetManager = new PacketManager();
 		ioManager = new IOManager();
 		byte[] data = new byte[512];
-
 		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
 
 		try{
@@ -42,9 +39,12 @@ public class Server{
 			while(serverRuning){
 				try {
 					receiveSocket.receive(receivePacket);//receive the request from the client
+					if(receivePacket.getData() == shutdown){
+						stopServer();
+					}
+					
 					print("Packet recieved from client at " + getTimestamp());
-					//fileNames.add(files[0]);
-					//fileNames.add(files[1]);
+					
 					Response r = new Response(receivePacket); //dispatch new thread to handle the response, pass to it the request packet
 				} catch(IOException e) {
 					e.printStackTrace();         
@@ -57,6 +57,12 @@ public class Server{
 		}
 	}
 
+	private void stopServer(){
+		serverRuning = false;
+		receiveSocket.close();
+		print("Server shutting down");
+	}
+	
 	public static void main( String args[] ){
 		new Server(); //instantiate the server
 	}
@@ -330,7 +336,7 @@ public class Server{
 		}
 
 		/**
-		 * Sends an Error Packet to the fiven Address
+		 * Sends an Error Packet to the given Address
 		 * @param i	Error message ID
 		 * @param addr Address to send the error
 		 * @param port Port
