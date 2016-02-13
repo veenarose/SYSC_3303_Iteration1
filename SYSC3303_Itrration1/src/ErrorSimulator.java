@@ -1,4 +1,3 @@
-
 import java.io.*;
 import java.net.*;
 import java.util.Scanner;
@@ -68,6 +67,7 @@ public class ErrorSimulator {
 		//set the port for the packet to be that of the servers receive socket
 		receiveSendPacket.setPort(69);
 		//display packet info being sent to Server to the console
+		System.out.println();
 		packetManager.displayPacketInfo(receiveSendPacket, host, true);
 		System.out.print("Containing: ");
 		System.out.println(new String(receiveSendPacket.getData(),0,len));
@@ -95,7 +95,7 @@ public class ErrorSimulator {
 		packetManager.displayPacketInfo(responsePacket, host, false);
 		//form a string from the byte array.
 		String response = new String(data,0,len);   
-		System.out.println(response + "\n");
+		System.out.println(response);
 
 		//set the response packet's port destination to that of the client's sendReceive socket
 		responsePacket.setPort(clientPort);
@@ -125,8 +125,6 @@ public class ErrorSimulator {
 		byte data[] = new byte[100];
 		
 		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
-		clientPort = receivePacket.getPort();
-		clientIP = receivePacket.getAddress();
 		try {
 			//block until a datagram is received via sendReceiveSocket.  
 			receiveSocket.receive(receivePacket);
@@ -163,7 +161,6 @@ public class ErrorSimulator {
 		//create packet in which to store server response
 		byte respData[] = new byte[100];
 		DatagramPacket lo = new DatagramPacket(respData, respData.length);
-		
 		try {
 			//block until a packet is received via sendReceiveSocket from server  
 			sendReceiveSocket.receive(lo);
@@ -172,6 +169,7 @@ public class ErrorSimulator {
 			System.exit(1);
 		}
 		System.out.println("Response received:");
+		System.out.println("Contains: " + new String(lo.getData()));
 		return lo;
 	}
 
@@ -180,8 +178,7 @@ public class ErrorSimulator {
 	 * @return the DatagramPacket we are sending 
 	 */
 	private static DatagramPacket sendPacketToClient(DatagramPacket po){
-		po.setPort(clientPort);
-		po.setAddress(clientIP);
+		po.setPort(clientPort);;
 		//relay response packet to client
 		try {
 			DatagramSocket relayToClient = new DatagramSocket();
@@ -200,6 +197,8 @@ public class ErrorSimulator {
 	 */
 	private void createInvalidPacket(){
 		DatagramPacket receivePacket = receiveClientPacket();
+		clientPort = receivePacket.getPort();
+		clientIP = receivePacket.getAddress();
 		//setting an invalid opcode error
 		if (errorSelected == 1){
 			System.out.println("Created an invalid opcode packet.");
@@ -265,6 +264,7 @@ public class ErrorSimulator {
 	private void serverResponse(){
 		System.out.println("\nWaiting for a response..");
 		DatagramPacket serverPacket = receiveServerPacket();
+		serverPacket.setPort(clientPort);
 		sendPacketToClient(serverPacket);
 	}
 
