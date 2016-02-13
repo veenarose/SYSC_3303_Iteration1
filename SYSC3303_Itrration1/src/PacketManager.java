@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.util.Arrays;
 
 /**
  * Class is used to handle the read / write packets between the clients and server
@@ -322,4 +323,14 @@ public class PacketManager {
 		//returns a value which is either a 1 for a read request or a 2 for a write request 
 		return msg[1]; 
 	}  
+	
+	public static String extractMessageFromErrorPacket(byte[] err) {
+		byte msg[] = new byte[err.length - 5];
+		System.arraycopy(err, 4, msg, 0, err.length - 5);
+		return Arrays.toString(msg);
+	}
+	
+	public boolean isErrorPacket(byte[] p) {
+		return p[1] == 5;
+	}
 }

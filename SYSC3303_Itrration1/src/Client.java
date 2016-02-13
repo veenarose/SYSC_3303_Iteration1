@@ -1,6 +1,9 @@
+import java.util.List;
 import java.util.Set;
 import java.io.*;
 import java.net.*;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashSet;
 
 /**
@@ -73,6 +76,15 @@ public class Client { //the client class
         }
     }
     
+    public void handleInvalidBlock(DatagramSocket socket, int expected, int found) {
+    	System.out.println("Unexpected block number detected, "
+				+ "terminating connection and sending error packet");
+    	byte[] errBlock = new byte[]{0,4};
+    	byte[] errData = packMan.createError(errBlock,"Invalid block number detected. Was expecting " 
+				+ expected + " but received " + found + ".");
+    	DatagramPacket err = new DatagramPacket(errData, errData.length);
+    	sendPacket(err, socket); }
+    
     /**
      * client's method for sending and receiving requests
      * @param req 
@@ -117,144 +129,175 @@ public class Client { //the client class
         int serverPort; //variable to store the port of the sever
         InetAddress serverHost; //variable to store the address of the server's host
         
-        if (req == 1) { //a read request
-        	
-        	//variable to store the read requests data, 2 bytes for the opcode, 2 for the block number, 512 for the raw data
-        	byte readData[] = new byte[ioMan.getBufferSize() + 4]; 
-        	
-        	System.out.println("About to receive data from Server 1");
-        	//receive data from the server
-        	receivePacket = new DatagramPacket(readData, readData.length);
-        	receivePacket(receivePacket, sendReceiveSocket);
-        	System.out.println("Recieved data from Server 2");
-        	
-        	//create a new file with name filename which will be written to
-        	File writeTo = new File(ClientDirectory + filename);
-        	System.out.println("writeTo exists?: " +  writeTo.exists() + " 3");
-        	
-        	//write the data to local file with name filename
-        	byte writeToFileData[];
-        	writeToFileData = packMan.getData(readData);
-        	try {
-				ioMan.write(writeTo, writeToFileData);
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-        	System.out.println("wrote to file 4");
-        	serverHost = receivePacket.getAddress(); //get the host address from the server
-        	serverPort = receivePacket.getPort(); //get the port id
-        	
-        	//send ack packets and receive data until last packet is reached
-        	System.out.println("Last packet?: " + packMan.lastPacket(writeToFileData) + " 5");
-        	while (!packMan.lastPacket(writeToFileData)){ 
-        		
-        		//create ack
-        		byte[] ack = packMan.createAck(readData);
-        		
-        		//send the ack packet
-        		sendPacket = new DatagramPacket(ack, ack.length,
-				                                     serverHost, serverPort);
-        		sendPacket(sendPacket, sendReceiveSocket);
-        		System.out.println("sent the packet 6");
-        		
-        		//receive data from server
-        		receivePacket = new DatagramPacket(readData, readData.length);
-        		receivePacket(receivePacket, sendReceiveSocket);
-        		System.out.println("received the packet 7");
-            	
-            	//write the data to the file
-            	writeToFileData = packMan.getData(readData);
-            	try {
-					ioMan.write(writeTo, writeToFileData);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-        		
-        	}  //end read request loop
-        	
-        	
-        } else { //a write request
-        	
-        	BufferedInputStream reader = new BufferedInputStream
-					(new FileInputStream(ClientDirectory + origfile));
-        	
-        	//byte buffer for incoming ack packets
-        	byte[] ackData = new byte[4];
-        	
-        	//receive the ack packet from the server, should be block number 0
-        	receivePacket = new DatagramPacket(ackData, ackData.length);
-        	receivePacket(receivePacket, sendReceiveSocket);
-        	
-        	//get block number from the ack and increment it
-        	int blockNumAsInt = packMan.twoBytesToInt(ackData[2], ackData[3]); 
-        	System.out.println(blockNumAsInt);
-    		blockNumAsInt++; //increment the block number
-    		System.out.println(blockNumAsInt);
-    		//convert int back to two bytes
-    		byte blockNum[] = packMan.intToBytes(blockNumAsInt);
-    		System.out.println(blockNum[0] + " " + blockNum[1]);
-        	
-        	//byte buffer to be filled with data from local file
-        	byte readFromFileData[] = new byte[ioMan.getBufferSize()]; 
-        	
-        	//byte buffer for write requests
-        	byte writeData[] = new byte[516]; 
-        	
-        	serverHost = receivePacket.getAddress(); //get the host address from the server
-        	serverPort = receivePacket.getPort(); //get the port id
-        	
-        	try {
-				reader.read(readFromFileData, 0, ioMan.getBufferSize());
-				writeData = packMan.createData(readFromFileData, blockNum);
-				packMan.printTFTPPacketData(writeData);
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-        	
-        	//send the packet containing the data to be written to the server
-			sendPacket = new DatagramPacket(writeData, writeData.length, serverHost, serverPort); 
-        	sendPacket(sendPacket, sendReceiveSocket);
-        	
-        	//receive ack packets and send data until there is no more data to send
-			while (!packMan.lastPacket(readFromFileData)) { 
-				
-				readFromFileData = new byte[ioMan.getBufferSize()];
-				
-        		//wait to receive the acknowledgement just sent
-        		//wait for a response from the server
-        		receivePacket = new DatagramPacket(ackData, ackData.length);
-        		receivePacket(receivePacket, sendReceiveSocket);
-        		
-        		//get the two-byte block number from the ack and convert it to an int
-            	blockNumAsInt = packMan.twoBytesToInt(ackData[2], ackData[3]); 
-            	System.out.println(blockNumAsInt);
-        		blockNumAsInt++; //increment the block number
-        		System.out.println(blockNumAsInt);
-        		//convert int back to two bytes
-        		blockNum = packMan.intToBytes(blockNumAsInt);
-        		System.out.println(blockNum[0] + " " + blockNum[1]);
-        		
-        		//read 512 bytes from local file and create a data packet to send 
-        		//these to-be-written bytes to the server
-        		try {
-    				reader.read(readFromFileData, 0, ioMan.getBufferSize());
-    				writeData = packMan.createData(readFromFileData, blockNum);
-    			} catch (IOException e1) {
-    				// TODO Auto-generated catch block
-    				e1.printStackTrace();
-    			}
-        		
-        		//send data to-be-written on the server
-        		sendPacket = new DatagramPacket(writeData, writeData.length, serverHost, serverPort); //the packet to be sent
-        		sendPacket(sendPacket, sendReceiveSocket);
-        		
-        	} //end write request loop
+        byte data[] = new byte[ioMan.getBufferSize() + 4];
         
-        }//end handle else write request
-    
+        receivePacket = new DatagramPacket(data, data.length);
+    	receivePacket(receivePacket, sendReceiveSocket);
+    	serverHost = receivePacket.getAddress(); //get the host address from the server
+    	serverPort = receivePacket.getPort(); //get the port id
+    	int expectedBlockNumber;
+    	
+    	if(!packMan.isErrorPacket(data)) {
+        
+    		if (req == 1) { //a read request
+	        	
+    			expectedBlockNumber = 1;
+	        	
+    			//variable to store the read requests data, 2 bytes for the opcode, 2 for the block number, 512 for the raw data
+	        	byte readData[] = data;
+	        	
+	        	if(packMan.twoBytesToInt(data[2], data[3]) == expectedBlockNumber) { //valid block number
+	        		
+		        	//create a new file with name filename which will be written to
+		        	File writeTo = new File(ClientDirectory + filename);
+		        	System.out.println("writeTo exists?: " +  writeTo.exists() + " 3");
+		        	
+		        	//write the data to local file with name filename
+		        	byte writeToFileData[];
+		        	writeToFileData = packMan.getData(readData);
+		        	try {
+						ioMan.write(writeTo, writeToFileData);
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+		        	System.out.println("wrote to file 4");
+		        	
+		        	//send ack packets and receive data until last packet is reached
+		        	System.out.println("Last packet?: " + 
+		        			packMan.lastPacket(writeToFileData) + " 5");
+		        	
+		        	while (!packMan.lastPacket(writeToFileData)){ 
+		        		
+		        		//create ack
+		        		byte[] ack = packMan.createAck(readData);
+		        		
+		        		//send the ack packet
+		        		sendPacket = new DatagramPacket(ack, ack.length,
+						                                     serverHost, serverPort);
+		        		sendPacket(sendPacket, sendReceiveSocket);
+		        		
+		        		expectedBlockNumber++;
+		        		//receive data from server
+		        		receivePacket = new DatagramPacket(readData, readData.length);
+		        		receivePacket(receivePacket, sendReceiveSocket);
+		        		
+		        		if(packMan.twoBytesToInt(data[2], data[3]) != 
+		        				expectedBlockNumber) {
+		        			handleInvalidBlock(sendReceiveSocket, 
+			        				expectedBlockNumber, 
+			        				packMan.twoBytesToInt(data[2], data[3]));
+		        			break;
+		        		}
+		            	
+		            	//write the data to the file
+		            	writeToFileData = packMan.getData(readData);
+		            	try {
+							ioMan.write(writeTo, writeToFileData);
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+		        		
+		        	}  //end read request loop
+	        	
+	        	} else { //unexpected block number
+	        		handleInvalidBlock(sendReceiveSocket, 
+	        				expectedBlockNumber, 
+	        				packMan.twoBytesToInt(data[2], data[3]));
+	        	}
+	        	
+	        } else { //a write request
+	        	
+	        	expectedBlockNumber = 0;
+	        	
+	        	BufferedInputStream reader = new BufferedInputStream
+						(new FileInputStream(ClientDirectory + origfile));
+	        	
+	        	//byte buffer for incoming ack packets
+	        	byte[] ackData = new byte[4];
+	        	for(int i = 0; i < ackData.length; i++) {
+	        		ackData[i] = data[i];
+	        	}
+	        	
+	        	if(packMan.twoBytesToInt(ackData[2], ackData[3]) == expectedBlockNumber) { //valid block number
+
+	        		//get block number from the ack and increment it
+		        	int blockNumAsInt = packMan.twoBytesToInt(ackData[2], ackData[3]); 
+		        	System.out.println(blockNumAsInt);
+		    		blockNumAsInt++; //increment the block number
+		    		System.out.println(blockNumAsInt);
+		    		//convert int back to two bytes
+		    		byte blockNum[] = packMan.intToBytes(blockNumAsInt);
+		    		System.out.println(blockNum[0] + " " + blockNum[1]);
+		        	
+		        	//byte buffer to be filled with data from local file
+		        	byte readFromFileData[] = new byte[ioMan.getBufferSize()]; 
+		        	
+		        	//byte buffer for write requests
+		        	byte writeData[] = new byte[516];
+		        	
+		        	try {
+						reader.read(readFromFileData, 0, ioMan.getBufferSize());
+						writeData = packMan.createData(readFromFileData, blockNum);
+						packMan.printTFTPPacketData(writeData);
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+		        	
+		        	//send the packet containing the data to be written to the server
+					sendPacket = new DatagramPacket(writeData, writeData.length, 
+							serverHost, serverPort); 
+		        	sendPacket(sendPacket, sendReceiveSocket);
+		        	
+		        	//receive ack packets and send data until there is no more data to send
+					while (!packMan.lastPacket(readFromFileData)) { 
+						
+						readFromFileData = new byte[ioMan.getBufferSize()];
+						
+		        		//wait to receive the acknowledgement just sent
+		        		//wait for a response from the server
+		        		receivePacket = new DatagramPacket(ackData, ackData.length);
+		        		receivePacket(receivePacket, sendReceiveSocket);
+		        		
+		        		//get the two-byte block number from the ack and convert it to an int
+		            	blockNumAsInt = packMan.twoBytesToInt(ackData[2], ackData[3]); 
+		            	System.out.println(blockNumAsInt);
+		        		blockNumAsInt++; //increment the block number
+		        		System.out.println(blockNumAsInt);
+		        		//convert int back to two bytes
+		        		blockNum = packMan.intToBytes(blockNumAsInt);
+		        		System.out.println(blockNum[0] + " " + blockNum[1]);
+		        		
+		        		//read 512 bytes from local file and create a data packet to send 
+		        		//these to-be-written bytes to the server
+		        		try {
+		    				reader.read(readFromFileData, 0, ioMan.getBufferSize());
+		    				writeData = packMan.createData(readFromFileData, blockNum);
+		    			} catch (IOException e1) {
+		    				// TODO Auto-generated catch block
+		    				e1.printStackTrace();
+		    			}
+		        		
+		        		//send data to-be-written on the server
+		        		sendPacket = new DatagramPacket(writeData, writeData.length, serverHost, serverPort); //the packet to be sent
+		        		sendPacket(sendPacket, sendReceiveSocket);
+		        		
+		        	} //end write request loop
+	        	
+	        	} else { //invalid block number
+	        		handleInvalidBlock(sendReceiveSocket, 
+	        				expectedBlockNumber, 
+	        				packMan.twoBytesToInt(ackData[2], ackData[3]));
+	        	}
+	        
+	        }//end handle else write request
+    	
+    	} else {//error received 
+    		System.out.println("Received an error packet with code: " + data[3]);
+    		System.out.println("Error message: " + packMan.extractMessageFromErrorPacket(data));
+    	}
     }//end of sendAndReceive
     
     /**
