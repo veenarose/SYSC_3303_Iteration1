@@ -362,7 +362,7 @@ public class Server{
 		}
 		
 		/**
-		 * Verifies that that client is the original client which the thread was made for
+		 * Verifies that that client is the original client for which the thread was made
 		 * @param p Packet received thats is to be verified
 		 * @return boolean
 		 */
