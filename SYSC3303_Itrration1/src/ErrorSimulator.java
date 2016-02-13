@@ -21,13 +21,13 @@ public class ErrorSimulator {
 	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
 	private static int clientPort;
 	private static InetAddress clientIP;
-	ProfileData pd = new ProfileData();
+	private static ProfileData pd = new ProfileData();
 	public ErrorSimulator() {
 		try {
 			//construct a datagram socket and bind it to any available port on the local machine
 			sendReceiveSocket = new DatagramSocket();
 			//construct a datagram socket and bind it to port 68 on the local machine
-			receiveSocket = new DatagramSocket(68);
+			receiveSocket = new DatagramSocket(pd.getIntermediatePort());
 			//construct a datagram socket and bind it to any available port on the local machine
 			unknownSocket = new DatagramSocket();
 		} catch (SocketException se) {   //can't create a socket.
@@ -65,7 +65,7 @@ public class ErrorSimulator {
 		packetManager.printTFTPPacketData(receiveSendPacket.getData());
 
 		//set the port for the packet to be that of the servers receive socket
-		receiveSendPacket.setPort(69);
+		receiveSendPacket.setPort(pd.getServerPort());
 		//display packet info being sent to Server to the console
 		System.out.println();
 		packetManager.displayPacketInfo(receiveSendPacket, host, true);
@@ -141,7 +141,7 @@ public class ErrorSimulator {
 	 */
 	private static DatagramPacket sendPacket(DatagramPacket po){
 		//set the port for the packet to be that of the servers receive socket
-		po.setPort(69);
+		po.setPort(pd.getServerPort());
 		
 		//relay the socket to the server
 		try {
