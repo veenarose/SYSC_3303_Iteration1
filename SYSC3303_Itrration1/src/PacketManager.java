@@ -233,10 +233,6 @@ public class PacketManager {
 		return false;
 	}
 	
-	
-	
-
-	
 	public boolean isDataPacket(byte[] data) {
 		if(data[1] != 4) { return false; }
 		int bufferSize = 516;
