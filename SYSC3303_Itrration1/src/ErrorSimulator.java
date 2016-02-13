@@ -19,7 +19,9 @@ public class ErrorSimulator {
 	private int errorData;					 //
 	private int errorAck;				 	 //
 	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
-
+	private static int clientPort;
+	private static InetAddress clientIP;
+	ProfileData pd = new ProfileData();
 	public ErrorSimulator() {
 		try {
 			//construct a datagram socket and bind it to any available port on the local machine
@@ -43,7 +45,7 @@ public class ErrorSimulator {
 	 */	
 	public static void receiveAndSend() {
 		byte data[] = new byte[100];
-		int clientPort; //port from which receiving client packet came from
+		//int clientPort; //port from which receiving client packet came from
 		DatagramPacket receiveSendPacket = new DatagramPacket(data, data.length);
 		try {
 			//block until a datagram is received via sendReceiveSocket.  
@@ -53,6 +55,7 @@ public class ErrorSimulator {
 			System.exit(1);
 		}
 		clientPort = receiveSendPacket.getPort();
+		clientIP = receiveSendPacket.getAddress();
 		int len = receiveSendPacket.getLength();
 
 		String host = "Error Simulator";
@@ -119,8 +122,10 @@ public class ErrorSimulator {
 	 */
 	private static DatagramPacket receiveClientPacket(){
 		byte data[] = new byte[100];
-
+		
 		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
+		clientPort = receivePacket.getPort();
+		clientIP = receivePacket.getAddress();
 		try {
 			//block until a datagram is received via sendReceiveSocket.  
 			receiveSocket.receive(receivePacket);
@@ -138,7 +143,7 @@ public class ErrorSimulator {
 	private static DatagramPacket sendPacket(DatagramPacket po){
 		//set the port for the packet to be that of the servers receive socket
 		po.setPort(69);
-
+		
 		//relay the socket to the server
 		try {
 			sendReceiveSocket.send(po);
@@ -157,7 +162,7 @@ public class ErrorSimulator {
 		//create packet in which to store server response
 		byte respData[] = new byte[100];
 		DatagramPacket lo = new DatagramPacket(respData, respData.length);
-
+		
 		try {
 			//block until a packet is received via sendReceiveSocket from server  
 			sendReceiveSocket.receive(lo);
@@ -174,6 +179,8 @@ public class ErrorSimulator {
 	 * @return the DatagramPacket we are sending 
 	 */
 	private static DatagramPacket sendPacketToClient(DatagramPacket po){
+		po.setPort(clientPort);
+		po.setAddress(clientIP);
 		//relay response packet to client
 		try {
 			DatagramSocket relayToClient = new DatagramSocket();
@@ -298,15 +305,16 @@ public class ErrorSimulator {
 		}
 		receiveClientPacket();
 	}
+	
 	/*
 	 * 
 	 */
 	private void shutDown(){
-		byte respData[] = new byte[2];
-		respData[0] = 1;
-		respData[1] = 1;
-		DatagramPacket sendPacket = new DatagramPacket(respData,respData.length);
-		sendPacket(sendPacket);
+		byte respData[] = new byte[10];
+		DatagramPacket sendPackets = new DatagramPacket(respData,respData.length);
+		byte[] arr = {1,1};
+		sendPackets.setData(arr);
+		sendPacket(sendPackets);
 	}
 	/*
 	 * Error Simulation
@@ -346,8 +354,121 @@ public class ErrorSimulator {
 				shutDown(); //Attempting to shutdown server
 			}
 		} while (!validInput);
+
+		//simulate error code 4
+		if (inputMenu.equals("1")){
+			do
+			{
+				System.out.println("\nYou have chosen error code 4, please select an error from below.");
+				System.out.println("	(1) - Invalid opcode");
+				System.out.println("	(2) - Invalid mode");
+				System.out.println("	(3) - Missing filename");
+				System.out.println("	(4) - No termination after ending 0");
+				System.out.println("	(5) - No ending 0");
+				System.out.println("	(6) - Invalid DATA");
+				System.out.println("	(7) - Invalid ACK");
+				inputCode = keyboard.next();
+
+				errorSelected = Integer.valueOf(inputCode);
+
+				if ((errorSelected < 1) || (errorSelected > 7)){
+					System.out.println("Please enter a value from 1 to 5, thank you");
+					validInput = false;
+				}
+				switch(errorSelected){
+				case 1:{
+					System.out.println("You selected, invalid opcode error.\n");
+					createInvalidPacket();
+					serverResponse();
+					break;
+				}
+				case 2:{
+					System.out.println("You selected, invalid mode error.\n");
+					createInvalidPacket();
+					serverResponse();
+					break;
+				}
+				case 3:{
+					System.out.println("Missing filename error.\n");
+					createInvalidPacket();
+					serverResponse();
+					break;
+				}
+				case 4:{
+					System.out.println("No termination on packet error.\n");
+					createInvalidPacket();
+					serverResponse();
+					break;
+				}
+				case 5:{
+					System.out.println("Invalid ending on packet.\n");
+					createInvalidPacket();
+					serverResponse();
+					break;
+				}
+				}
+			}while (!validInput);
+			if (errorSelected == 6){
+				do
+				{
+					System.out.println("\nWhich host is going to send invalid DATA.");
+					System.out.println("	(1) - Client sends DATA");
+					System.out.println("	(2) - Server sends DATA");
+					inputData = keyboard.next();
+
+					errorData = Integer.valueOf(inputData);
+					if ((errorData < 1) || (errorData > 2)){
+						System.out.println("Please enter a value from 1 to 2, thank you");
+						validInput = false;
+					}
+					switch(errorData){
+					case 1:{
+						System.out.println("Client sending invalid DATA..\n");
+						createInvalidDataPacket();
+						serverResponse();
+						break;
+					}
+					case 2:{
+						System.out.println("Server sending invalid DATA..\n");
+						createInvalidDataPacket();
+						serverResponse();
+						break;
+					}
+					}
+				}while (!validInput);
+			}
+			if (errorSelected == 7){
+				do
+				{
+					System.out.println("\nWhich host is going to send invalid ACK.");
+					System.out.println("	(1) - Client sends ACK");
+					System.out.println("	(2) - Server sends ACK");
+					inputAck = keyboard.next();
+
+					errorAck = Integer.valueOf(inputAck);
+					if ((errorAck < 1) || (errorAck > 2)){
+						System.out.println("Please enter a value from 1 to 2, thank you");
+						validInput = false;
+					}
+					switch(errorAck){
+					case 1:{
+						System.out.println("Client sending invalid ACK..\n");
+						createInvalidAckPacket();
+						serverResponse();
+						break;
+					}
+					case 2:{
+						System.out.println("Server sending invalid ACK..\n");
+						createInvalidAckPacket();
+						serverResponse();
+						break;
+					}
+					}
+				}while (!validInput);
+			}	
+		}
+		keyboard.close();
 	}
-	
 
 	/*
 	 * The Main Method
