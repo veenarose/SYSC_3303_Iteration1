@@ -1,3 +1,4 @@
+
 import java.io.*;
 import java.net.*;
 import java.util.Scanner;
@@ -341,6 +342,7 @@ public class ErrorSimulator {
 				System.out.println("Please enter a value from 1 to 3, thank you");
 				validInput = false;
 			}
+			
 			if (inputMenu.equals("2")){
 				System.out.println("Error code 5 (UNKNOWN TID) simulated.");
 				unknownTID();
