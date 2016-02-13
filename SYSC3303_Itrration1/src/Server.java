@@ -184,7 +184,7 @@ public class Server{
 			print("1");
 			byte[] inboundDatapacket = new byte[ioManager.getBufferSize() + 4];
 			byte[] rawData; 
-			short blockNum = 1;
+			int blockNum = 1;
 			String filename = packetManager.getFilename(contents); 
 			print("4");
 			print("Attempting to read from file: " + filename);
@@ -196,6 +196,7 @@ public class Server{
 
 			do{
 				rawData = new byte[ioManager.getBufferSize()];
+				
 				/* create and send ACK packet to client */
 				packet = new DatagramPacket(ack, ack.length, clientAddr, clientPort);
 				socket.send(packet);
@@ -211,11 +212,12 @@ public class Server{
 					continue; //go back and wait for client packet
 				}
 				
+				blockNum++;
 				ack = packetManager.createAck(inboundDatapacket);
-
+				
 				rawData = packetManager.getData(inboundDatapacket);
-				packetManager.printTFTPPacketData(inboundDatapacket);
-				packetManager.printTFTPPacketData(rawData);
+				//packetManager.printTFTPPacketData(inboundDatapacket);
+				//packetManager.printTFTPPacketData(rawData);
 				ioManager.write(writeTo, rawData);
 
 			} while(!(packetManager.lastPacket(rawData)));
@@ -223,7 +225,8 @@ public class Server{
 			/* create and send ACK packet to client */
 			packet = new DatagramPacket(ack, ack.length, clientAddr, clientPort);
 			socket.send(packet);
-
+			blockNum++;
+			
 			print("10");
 			/* wait for next packet */
 			packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
@@ -297,14 +300,6 @@ public class Server{
 						break;
 					}
 				}
-				/*else if(packetManager.validateRequest(packet.getData()) == 5){
-
-					//TODO handle error packets
-					break;
-				} else {
-					error("HandleReadReq: incoming packet could not be verified as ACK or ERR");
-					break;
-				}*/
 			} while(!(packetManager.lastPacket(data)));
 
 			/* exit loop for last packet */
