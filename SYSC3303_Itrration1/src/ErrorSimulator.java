@@ -21,7 +21,7 @@ public class ErrorSimulator {
 	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
 	private static int clientPort;
 	private static InetAddress clientIP;
-	static ProfileData pd = new ProfileData();
+	private static ProfileData pd = new ProfileData();
 	public ErrorSimulator() {
 		try {
 			//construct a datagram socket and bind it to any available port on the local machine
