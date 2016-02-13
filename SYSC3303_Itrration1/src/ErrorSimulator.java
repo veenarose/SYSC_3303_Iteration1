@@ -2,11 +2,12 @@ import java.io.*;
 import java.net.*;
 import java.util.Scanner;
 
-//ErrorSimulator.java
-//This class is the intermediate host between the client and server
-//for assignment 1.
-//
-//by: Damjan Markovic
+/* ErrorSimulator.java
+ * This class is the intermediate host between the client and server
+ * for assignment 1.
+ * 
+ * by: Damjan Markovic
+ */
 
 public class ErrorSimulator {
 
@@ -18,7 +19,7 @@ public class ErrorSimulator {
 	private int errorData;					 //
 	private int errorAck;				 	 //
 	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
-	
+
 	public ErrorSimulator() {
 		try {
 			//construct a datagram socket and bind it to any available port on the local machine
@@ -36,9 +37,10 @@ public class ErrorSimulator {
 		errorAck = -1;
 	}
 
-	//method which: 
-	//receives requests from the client and responses from the server
-	//sends requests to the server and responses to the client
+	/* Method which: 
+	 * Receives requests from the client and responses from the server
+	 * Sends requests to the server and responses to the client
+	 */	
 	public static void receiveAndSend() {
 		byte data[] = new byte[100];
 		int clientPort; //port from which receiving client packet came from
@@ -58,7 +60,7 @@ public class ErrorSimulator {
 		packetManager.displayPacketInfo(receiveSendPacket, host, false);
 		System.out.print("Containing: ");
 		packetManager.printTFTPPacketData(receiveSendPacket.getData());
-		
+
 		//set the port for the packet to be that of the servers receive socket
 		receiveSendPacket.setPort(69);
 		//display packet info being sent to Server to the console
@@ -111,6 +113,10 @@ public class ErrorSimulator {
 
 	}
 
+	/*
+	 * Receives the data packet from the client
+	 * @return The DatagramPacket received 
+	 */
 	private static DatagramPacket receiveClientPacket(){
 		byte data[] = new byte[100];
 
@@ -124,6 +130,11 @@ public class ErrorSimulator {
 		}
 		return receivePacket;
 	}
+
+	/*
+	 * Send the DatagramPacket to the Server
+	 * @return the DatagramPacket we are sending 
+	 */
 	private static DatagramPacket sendPacket(DatagramPacket po){
 		//set the port for the packet to be that of the servers receive socket
 		po.setPort(69);
@@ -139,7 +150,8 @@ public class ErrorSimulator {
 	} 
 
 	/*
-	 * 
+	 * Receives the data packet from the client
+	 * @return The DatagramPacket received
 	 */
 	private static DatagramPacket receiveServerPacket(){
 		//create packet in which to store server response
@@ -156,7 +168,11 @@ public class ErrorSimulator {
 		System.out.println("Response received:");
 		return lo;
 	}
-	
+
+	/*
+	 * Send the DatagramPacket to the client 
+	 * @return the DatagramPacket we are sending 
+	 */
 	private static DatagramPacket sendPacketToClient(DatagramPacket po){
 		//relay response packet to client
 		try {
@@ -170,7 +186,7 @@ public class ErrorSimulator {
 		}
 		return po;
 	}
-	
+
 	/*
 	 * Creates an invalid read/write request packet
 	 */
@@ -234,7 +250,7 @@ public class ErrorSimulator {
 			sendPacket(receivePacket);
 		}
 	}
-	
+
 	/*
 	 * Waits for the response from Server and relay back to Client
 	 */
@@ -243,7 +259,7 @@ public class ErrorSimulator {
 		DatagramPacket serverPacket = receiveServerPacket();
 		sendPacketToClient(serverPacket);
 	}
-	
+
 	/*
 	 * Creates an invalid Client and Server DATA packet 
 	 */
@@ -255,7 +271,7 @@ public class ErrorSimulator {
 			sendPacket(receivePacket);
 		}
 	}
-	
+
 	/*
 	 * Creates an invalid Client and Server ACK packet 
 	 */
@@ -267,7 +283,7 @@ public class ErrorSimulator {
 			sendPacket(receiveSendPacket);
 		}
 	}
-	
+
 	/*
 	 * Creates an Unknown Transfer ID
 	 */
@@ -282,7 +298,7 @@ public class ErrorSimulator {
 		}
 		receiveClientPacket();
 	}
-	
+
 	/*
 	 * Error Simulation
 	 */
@@ -404,7 +420,7 @@ public class ErrorSimulator {
 					System.out.println("	(1) - Client sends ACK");
 					System.out.println("	(2) - Server sends ACK");
 					inputAck = keyboard.next();
-					
+
 					errorAck = Integer.valueOf(inputAck);
 					if ((errorAck < 1) || (errorAck > 2)){
 						System.out.println("Please enter a value from 1 to 2, thank you");
@@ -428,6 +444,9 @@ public class ErrorSimulator {
 		keyboard.close();
 	}
 
+	/*
+	 * The Main Method
+	 */
 	public static void main( String args[] ) throws IOException
 	{
 		ErrorSimulator h = new ErrorSimulator();
