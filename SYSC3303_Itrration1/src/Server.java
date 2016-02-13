@@ -305,6 +305,8 @@ public class Server{
 						error("ACK packet Block Number does not match current block number");
 						break;
 					}
+				} else {
+					handleErrReq(6, clientAddr, clientPort);
 				}
 			} while(!(packetManager.lastPacket(data)));
 
@@ -348,7 +350,8 @@ public class Server{
 					"Invalid Request Type", 
 					"Packet message continues after terminating 0",
 					"Packet did not terminate with 0",
-					"Error has occoured"
+					"Error has occoured",
+					"Invalid ACK recieved"
 			};
 
 			byte[] err = packetManager.createError(errCode, errMsg[i]);

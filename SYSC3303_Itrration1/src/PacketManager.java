@@ -226,7 +226,9 @@ public class PacketManager {
 	 */
 	public boolean isAckPacket(byte[] data){
 		if(data.length == 4){
-			return true;
+			if(data[0] == 0 && data[1] == 4){
+				return true;
+			}
 		}
 		return false;
 	}
