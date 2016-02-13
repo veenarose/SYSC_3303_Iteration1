@@ -353,7 +353,8 @@ public class Server{
 
 			byte[] err = packetManager.createError(errCode, errMsg[i]);
 			packet = new DatagramPacket(err,err.length,addr,port);
-
+			
+			print(getTimestamp() + ": " + errMsg[i] + " thread exiting");
 			try {
 				socket.send(packet);
 			} catch (IOException e) {

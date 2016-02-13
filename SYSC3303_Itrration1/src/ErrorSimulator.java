@@ -317,7 +317,7 @@ public class ErrorSimulator {
 	private void startErr() throws IOException                                                                                                     
 	{                                                                                                                                              
 		Scanner keyboard = new Scanner(System.in);                                                                                                 
-		boolean validInput;                                                                                                                        
+		boolean validInput = true;                                                                                                                        
 		String inputMenu, inputCode, inputData, inputAck;                                                                                          
 		System.out.println("Welcome to Error Simulator.");                                                                                         
 		//get user to simulate error or without errors                                                                                             
