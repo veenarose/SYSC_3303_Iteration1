@@ -55,7 +55,7 @@ public class ErrorSimulator {
 			System.exit(1);
 		}
 		clientPort = receiveSendPacket.getPort();
-		clientIP = receiveSendPacket.getAddress();
+		setClientIP(receiveSendPacket.getAddress());
 		int len = receiveSendPacket.getLength();
 
 		String host = "Error Simulator";
@@ -199,7 +199,7 @@ public class ErrorSimulator {
 	private void createInvalidPacket(){
 		DatagramPacket receivePacket = receiveClientPacket();
 		clientPort = receivePacket.getPort();
-		clientIP = receivePacket.getAddress();
+		setClientIP(receivePacket.getAddress());
 		//setting an invalid opcode error
 		if (errorSelected == 1){
 			System.out.println("Created an invalid opcode packet.");
@@ -480,5 +480,13 @@ public class ErrorSimulator {
 	{
 		ErrorSimulator h = new ErrorSimulator();
 		h.startErr();
+	}
+
+	public static InetAddress getClientIP() {
+		return clientIP;
+	}
+
+	public static void setClientIP(InetAddress clientIP) {
+		ErrorSimulator.clientIP = clientIP;
 	}
 }
