@@ -45,7 +45,6 @@ public class ErrorSimulator {
 	 */	
 	public static void receiveAndSend() {
 		byte data[] = new byte[100];
-		//int clientPort; //port from which receiving client packet came from
 		DatagramPacket receiveSendPacket = new DatagramPacket(data, data.length);
 		try {
 			//block until a datagram is received via sendReceiveSocket.  
@@ -123,8 +122,10 @@ public class ErrorSimulator {
 	 */
 	private static DatagramPacket receiveClientPacket(){
 		byte data[] = new byte[100];
-		
+
 		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
+		clientPort = receivePacket.getPort();
+		clientIP = receivePacket.getAddress();
 		try {
 			//block until a datagram is received via sendReceiveSocket.  
 			receiveSocket.receive(receivePacket);
@@ -142,7 +143,7 @@ public class ErrorSimulator {
 	private static DatagramPacket sendPacket(DatagramPacket po){
 		//set the port for the packet to be that of the servers receive socket
 		po.setPort(pd.getServerPort());
-		
+
 		//relay the socket to the server
 		try {
 			sendReceiveSocket.send(po);
@@ -161,6 +162,7 @@ public class ErrorSimulator {
 		//create packet in which to store server response
 		byte respData[] = new byte[100];
 		DatagramPacket lo = new DatagramPacket(respData, respData.length);
+
 		try {
 			//block until a packet is received via sendReceiveSocket from server  
 			sendReceiveSocket.receive(lo);
@@ -178,11 +180,11 @@ public class ErrorSimulator {
 	 * @return the DatagramPacket we are sending 
 	 */
 	private static DatagramPacket sendPacketToClient(DatagramPacket po){
-		po.setPort(clientPort);;
 		//relay response packet to client
+		DatagramPacket p = new DatagramPacket(po.getData(),po.getData().length, clientIP, clientPort);
 		try {
 			DatagramSocket relayToClient = new DatagramSocket();
-			relayToClient.send(po);
+			relayToClient.send(p);
 			relayToClient.close();
 
 		} catch (IOException e) {
@@ -307,7 +309,7 @@ public class ErrorSimulator {
 		}
 		receiveClientPacket();
 	}
-	
+
 	/*
 	 * Attempting to shutdown the server
 	 */

@@ -213,6 +213,8 @@ public class Server{
 				packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
 				socket.receive(packet);
 				
+				
+				
 				//If Packet arrives from an unknown TID
 				if(verifyClient(packet) == false){
 					handleErrReq(5 , packet.getAddress(), packet.getPort());
@@ -334,6 +336,8 @@ public class Server{
 				if(bn != blockNum){
 					error("ACK packet Block Number does not match current block number");
 				}
+			} else {
+				handleErrReq(6, clientAddr, clientPort);
 			}
 			print("File read Succesfuly");
 		}
