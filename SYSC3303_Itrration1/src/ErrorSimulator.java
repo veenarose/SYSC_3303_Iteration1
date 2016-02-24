@@ -63,11 +63,11 @@ public class ErrorSimulator {
 		packetManager.displayPacketInfo(receiveSendPacket, host, false);
 		System.out.print("Containing: ");
 		packetManager.printTFTPPacketData(receiveSendPacket.getData());
-
+		System.out.println();
 		//set the port for the packet to be that of the servers receive socket
 		receiveSendPacket.setPort(pd.getServerPort());
 		//display packet info being sent to Server to the console
-		System.out.println();
+
 		packetManager.displayPacketInfo(receiveSendPacket, host, true);
 		System.out.print("Containing: ");
 		System.out.println(new String(receiveSendPacket.getData(),0,len));
@@ -91,12 +91,12 @@ public class ErrorSimulator {
 			e.printStackTrace();         
 			System.exit(1);
 		}
+		System.out.println();
 		len = responsePacket.getLength();
 		packetManager.displayPacketInfo(responsePacket, host, false);
 		//form a string from the byte array.
 		String response = new String(data,0,len);   
-		System.out.println(response);
-
+		System.out.println(response+"\n");
 		//set the response packet's port destination to that of the client's sendReceive socket
 		responsePacket.setPort(clientPort);
 		len = responsePacket.getLength();
@@ -189,6 +189,7 @@ public class ErrorSimulator {
 			e.printStackTrace();         
 			System.exit(1);
 		}
+		System.out.println("Response sent to Client:");
 		return po;
 	}
 
@@ -308,7 +309,7 @@ public class ErrorSimulator {
 	}
 	
 	/*
-	 * 
+	 * Attempting to shutdown the server
 	 */
 	private void shutDown(){
 		byte respData[] = new byte[10];

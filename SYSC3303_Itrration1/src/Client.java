@@ -332,7 +332,7 @@ public class Client { //the client class
     	
     	} else {//error received 
     		System.out.println("Received an error packet with code: " + data[3]);
-    		System.out.println("Error message: " + packMan.extractMessageFromErrorPacket(data));
+    		System.out.println("Error message: " + new String(data));
     	}
     }//end of sendAndReceive
     

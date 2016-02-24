@@ -134,6 +134,7 @@ public class Server{
 			}
 
 			if(packetType != 0){
+				System.out.println("packet "+new String(contents));
 				print("Packet type verified as " + packetType + ". Starting thread. " + getTimestamp());
 				this.start();
 			} else {
@@ -208,7 +209,7 @@ public class Server{
 				socket.send(packet);
 
 				print("9");
-				/* wait for next packet */
+				/*  for next packet */
 				packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
 				socket.receive(packet);
 				
