@@ -33,6 +33,7 @@ public class Server{
 		ioManager = new IOManager();
 		byte[] data = new byte[512];
 		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
+		printAllFolderContent();
 
 		try{
 			receiveSocket = new DatagramSocket(pd.getServerPort()); //socket listening on port 1025
@@ -42,9 +43,9 @@ public class Server{
 					if(receivePacket.getData() == shutdown){
 						stopServer();
 					}
-					
+
 					print("Packet recieved from client at " + getTimestamp());
-					
+
 					Response r = new Response(receivePacket); //dispatch new thread to handle the response, pass to it the request packet
 				} catch(IOException e) {
 					e.printStackTrace();         
@@ -61,6 +62,22 @@ public class Server{
 		serverRuning = false;
 		receiveSocket.close();
 		print("Server shutting down");
+	}
+	
+	/*
+	 * Prints all the file names from the specified path.
+	 */
+	public void printAllFolderContent(){
+		File folder = new File(ServerDirectory);
+		File[] listOfFiles = folder.listFiles();
+
+		for (int i = 0; i < listOfFiles.length; i++) {
+			if (listOfFiles[i].isFile()) {
+				System.out.println("File " +(i+1) +": "+ listOfFiles[i].getName());
+			} else if (listOfFiles[i].isDirectory()) {
+				System.out.println("Directory " + listOfFiles[i].getName());
+			}
+		}
 	}
 	
 	public static void main( String args[] ){
@@ -203,7 +220,7 @@ public class Server{
 
 			do{
 				rawData = new byte[ioManager.getBufferSize()];
-				
+
 				/* create and send ACK packet to client */
 				packet = new DatagramPacket(ack, ack.length, clientAddr, clientPort);
 				socket.send(packet);
@@ -212,18 +229,18 @@ public class Server{
 				/*  for next packet */
 				packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
 				socket.receive(packet);
-				
-				
-				
+
+
+
 				//If Packet arrives from an unknown TID
 				if(verifyClient(packet) == false){
 					handleErrReq(5 , packet.getAddress(), packet.getPort());
 					continue; //go back and wait for client packet
 				}
-				
+
 				blockNum++;
 				ack = packetManager.createAck(inboundDatapacket);
-				
+
 				rawData = packetManager.getData(inboundDatapacket);
 				//packetManager.printTFTPPacketData(inboundDatapacket);
 				//packetManager.printTFTPPacketData(rawData);
@@ -235,7 +252,7 @@ public class Server{
 			packet = new DatagramPacket(ack, ack.length, clientAddr, clientPort);
 			socket.send(packet);
 			blockNum++;
-			
+
 			print("10");
 			/* wait for next packet */
 			packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
@@ -293,7 +310,7 @@ public class Server{
 				if(verifyClient(packet) == false){
 					handleErrReq(5, packet.getAddress(), packet.getPort());
 				}
-				
+
 				print(" 11 ");
 				/* confirm validity of ACK */
 				if(packetManager.isAckPacket(packet.getData())){
@@ -361,7 +378,7 @@ public class Server{
 
 			byte[] err = packetManager.createError(errCode, errMsg[i]);
 			packet = new DatagramPacket(err,err.length,addr,port);
-			
+
 			print(getTimestamp() + ": " + errMsg[i] + " thread exiting");
 			try {
 				socket.send(packet);
@@ -370,7 +387,7 @@ public class Server{
 				e.printStackTrace();
 			}
 		}
-		
+
 		/**
 		 * Verifies that that client is the original client for which the thread was made
 		 * @param p Packet received thats is to be verified
@@ -382,5 +399,6 @@ public class Server{
 			}
 			return false;
 		}
+
 	}
 }
