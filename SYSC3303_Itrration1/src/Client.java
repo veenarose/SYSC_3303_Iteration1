@@ -85,6 +85,12 @@ public class Client { //the client class
     	
     }
     
+    /**
+     * private method that handles an invalid Block 
+     * @param DatagramSicket : socket
+     * @param int expected 
+     * @param int found 
+     */
     public void handleInvalidBlock(DatagramSocket socket, int expected, int found) {
     	System.out.println("Unexpected block number detected, "
 				+ "terminating connection and sending error packet");
@@ -360,6 +366,9 @@ public class Client { //the client class
     	else return -1;
     }
     
+    /*
+     * The main method
+     */
     public static void main( String args[] ) throws IOException
     {
     	
