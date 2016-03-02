@@ -29,6 +29,7 @@ public class Server{
 	 * and pass them onto to new response handler threads.
 	 */
 	public Server(){
+		System.out.println("Server Started...");
 		packetManager = new PacketManager();
 		ioManager = new IOManager();
 		byte[] data = new byte[512];
