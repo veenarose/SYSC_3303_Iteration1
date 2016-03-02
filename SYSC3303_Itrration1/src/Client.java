@@ -1,9 +1,6 @@
-import java.util.List;
 import java.util.Set;
 import java.io.*;
 import java.net.*;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.HashSet;
 
 /**
@@ -85,20 +82,7 @@ public class Client { //the client class
     	
     }
     
-    /**
-     * private method that handles an invalid Block 
-     * @param DatagramSicket : socket
-     * @param int expected 
-     * @param int found 
-     */
-    public void handleInvalidBlock(DatagramSocket socket, int expected, int found) {
-    	System.out.println("Unexpected block number detected, "
-				+ "terminating connection and sending error packet");
-    	byte[] errBlock = new byte[]{0,4};
-    	byte[] errData = packMan.createError(errBlock,"Invalid block number detected. Was expecting " 
-				+ expected + " but received " + found + ".");
-    	DatagramPacket err = new DatagramPacket(errData, errData.length);
-    	sendPacket(err, socket); }
+    
     
     /**
      * client's method for sending and receiving requests
@@ -173,7 +157,6 @@ public class Client { //the client class
 		        	try {
 						ioMan.write(writeTo, writeToFileData);
 					} catch (IOException e1) {
-						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}
 		        	System.out.println("wrote to file 4");
@@ -207,9 +190,8 @@ public class Client { //the client class
 		        		
 		        		if(packMan.twoBytesToInt(data[2], data[3]) != 
 		        				expectedBlockNumber) {
-		        			handleInvalidBlock(sendReceiveSocket, 
-			        				expectedBlockNumber, 
-			        				packMan.twoBytesToInt(data[2], data[3]));
+		        			sendPacket(packMan.handleInvalidBlock(expectedBlockNumber, 
+			        				packMan.twoBytesToInt(data[2], data[3])), sendReceiveSocket);
 		        			break;
 		        		}
 		            	
@@ -218,16 +200,14 @@ public class Client { //the client class
 		            	try {
 							ioMan.write(writeTo, writeToFileData);
 						} catch (IOException e) {
-							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
 		        		
 		        	}  //end read request loop
 	        	
 	        	} else { //unexpected block number
-	        		handleInvalidBlock(sendReceiveSocket, 
-	        				expectedBlockNumber, 
-	        				packMan.twoBytesToInt(data[2], data[3]));
+	        		sendPacket(packMan.handleInvalidBlock(expectedBlockNumber, 
+	        				packMan.twoBytesToInt(data[2], data[3])), sendReceiveSocket);
 	        	}
 	        	
 	        } else { //a write request
@@ -265,7 +245,6 @@ public class Client { //the client class
 						writeData = packMan.createData(readFromFileData, blockNum);
 						packMan.printTFTPPacketData(writeData);
 					} catch (IOException e1) {
-						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}
 		        	
@@ -297,9 +276,8 @@ public class Client { //the client class
 		        		
 		        		if(packMan.twoBytesToInt(ackData[2], ackData[3]) != 
 		        				expectedBlockNumber) {
-		        			handleInvalidBlock(sendReceiveSocket, 
-			        				expectedBlockNumber, 
-			        				packMan.twoBytesToInt(ackData[2], ackData[3]));
+		        			sendPacket(packMan.handleInvalidBlock(expectedBlockNumber, 
+			        				packMan.twoBytesToInt(ackData[2], ackData[3])), sendReceiveSocket);
 		        			break;
 		        		}
 		        		
@@ -318,7 +296,6 @@ public class Client { //the client class
 		    				reader.read(readFromFileData, 0, ioMan.getBufferSize());
 		    				writeData = packMan.createData(readFromFileData, blockNum);
 		    			} catch (IOException e1) {
-		    				// TODO Auto-generated catch block
 		    				e1.printStackTrace();
 		    			}
 		        		
@@ -329,9 +306,8 @@ public class Client { //the client class
 		        	} //end write request loop
 	        	
 	        	} else { //invalid block number
-	        		handleInvalidBlock(sendReceiveSocket, 
-	        				expectedBlockNumber, 
-	        				packMan.twoBytesToInt(ackData[2], ackData[3]));
+	        		sendPacket(packMan.handleInvalidBlock(expectedBlockNumber, 
+	        				packMan.twoBytesToInt(ackData[2], ackData[3])), sendReceiveSocket);
 	        	}
 	        
 	        }//end handle else write request
@@ -366,9 +342,6 @@ public class Client { //the client class
     	else return -1;
     }
     
-    /*
-     * The main method
-     */
     public static void main( String args[] ) throws IOException
     {
     	

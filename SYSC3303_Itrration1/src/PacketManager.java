@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.util.Arrays;
 
 /**
@@ -10,7 +11,7 @@ public class PacketManager {
 	private static byte[] WRQ = {0,2}; // Write opcode
 	private static byte[] DRQ = {0,3}; //data request
 	private static byte[] ERC = {0,5}; //error opcode
-	
+
 	private static String[] validModes = {"netascii", "octet"};// The modes
 
 	/**
@@ -40,11 +41,7 @@ public class PacketManager {
 
 		return readPack;
 	}
-	
-	/*
-	 * Prints the TFTP PacketData 
-	 * @param: Takes in the byte array of the packet
-	 */
+
 	public void printTFTPPacketData(byte[] p) {
 		int length = p.length;
 		System.out.print("[");
@@ -56,7 +53,7 @@ public class PacketManager {
 			}
 		}
 	}
-	
+
 	/**
 	 * This method is used to create a write request to send to the server
 	 *@param message String: The name of the file
@@ -96,13 +93,13 @@ public class PacketManager {
 		System.arraycopy(data, 0, dataPack, block.length+DRQ.length, data.length);
 		return dataPack;
 	}
-	
+
 	/**
 	 * This method is used to extract the Ack code from the data received
 	 * @param data byte[]: The data that is received
 	 * @return A byte array containing the Ack code
 	 */
-	public static byte[] createAck(byte[] data){
+	public byte[] createAck(byte[] data){
 		byte[] ack = new byte[4];
 		ack[0] = 0; 
 		ack[1] = 4;
@@ -110,7 +107,7 @@ public class PacketManager {
 		ack[3] = data[3];
 		return ack;
 	}
-	
+
 	/**
 	 * This method is used to extract the Ack code from the data received
 	 * @param data byte[]: The data that is received
@@ -124,7 +121,7 @@ public class PacketManager {
 		ack[3] = data[3];
 		return ack;
 	}
-	
+
 	/**
 	 * Creates a packet to send the server or client 
 	 * @param errCode Byte[] The that contains the Error code 04/05 
@@ -135,13 +132,13 @@ public class PacketManager {
 		byte[] msg = errMessage.getBytes();
 		byte arr[] = {0};
 		byte dataPack[] = new byte[ERC.length+errCode.length+msg.length+arr.length]; 
-		
+
 		System.arraycopy(ERC, 0, dataPack, 0, ERC.length);
 		System.arraycopy(errCode, 0, dataPack, ERC.length, errCode.length);
 		System.arraycopy(msg, 0, dataPack, errCode.length+ERC.length, msg.length);
 		return dataPack;
 	}
-	
+
 	/**
 	 * This method is used to extract the Block number from the data received
 	 * @param data byte[]: The data that is received
@@ -192,17 +189,17 @@ public class PacketManager {
 		byte[] byteMessage = new byte[data.length - 2];
 		String[] sfn;
 		byte[] delimiter = {0};
-		
+
 		/*Get everything past header*/
 		for(int i = 0 ; i < byteMessage.length; i++){
 			byteMessage [i] = data[i+2];			
 		}
 		/* Split the string at byte 0 to form 2 pieces: filename, mode*/
 		sfn = new String(byteMessage).split(new String(delimiter));
-		
+
 		return sfn[0];
 	}
-	
+
 	/**
 	 * Returns the mode from a READ or WRITE request
 	 * @param data Data portion of the packet
@@ -212,17 +209,17 @@ public class PacketManager {
 		byte[] byteMessage = new byte[data.length - 2];
 		String[] sfn;
 		byte[] delimiter = {0};
-		
+
 		/*Get everything past header*/
 		for(int i = 0 ; i < byteMessage.length; i++){
 			byteMessage [i] = data[i+2];			
 		}
 		/* Split the string at byte 0 to form 2 pieces: filename, mode*/
 		sfn = new String(byteMessage).split(new String(delimiter));
-		
+
 		return sfn[1];
 	}
-	
+
 	/**
 	 * Quick and dirty check of whether a packet is an ACK packet
 	 * @param data
@@ -236,14 +233,14 @@ public class PacketManager {
 		}
 		return false;
 	}
-	
+
 	public boolean isDataPacket(byte[] data) {
 		if(data[1] != 4) { return false; }
 		int bufferSize = 516;
 		if(data.length != bufferSize) { return false; }
 		return true;
 	}
-	
+
 	/**
 	 * Takes two byte numbers and returns there associated int value
 	 * @param leftByte
@@ -253,7 +250,7 @@ public class PacketManager {
 	public int twoBytesToInt(byte leftByte, byte rightByte) {
 		return ((leftByte << 8) & 0x0000ff00) | (rightByte & 0x000000ff);
 	}
-	
+
 	/**
 	 * Splits an int into two byte values
 	 * @param leftByte
@@ -262,13 +259,13 @@ public class PacketManager {
 	 */
 	public byte[] intToBytes(int i) {
 		byte[] data = new byte[2];
-		
+
 		data[0] = (byte)((i >> 8) & 0xFF);
 		data[1] = (byte)(i & 0xFF);
-		
+
 		return data;
 	}
-	
+
 	/**
 	 * This method is used to display the packet information
 	 * 
@@ -307,7 +304,7 @@ public class PacketManager {
 		int zeroCount = 0; 	
 		String[] sfn;
 		byte[] delimiter = {0};
-		
+
 		//checks leading 0 byte and read/write request byte
 		if(msg[0] != 0 || (msg[1] != 1 && msg[1] != 2)) {} 
 
@@ -325,24 +322,35 @@ public class PacketManager {
 			} 
 			i++; 
 		} if(zeroCount <= 1) { throw invalid; } 
-		
+
+
 		/* Split the string at byte 0 to form 2 pieces: filename, mode*/
 		sfn = new String(msg).split(new String(delimiter));
-		
+
 		if (sfn.length > 3){
 			return 200;
 		}
-		
+
 		//returns a value which is either a 1 for a read request or a 2 for a write request 
 		return msg[1]; 
 	}  
+	public DatagramPacket handleInvalidBlock(int expected, int found) {
+    	System.out.println("Unexpected block number detected, "
+				+ "terminating connection and sending error packet");
+    	byte[] errBlock = new byte[]{0,4};
+    	byte[] errData = createError(errBlock,"Invalid block number detected. Was expecting " 
+				+ expected + " but received " + found + ".");
+    	DatagramPacket err = new DatagramPacket(errData, errData.length);
+    	//sendPacket(err, socket);
+    	return err;
+    }
 	
 	public static String extractMessageFromErrorPacket(byte[] err) {
 		byte msg[] = new byte[err.length - 5];
 		System.arraycopy(err, 4, msg, 0, err.length - 5);
 		return Arrays.toString(msg);
 	}
-	
+
 	public boolean isErrorPacket(byte[] p) {
 		return p[1] == 5;
 	}
