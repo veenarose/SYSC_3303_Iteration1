@@ -29,13 +29,14 @@ public class Server{
 	 * and pass them onto to new response handler threads.
 	 */
 	public Server(){
-		System.out.println("Server Started...");
+		System.out.println("Server started");
+		System.out.println("Waiting for packet..");
 		packetManager = new PacketManager();
 		ioManager = new IOManager();
 		byte[] data = new byte[512];
 		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
 		printAllFolderContent();
-
+		
 		try{
 			receiveSocket = new DatagramSocket(pd.getServerPort()); //socket listening on port 1025
 			while(serverRuning){
@@ -44,9 +45,9 @@ public class Server{
 					if(receivePacket.getData() == shutdown){
 						stopServer();
 					}
-
+					
 					print("Packet recieved from client at " + getTimestamp());
-
+					
 					Response r = new Response(receivePacket); //dispatch new thread to handle the response, pass to it the request packet
 				} catch(IOException e) {
 					e.printStackTrace();         
@@ -59,12 +60,6 @@ public class Server{
 		}
 	}
 
-	private void stopServer(){
-		serverRuning = false;
-		receiveSocket.close();
-		print("Server shutting down");
-	}
-	
 	/*
 	 * Prints all the file names from the specified path.
 	 */
@@ -79,6 +74,12 @@ public class Server{
 				System.out.println("Directory " + listOfFiles[i].getName());
 			}
 		}
+	}
+
+	private void stopServer(){
+		serverRuning = false;
+		receiveSocket.close();
+		print("Server shutting down");
 	}
 	
 	public static void main( String args[] ){
@@ -165,7 +166,7 @@ public class Server{
 				handleErrReq(0 ,clientAddr, clientPort);
 			}
 
-			if (filename == ""){
+			if (filename.isEmpty()){
 				handleErrReq(1 ,clientAddr, clientPort);
 			}
 
@@ -221,7 +222,7 @@ public class Server{
 
 			do{
 				rawData = new byte[ioManager.getBufferSize()];
-
+				
 				/* create and send ACK packet to client */
 				packet = new DatagramPacket(ack, ack.length, clientAddr, clientPort);
 				socket.send(packet);
@@ -230,18 +231,18 @@ public class Server{
 				/*  for next packet */
 				packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
 				socket.receive(packet);
-
-
-
+				
+				
+				
 				//If Packet arrives from an unknown TID
 				if(verifyClient(packet) == false){
 					handleErrReq(5 , packet.getAddress(), packet.getPort());
 					continue; //go back and wait for client packet
 				}
-
+				
 				blockNum++;
 				ack = packetManager.createAck(inboundDatapacket);
-
+				
 				rawData = packetManager.getData(inboundDatapacket);
 				//packetManager.printTFTPPacketData(inboundDatapacket);
 				//packetManager.printTFTPPacketData(rawData);
@@ -253,8 +254,7 @@ public class Server{
 			packet = new DatagramPacket(ack, ack.length, clientAddr, clientPort);
 			socket.send(packet);
 			blockNum++;
-
-			print("10");
+			
 			/* wait for next packet */
 			packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
 			socket.receive(packet);
@@ -269,14 +269,14 @@ public class Server{
 
 		private void handleReadReq() throws IOException {
 			byte[] data; 
-			short blockNum = 1; print(" 3 ");
-			String filename = packetManager.getFilename(contents); print(" 4 ");
+			short blockNum = 1;
+			short expectedBlockNum = blockNum;
+			String filename = packetManager.getFilename(contents);
 			print("Attempting to read from file: " + filename);
 
 			BufferedInputStream reader = new BufferedInputStream
 					(new FileInputStream(ServerDirectory + filename));
 
-			print(" 5 ");
 			/* Convert block number from short to byte[] */
 			ByteBuffer buffer = ByteBuffer.allocate(2);
 			buffer.putShort(blockNum);
@@ -284,35 +284,30 @@ public class Server{
 
 			do{
 				data = new byte[512];
-				print(" 6 ");
 				/* get data from file and configure the offset*/
 
 				reader.read(data, 0, data.length);
 
-				print(" 7 ");
 				/* place data into packet to be sent to client */
 				packet = new DatagramPacket(packetManager.createData(data, block),
 						packetManager.createData(data, block).length,
 						clientAddr,
 						clientPort);
 
-				print(" 8 ");
 				/* send packet to client */
 				socket.send(packet);
 
-				print(" 9 ");
 				/* iterate server side block number */
 				blockNum++;
 
-				print(" 10 ");
 				/* wait to receive ACK confirmation */
 				socket.receive(packet);
-
+				
+				
 				if(verifyClient(packet) == false){
 					handleErrReq(5, packet.getAddress(), packet.getPort());
 				}
-
-				print(" 11 ");
+				
 				/* confirm validity of ACK */
 				if(packetManager.isAckPacket(packet.getData())){
 					byte[] ackData = packet.getData();
@@ -379,7 +374,7 @@ public class Server{
 
 			byte[] err = packetManager.createError(errCode, errMsg[i]);
 			packet = new DatagramPacket(err,err.length,addr,port);
-
+			
 			print(getTimestamp() + ": " + errMsg[i] + " thread exiting");
 			try {
 				socket.send(packet);
@@ -388,7 +383,7 @@ public class Server{
 				e.printStackTrace();
 			}
 		}
-
+		
 		/**
 		 * Verifies that that client is the original client for which the thread was made
 		 * @param p Packet received thats is to be verified
@@ -400,6 +395,5 @@ public class Server{
 			}
 			return false;
 		}
-
 	}
 }

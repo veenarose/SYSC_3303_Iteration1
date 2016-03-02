@@ -22,7 +22,9 @@ public class ErrorSimulator {
 	private int errorBlkNum;				 //to store the user selected block number
 	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
 	private static int clientPort;
+	private static int serverPort;
 	private static InetAddress clientIP;
+	private static InetAddress serverIP;
 	private static ProfileData pd = new ProfileData();
 	public ErrorSimulator() {
 		try {
@@ -144,7 +146,7 @@ public class ErrorSimulator {
 	 * Send the DatagramPacket to the Server
 	 * @return the DatagramPacket we are sending 
 	 */
-	private static DatagramPacket sendPacket(DatagramPacket po){
+	private static DatagramPacket sendPacketToServer(DatagramPacket po){
 		//set the port for the packet to be that of the servers receive socket
 		po.setPort(pd.getServerPort());
 
@@ -166,7 +168,8 @@ public class ErrorSimulator {
 		//create packet in which to store server response
 		byte respData[] = new byte[100];
 		DatagramPacket lo = new DatagramPacket(respData, respData.length);
-
+		serverPort = lo.getPort();
+		serverIP = lo.getAddress();
 		try {
 			//block until a packet is received via sendReceiveSocket from server  
 			sendReceiveSocket.receive(lo);
@@ -198,7 +201,7 @@ public class ErrorSimulator {
 		System.out.println("Response sent to Client:");
 		return po;
 	}
-
+	
 	/*
 	 * Creates an invalid read/write request packet
 	 */
@@ -206,8 +209,19 @@ public class ErrorSimulator {
 		DatagramPacket receivePacket = receiveClientPacket();
 		clientPort = receivePacket.getPort();
 		setClientIP(receivePacket.getAddress());
-		//setting an invalid opcode error
+		
+		//setting a large packet
 		if (errorSelected == 1){
+			System.out.println("Created a very large packet.");
+			byte[] inValid = receivePacket.getData();
+			inValid[1] = 8;
+			receivePacket.setData(inValid);
+			System.out.print("Containing: ");
+			packetManager.printTFTPPacketData(receivePacket.getData());
+			System.out.println("Invalid opcode packet sent.");
+			sendPacketToServer(receivePacket);
+		}
+		else if (errorSelected == 2){							//setting an invalid opcode error
 			System.out.println("Created an invalid opcode packet.");
 			byte[] inValid = receivePacket.getData();
 			inValid[1] = 8;
@@ -215,9 +229,9 @@ public class ErrorSimulator {
 			System.out.print("Containing: ");
 			packetManager.printTFTPPacketData(receivePacket.getData());
 			System.out.println("Invalid opcode packet sent.");
-			sendPacket(receivePacket);
+			sendPacketToServer(receivePacket);
 		}
-		else if(errorSelected == 2){			//setting an invalid mode error
+		else if(errorSelected == 3){			//setting an invalid mode error
 			System.out.println("Created an invalid mode packet.");
 			String invalidMode = "invalidMode";
 			byte[] req = packetManager.createRead(packetManager.getFilename(receivePacket.getData()), invalidMode);
@@ -226,20 +240,20 @@ public class ErrorSimulator {
 			System.out.print("In Bytes: ");
 			packetManager.printTFTPPacketData(receivePacket.getData());
 			System.out.println("Invalid mode packet sent.");
-			sendPacket(receivePacket);
+			sendPacketToServer(receivePacket);
 		}
-		else if (errorSelected == 3){			//setting a missing filename error
+		else if (errorSelected == 4){			//setting a missing filename error
 			System.out.println("Created a missing filename packet.");
-			String missFile = " ";
+			String missFile = "";
 			byte[] req = packetManager.createRead(missFile, packetManager.getMode(receivePacket.getData()));
 			receivePacket.setData(req);
 			System.out.println("Containing: "+new String(receivePacket.getData()));
 			System.out.print("In Bytes: ");
 			packetManager.printTFTPPacketData(receivePacket.getData());
 			System.out.println("Missing filename packet sent.");
-			sendPacket(receivePacket);
+			sendPacketToServer(receivePacket);
 		}
-		else if (errorSelected == 4){			//setting a no termination error
+		else if (errorSelected == 5){			//setting a no termination error
 			System.out.println("Created a no termination packet.");
 			byte[] oldReq = receivePacket.getData();
 			byte[] newReq = new byte[oldReq.length+1];
@@ -248,9 +262,9 @@ public class ErrorSimulator {
 			System.out.print("Containing: ");
 			packetManager.printTFTPPacketData(receivePacket.getData());
 			System.out.println("Invalid termination packet sent.");
-			sendPacket(receivePacket);
+			sendPacketToServer(receivePacket);
 		}
-		else if (errorSelected == 5){			//setting a no termination error
+		else if (errorSelected == 6){			//setting a no termination error
 			System.out.println("Created a no ending zero packet.");
 			byte[] oldReq = receivePacket.getData();
 			byte[] newReq = new byte[oldReq.length-1];
@@ -259,7 +273,7 @@ public class ErrorSimulator {
 			System.out.print("Containing: ");
 			packetManager.printTFTPPacketData(receivePacket.getData());
 			System.out.println("Invalid ending packet sent.");
-			sendPacket(receivePacket);
+			sendPacketToServer(receivePacket);
 		}
 	}
 
@@ -280,9 +294,35 @@ public class ErrorSimulator {
 		DatagramPacket receivePacket = receiveClientPacket();  //receive DATA/ACK packet from client
 		DatagramPacket receivePacket2 = receiveServerPacket(); //receive DATA/ACK packet from server
 		clientPort = receivePacket.getPort();
+		serverPort = receivePacket2.getPort();
 		setClientIP(receivePacket.getAddress());
+		setServerIP(receivePacket2.getAddress());
+		
+		if(errorSelected2 == 1 && errorHost == 1){					//if client sends too larger packet
+			System.out.println("Created a very large packet.");
+			byte[] oldReq = receivePacket.getData();
+			byte[] newReq = new byte[oldReq.length+10];
+			System.arraycopy(oldReq, 0, newReq, 0, newReq.length-1);
+			newReq[newReq.length - 1] = 1;
+			receivePacket.setData(newReq);
+			System.out.print("Containing: ");
+			packetManager.printTFTPPacketData(receivePacket.getData());
+			System.out.println("Invalid packet size sent.");
+			sendPacketToServer(receivePacket);
+		}else if(errorSelected2 == 1 && errorHost == 2){			//if server sends too larger packet
+			System.out.println("Created a very large packet.");
+			byte[] oldReq = receivePacket2.getData();
+			byte[] newReq = new byte[oldReq.length+10];
+			System.arraycopy(oldReq, 0, newReq, 0, newReq.length-1);
+			newReq[newReq.length - 1] = 1;
+			receivePacket2.setData(newReq);
+			System.out.print("Containing: ");
+			packetManager.printTFTPPacketData(receivePacket2.getData());
+			System.out.println("Invalid packet size sent.");
+			sendPacketToClient(receivePacket2);
+		}
 		//setting an invalid mode error
-		if(errorSelected2 == 1 && errorHost == 1){					//if client sends an invalid opcode
+		if(errorSelected2 == 2 && errorHost == 1){					//if client sends an invalid opcode
 			System.out.println("Created an invalid opcode packet.");
 			byte[] inValid = receivePacket.getData();
 			inValid[1] = 8;
@@ -290,9 +330,9 @@ public class ErrorSimulator {
 			System.out.print("Containing: ");
 			packetManager.printTFTPPacketData(receivePacket.getData());
 			System.out.println("Invalid opcode packet sent.");
-			sendPacket(receivePacket);
+			sendPacketToServer(receivePacket);
 		}
-		else if (errorSelected2 == 1 && errorHost == 2){			//if server sends an invalid opcode
+		else if (errorSelected2 == 2 && errorHost == 2){			//if server sends an invalid opcode
 			System.out.println("Created an invalid opcode packet.");
 			byte[] inValid = receivePacket2.getData();
 			inValid[1] = 8;
@@ -304,7 +344,7 @@ public class ErrorSimulator {
 			sendPacketToClient(receivePacket2);
 		}
 		//setting an block number error
-		if(errorSelected2 == 2 && errorHost == 1){					//if client sends an invalid block number on DATA/ACK packet
+		if(errorSelected2 == 3 && errorHost == 1){					//if client sends an invalid block number on DATA/ACK packet
 			System.out.println("Created an invalid block number packet.");
 			byte[] blkNum = receivePacket.getData();
 			byte lsb_blockNumber = blkNum[3];
@@ -314,9 +354,9 @@ public class ErrorSimulator {
 			System.out.print("Containing: ");
 			packetManager.printTFTPPacketData(receivePacket.getData());
 			System.out.println("Invalid Block Number packet sent.");
-			sendPacket(receivePacket);
+			sendPacketToServer(receivePacket);
 		}
-		else if (errorSelected2 == 2 && errorHost == 2){			//if server sends an invalid block number on DATA/ACK packet
+		else if (errorSelected2 == 3 && errorHost == 2){			//if server sends an invalid block number on DATA/ACK packet
 			System.out.println("Created an invalid block number packet.");
 			byte[] blkNum = receivePacket2.getData();
 			byte lsb_blockNumber = blkNum[3];
@@ -360,7 +400,7 @@ public class ErrorSimulator {
 		DatagramPacket sendPackets = new DatagramPacket(respData,respData.length);
 		byte[] arr = {1,1};
 		sendPackets.setData(arr);
-		sendPacket(sendPackets);
+		sendPacketToServer(sendPackets);
 	}
 	/*
 	 * Error Simulation
@@ -421,17 +461,18 @@ public class ErrorSimulator {
 			do
 			{
 				System.out.println("\nPlease select the type of error from below.");
-				System.out.println("	(1) - Invalid opcode");
-				System.out.println("	(2) - Invalid mode");
-				System.out.println("	(3) - Missing filename");
-				System.out.println("	(4) - No termination after ending 0");
-				System.out.println("	(5) - No ending 0");
+				System.out.println("	(1) - Packet too large");
+				System.out.println("	(2) - Invalid opcode");
+				System.out.println("	(3) - Invalid mode");
+				System.out.println("	(4) - Missing filename");
+				System.out.println("	(5) - No termination after ending 0");
+				System.out.println("	(6) - No ending 0");
 				inputCode = keyboard.next();
 
 				errorSelected = Integer.valueOf(inputCode);
 
-				if ((errorSelected < 1) || (errorSelected > 5)){
-					System.out.println("Please enter a value from 1 to 5, thank you");
+				if ((errorSelected < 1) || (errorSelected > 6)){
+					System.out.println("Please enter a value from 1 to 6, thank you");
 					validInput = false;
 				}
 				System.out.println("Error packet simulator ready..");
@@ -443,20 +484,21 @@ public class ErrorSimulator {
 			do
 			{
 				System.out.println("\nPlease select the type of error from below.");
-				System.out.println("	(1) - Invalid opcode");
-				System.out.println("	(2) - Invalid block number");
-				System.out.println("	(3) - DATA/ACK delay");
-				System.out.println("	(4) - DATA/ACK duplicate");
-				System.out.println("	(5) - DATA/ACK loss");
+				System.out.println("	(1) - Packet too large");
+				System.out.println("	(2) - Invalid opcode");
+				System.out.println("	(3) - Invalid block number");
+				System.out.println("	(4) - DATA/ACK delay");
+				System.out.println("	(5) - DATA/ACK duplicate");
+				System.out.println("	(6) - DATA/ACK loss");
 				inputCode = keyboard.next();
 
 				errorSelected2 = Integer.valueOf(inputCode);
 
-				if ((errorSelected2 < 1) || (errorSelected2 > 5)){
-					System.out.println("Please enter a value from 1 to 5, thank you");
+				if ((errorSelected2 < 1) || (errorSelected2 > 6)){
+					System.out.println("Please enter a value from 1 to 6, thank you");
 					validInput = false;
 				}
-				if (errorSelected2 == 3){
+				if (errorSelected2 == 4){
 					do
 					{
 						validInput = true;
@@ -526,7 +568,7 @@ public class ErrorSimulator {
 		@SuppressWarnings("resource")
 		Scanner loop = new Scanner(System.in);
 		while(true){
-			System.out.println("Do you want to simulate an error again (yes/no)? ");
+			System.out.println("\nDo you want to simulate an error again (yes/no)? ");
 			String s = loop.next();
 			if(s.equals("yes"))
 			{
@@ -542,8 +584,15 @@ public class ErrorSimulator {
 	public static InetAddress getClientIP() {
 		return clientIP;
 	}
-
+	
+	public static InetAddress getServerIP() {
+		return serverIP;
+	}
+	
 	public static void setClientIP(InetAddress clientIP) {
 		ErrorSimulator.clientIP = clientIP;
+	}
+	public static void setServerIP(InetAddress serverIP) {
+		ErrorSimulator.serverIP = serverIP;
 	}
 }
