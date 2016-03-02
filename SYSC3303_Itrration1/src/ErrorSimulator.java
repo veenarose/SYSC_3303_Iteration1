@@ -17,6 +17,7 @@ public class ErrorSimulator {
 	DatagramPacket sendPacket;				 //packet which relays request from client to server
 	private int errorSelected;				 //to store in user choice for error code 4
 	private int errorSelected2;
+	private int packetDelay;
 	private int errorHost;					 //
 	private int errorBlkNum;				 //to store the user selected block number
 	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
@@ -37,6 +38,7 @@ public class ErrorSimulator {
 		}
 		errorSelected = -1;
 		errorSelected2 = -1;
+		packetDelay = -1;
 		errorHost = -1;
 		errorBlkNum = -1;
 	}
@@ -361,7 +363,7 @@ public class ErrorSimulator {
 		@SuppressWarnings("resource")
 		Scanner keyboard = new Scanner(System.in);
 		boolean validInput;
-		String inputMenu, inputType, inputCode, inputHost, inputNum;
+		String inputMenu, inputType, inputCode, inputHost, inputNum, inputDelay;
 		//get user to select an error code to which an error to be simulated on 
 		do
 		{
@@ -447,11 +449,34 @@ public class ErrorSimulator {
 					System.out.println("Please enter a value from 1 to 5, thank you");
 					validInput = false;
 				}
+				if (errorSelected2 == 3){
+					do
+					{
+						validInput = true;
+						System.out.println("Enter the delay amount in (ms) ");
+						inputDelay = keyboard.next();
+
+						try
+						{
+							packetDelay = Integer.valueOf(inputDelay);
+						}
+						catch (NumberFormatException e)
+						{
+							System.out.println("Please enter a value from " + 0 + " to " + 999999 );
+							validInput = false;
+						}
+						if ((packetDelay < 0) || (packetDelay > 999999))
+						{
+							System.out.println("Please enter a value from " + 0 + " to " + 999999 );
+							validInput = false;
+						}
+					}while (!validInput);
+				}
 			}while (!validInput);
 			do
 			{
 				validInput = true;
-				System.out.println("Which host is going to cause the simulated error.");
+				System.out.println("\nWhich host is going to cause the simulated error.");
 				System.out.println("	(1) - Client");
 				System.out.println("	(2) - Server");
 				inputHost = keyboard.next();
@@ -478,7 +503,7 @@ public class ErrorSimulator {
 				createInvalidDataAckPacket();
 				serverResponse();
 			}while (!validInput);
-
+			
 		}
 		//keyboard.close();
 	}
