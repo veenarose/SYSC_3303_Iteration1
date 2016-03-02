@@ -16,8 +16,8 @@ public class ErrorSimulator {
 	static DatagramSocket unknownSocket;	 //socket which sends unknown packets to client
 	DatagramPacket sendPacket;				 //packet which relays request from client to server
 	private int errorSelected;				 //to store in user choice for error code 4
-	private int errorData;					 //
-	private int errorAck;				 	 //
+	private int errorHost;					 //
+	private int errorBlkNum;				 //to store the user selected block number
 	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
 	private static int clientPort;
 	private static InetAddress clientIP;
@@ -35,8 +35,8 @@ public class ErrorSimulator {
 			System.exit(1);
 		}
 		errorSelected = -1;
-		errorData = -1;
-		errorAck = -1;
+		errorHost = -1;
+		errorBlkNum = -1;
 	}
 
 	/* Method which: 
@@ -198,7 +198,7 @@ public class ErrorSimulator {
 	/*
 	 * Creates an invalid read/write request packet
 	 */
-	private void createInvalidPacket(){
+	private void createInvalidRequestPacket(){
 		DatagramPacket receivePacket = receiveClientPacket();
 		clientPort = receivePacket.getPort();
 		setClientIP(receivePacket.getAddress());
@@ -274,24 +274,12 @@ public class ErrorSimulator {
 	/*
 	 * Creates an invalid Client and Server DATA packet 
 	 */
-	private void createInvalidDataPacket(){
+	private void createInvalidDataAckPacket(){
 		DatagramPacket receivePacket = receiveClientPacket();
-		if (errorData == 1 || errorData == 2){
+		if (errorHost == 1 || errorHost == 2){
 			receivePacket.getData()[2] = 9;
 			System.out.println("Containing: "+ new String (receivePacket.getData()));
 			sendPacket(receivePacket);
-		}
-	}
-
-	/*
-	 * Creates an invalid Client and Server ACK packet 
-	 */
-	private void createInvalidAckPacket(){
-		DatagramPacket receiveSendPacket = receiveClientPacket();
-		if (errorAck == 1 || errorAck == 2){
-			receiveSendPacket.getData()[1] = 7;
-			System.out.println("Containing: "+ new String (receiveSendPacket.getData()));
-			sendPacket(receiveSendPacket);
 		}
 	}
 
@@ -327,9 +315,9 @@ public class ErrorSimulator {
 	{
 		Scanner keyboard = new Scanner(System.in);
 		boolean validInput;
-		String inputMenu, inputCode, inputData, inputAck;
+		String inputMenu, inputType, inputCode, inputHost, inputNum;
 		System.out.println("Welcome to Error Simulator.");
-		//get user to simulate error or without errors
+		//get user to select an error code to which an error to be simulated on 
 		do
 		{
 			System.out.println("\nChoose your mode:");
@@ -345,7 +333,7 @@ public class ErrorSimulator {
 				System.out.println("Please enter a value from 1 to 3, thank you");
 				validInput = false;
 			}
-			
+
 			if (inputMenu.equals("2")){
 				System.out.println("Error code 5 (UNKNOWN TID) simulated.");
 				unknownTID();
@@ -359,118 +347,93 @@ public class ErrorSimulator {
 				shutDown(); //Attempting to shutdown server
 			}
 		} while (!validInput);
+		//get user input to select the type of packet the error to be simulated on
+		do
+		{
+			System.out.println("\nPlease select the type of packet, that you want to simulate errors for:");
+			System.out.println("	(1) - RRQ/WRQ packets");
+			System.out.println("	(2) - DATA/ACK packets");
+			inputType = keyboard.next();
 
-		//simulate error code 4
-		if (inputMenu.equals("1")){
+			if(inputType.equals("1") || inputType.equals("2")){
+				validInput = true;
+			}else{
+				System.out.println("Please enter a value between 1 and 2, thank you");
+				validInput = false;
+			}
+		}while (!validInput);
+		//simulate error code 4 on request packets
+		if (inputType.equals("1")){
 			do
 			{
-				System.out.println("\nYou have chosen error code 4, please select an error from below.");
+				System.out.println("\nPlease select the type of error from below.");
 				System.out.println("	(1) - Invalid opcode");
 				System.out.println("	(2) - Invalid mode");
 				System.out.println("	(3) - Missing filename");
 				System.out.println("	(4) - No termination after ending 0");
 				System.out.println("	(5) - No ending 0");
-				System.out.println("	(6) - Invalid DATA");
-				System.out.println("	(7) - Invalid ACK");
 				inputCode = keyboard.next();
 
 				errorSelected = Integer.valueOf(inputCode);
 
-				if ((errorSelected < 1) || (errorSelected > 7)){
+				if ((errorSelected < 1) || (errorSelected > 5)){
 					System.out.println("Please enter a value from 1 to 5, thank you");
 					validInput = false;
 				}
-				switch(errorSelected){
-				case 1:{
-					System.out.println("You selected, invalid opcode error.\n");
-					createInvalidPacket();
-					serverResponse();
-					break;
-				}
-				case 2:{
-					System.out.println("You selected, invalid mode error.\n");
-					createInvalidPacket();
-					serverResponse();
-					break;
-				}
-				case 3:{
-					System.out.println("Missing filename error.\n");
-					createInvalidPacket();
-					serverResponse();
-					break;
-				}
-				case 4:{
-					System.out.println("No termination on packet error.\n");
-					createInvalidPacket();
-					serverResponse();
-					break;
-				}
-				case 5:{
-					System.out.println("Invalid ending on packet.\n");
-					createInvalidPacket();
-					serverResponse();
-					break;
-				}
+				System.out.println("Error packet simulator ready..");
+				createInvalidRequestPacket();
+				serverResponse();
+			}while (!validInput);
+		}
+		else if (inputType.equals("2")){
+			do
+			{
+				System.out.println("\nPlease select the type of error from below.");
+				System.out.println("	(1) - Invalid opcode");
+				System.out.println("	(2) - Invalid block number");
+				System.out.println("	(3) - DATA/ACK delay");
+				System.out.println("	(4) - DATA/ACK duplicate");
+				System.out.println("	(5) - DATA/ACK loss");
+				inputCode = keyboard.next();
+
+				errorSelected = Integer.valueOf(inputCode);
+
+				if ((errorSelected < 1) || (errorSelected > 5)){
+					System.out.println("Please enter a value from 1 to 5, thank you");
+					validInput = false;
 				}
 			}while (!validInput);
-			if (errorSelected == 6){
-				do
-				{
-					System.out.println("\nWhich host is going to send invalid DATA.");
-					System.out.println("	(1) - Client sends DATA");
-					System.out.println("	(2) - Server sends DATA");
-					inputData = keyboard.next();
+			do
+			{
+				validInput = true;
+				System.out.println("Which host is going to cause the simulated error.");
+				System.out.println("	(1) - Client");
+				System.out.println("	(2) - Server");
+				inputHost = keyboard.next();
 
-					errorData = Integer.valueOf(inputData);
-					if ((errorData < 1) || (errorData > 2)){
-						System.out.println("Please enter a value from 1 to 2, thank you");
-						validInput = false;
-					}
-					switch(errorData){
-					case 1:{
-						System.out.println("Client sending invalid DATA..\n");
-						createInvalidDataPacket();
-						serverResponse();
-						break;
-					}
-					case 2:{
-						System.out.println("Server sending invalid DATA..\n");
-						createInvalidDataPacket();
-						serverResponse();
-						break;
-					}
-					}
-				}while (!validInput);
-			}
-			if (errorSelected == 7){
-				do
-				{
-					System.out.println("\nWhich host is going to send invalid ACK.");
-					System.out.println("	(1) - Client sends ACK");
-					System.out.println("	(2) - Server sends ACK");
-					inputAck = keyboard.next();
+				errorHost = Integer.valueOf(inputHost);
+				if ((errorHost < 1) || (errorHost > 2)){
+					System.out.println("Please enter a value from 1 to 2, thank you");
+					validInput = false;
+				}
+				
+			}while (!validInput);
+			do
+			{
+				validInput = true;
+				System.out.println("Enter the block number of the packet you wish to cause the error.");
+				inputNum = keyboard.next();
 
-					errorAck = Integer.valueOf(inputAck);
-					if ((errorAck < 1) || (errorAck > 2)){
-						System.out.println("Please enter a value from 1 to 2, thank you");
-						validInput = false;
-					}
-					switch(errorAck){
-					case 1:{
-						System.out.println("Client sending invalid ACK..\n");
-						createInvalidAckPacket();
-						serverResponse();
-						break;
-					}
-					case 2:{
-						System.out.println("Server sending invalid ACK..\n");
-						createInvalidAckPacket();
-						serverResponse();
-						break;
-					}
-					}
-				}while (!validInput);
-			}	
+				errorBlkNum = Integer.valueOf(inputNum);
+				if ((errorBlkNum < 0) || (errorBlkNum > 65535)){
+					System.out.println("Please enter a value from 0 to 65535, thank you");
+					validInput = false;
+				}
+				System.out.println("\nError simulator ready..");
+				createInvalidDataAckPacket();
+				serverResponse();
+			}while (!validInput);
+			
 		}
 		keyboard.close();
 	}
