@@ -328,6 +328,13 @@ public class ErrorSimulator {
 			receivePacket2.setPort(clientPort);
 			sendPacketToClient(receivePacket2);
 		}
+		//setting a delayed DATA/ACK packet
+		if(errorSelected2 == 3 && errorHost == 1){					//if client sends a delayed DATA/ACK packet
+			
+		}
+		else if(errorSelected2 == 3 && errorHost == 2){				//if server sends a delayed DATA/ACK packet
+			
+		}
 	}
 
 	/*
