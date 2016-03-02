@@ -41,6 +41,10 @@ public class PacketManager {
 		return readPack;
 	}
 	
+	/*
+	 * Prints the TFTP PacketData 
+	 * @param: Takes in the byte array of the packet
+	 */
 	public void printTFTPPacketData(byte[] p) {
 		int length = p.length;
 		System.out.print("[");
