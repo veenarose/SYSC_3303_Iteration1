@@ -302,103 +302,99 @@ public class ErrorSimulator {
 	}
 
 	/*
-	 * Creates an invalid DATA\ACK packet according to the selected Host 
+	 * Sends an invalid DATA\ACK packet to the server
 	 */
-	private void createInvalidDataAckPacket(){
-		System.out.println("whaaaa");
+	private void sendInvalidDataAckPacket(){
 		DatagramPacket receivePacket1 = receiveClientPacket();  //receive DATA/ACK packet from client
-		//		clientPort = receivePacket1.getPort();
-		//		setClientIP(receivePacket1.getAddress());
-		System.out.println(receivePacket1.getPort());
-		System.out.println("aa"+errorSelected2);
-//		DatagramPacket receivePacket2 = receiveServerPacket(); //receive DATA/ACK packet from server
-//		receivePacket2.setPort(clientPort);
-//		serverPort = receivePacket2.getPort();
-//		setServerIP(receivePacket2.getAddress());
-//		System.out.println(receivePacket2.getPort());
+		clientPort = receivePacket1.getPort();
+		setClientIP(receivePacket1.getAddress());
 
-		if(errorSelected2 == 1 ){
-			System.out.println("are u here");
-			//if (errorHost == 1){					//if client sends too larger packet
-				System.out.println("Created a very large packet.");
-				byte[] oldReq = receivePacket1.getData();
-				byte[] newReq = new byte[1000];
-				System.arraycopy(oldReq, 0, newReq, 0, oldReq.length);
-				newReq[newReq.length - 1] = 1;
-				receivePacket1.setData(newReq);
-				System.out.print("Containing: ");
-				packetManager.printTFTPPacketData(receivePacket1.getData());
-				System.out.println("Invalid packet size sent.");
-				sendPacketToServer(receivePacket1);
-//			}else if(errorHost == 2){			//if server sends too larger packet
-//				System.out.println("Created a very large packet.");
-//				byte[] oldReq = receivePacket2.getData();
-//				byte[] newReq = new byte[oldReq.length+10];
-//				System.arraycopy(oldReq, 0, newReq, 0, newReq.length-1);
-//				newReq[newReq.length - 1] = 1;
-//				receivePacket2.setData(newReq);
-//				System.out.print("Containing: ");
-//				packetManager.printTFTPPacketData(receivePacket2.getData());
-//				System.out.println("Invalid packet size sent.");
-//				sendPacketToClient(receivePacket2);
-//			}
+		if(errorSelected2 == 1 && errorHost == 1){				//if client sends too larger packet
+			System.out.println("Created a very large packet.");
+			byte[] oldReq = receivePacket1.getData();
+			byte[] newReq = new byte[1000];
+			System.arraycopy(oldReq, 0, newReq, 0, oldReq.length);
+			newReq[newReq.length - 1] = 1;
+			receivePacket1.setData(newReq);
+			System.out.print("Containing: ");
+			packetManager.printTFTPPacketData(receivePacket1.getData());
+			System.out.println("Invalid packet size sent.");
+			sendPacketToServer(receivePacket1);
+		} 
+		else if(errorSelected2 == 2 && errorHost == 1){			//if client sends an invalid opcode
+			System.out.println("Created an invalid opcode packet.");
+			byte[] inValid = receivePacket1.getData();
+			inValid[1] = 8;
+			receivePacket1.setData(inValid);
+			System.out.print("Containing: ");
+			packetManager.printTFTPPacketData(receivePacket1.getData());
+			System.out.println("Invalid opcode packet sent.");
+			sendPacketToServer(receivePacket1);
+		} 
+		else if(errorSelected2 == 3 && errorHost == 1){			//if client sends an invalid block number on DATA/ACK packet
+			System.out.println("Created an invalid block number packet.");
+			byte[] blkNum = receivePacket1.getData();
+			byte lsb_blockNumber = blkNum[3];
+			lsb_blockNumber += 1;
+			blkNum[3] = lsb_blockNumber;
+			receivePacket1.setData(blkNum);
+			System.out.print("Containing: ");
+			packetManager.printTFTPPacketData(receivePacket1.getData());
+			System.out.println("Invalid Block Number packet sent.");
+			sendPacketToServer(receivePacket1);
 		}
-		//setting an invalid mode error
-//		if(errorSelected2 == 2 && errorHost == 1){					//if client sends an invalid opcode
-//			System.out.println("Created an invalid opcode packet.");
-//			byte[] inValid = receivePacket1.getData();
-//			inValid[1] = 8;
-//			receivePacket1.setData(inValid);
-//			System.out.print("Containing: ");
-//			packetManager.printTFTPPacketData(receivePacket1.getData());
-//			System.out.println("Invalid opcode packet sent.");
-//			sendPacketToServer(receivePacket1);
-//		}
-//		else if (errorSelected2 == 2 && errorHost == 2){			//if server sends an invalid opcode
-//			System.out.println("Created an invalid opcode packet.");
-//			byte[] inValid = receivePacket2.getData();
-//			inValid[1] = 8;
-//			receivePacket2.setData(inValid);
-//			System.out.print("Containing: ");
-//			packetManager.printTFTPPacketData(receivePacket2.getData());
-//			System.out.println("Invalid opcode packet sent.");
-//			receivePacket2.setPort(clientPort);
-//			sendPacketToClient(receivePacket2);
-//		}
-//		//setting an block number error
-//		if(errorSelected2 == 3 && errorHost == 1){					//if client sends an invalid block number on DATA/ACK packet
-//			System.out.println("Created an invalid block number packet.");
-//			byte[] blkNum = receivePacket1.getData();
-//			byte lsb_blockNumber = blkNum[3];
-//			lsb_blockNumber += 1;
-//			blkNum[3] = lsb_blockNumber;
-//			receivePacket1.setData(blkNum);
-//			System.out.print("Containing: ");
-//			packetManager.printTFTPPacketData(receivePacket1.getData());
-//			System.out.println("Invalid Block Number packet sent.");
-//			sendPacketToServer(receivePacket1);
-//		}
-//		else if (errorSelected2 == 3 && errorHost == 2){			//if server sends an invalid block number on DATA/ACK packet
-//			System.out.println("Created an invalid block number packet.");
-//			byte[] blkNum = receivePacket2.getData();
-//			byte lsb_blockNumber = blkNum[3];
-//			lsb_blockNumber += 1;
-//			blkNum[3] = lsb_blockNumber;
-//			receivePacket2.setData(blkNum);
-//			packetManager.printTFTPPacketData(receivePacket2.getData());
-//			System.out.println("Invalid Block Number packet sent.");
-//			receivePacket2.setPort(clientPort);
-//			sendPacketToClient(receivePacket2);
-//		}
-//		//setting a delayed DATA/ACK packet
-//		if(errorSelected2 == 3 && errorHost == 1){					//if client sends a delayed DATA/ACK packet
-//
-//		}
-//		else if(errorSelected2 == 3 && errorHost == 2){				//if server sends a delayed DATA/ACK packet
-//
-//		}
+		else if(errorSelected2 == 3 && errorHost == 1){			//if client sends a delayed DATA/ACK packet
+
+		}
 	}
 
+	/*
+	 * Receives an invalid DATA\ACK packet to the server
+	 */
+	private void receiveInvalidDataAckPacket(){
+		DatagramPacket receivePacket2 = receiveServerPacket(); //receive DATA/ACK packet from server
+		receivePacket2.setPort(clientPort);
+
+		if(errorSelected2 == 1 && errorHost == 2){			//if server sends too larger packet
+			System.out.println("Created a very large packet.");
+			byte[] oldReq = receivePacket2.getData();
+			byte[] newReq = new byte[oldReq.length+10];
+			System.arraycopy(oldReq, 0, newReq, 0, newReq.length-1);
+			newReq[newReq.length - 1] = 1;
+			receivePacket2.setData(newReq);
+			System.out.print("Containing: ");
+			packetManager.printTFTPPacketData(receivePacket2.getData());
+			System.out.println("Invalid packet size sent.");
+			sendPacketToClient(receivePacket2);
+
+		}
+		else if (errorSelected2 == 2 && errorHost == 2){	//if server sends an invalid opcode
+			System.out.println("Created an invalid opcode packet.");
+			byte[] inValid = receivePacket2.getData();
+			inValid[1] = 8;
+			receivePacket2.setData(inValid);
+			System.out.print("Containing: ");
+			packetManager.printTFTPPacketData(receivePacket2.getData());
+			System.out.println("Invalid opcode packet sent.");
+			receivePacket2.setPort(clientPort);
+			sendPacketToClient(receivePacket2);
+		}
+		else if (errorSelected2 == 3 && errorHost == 2){	//if server sends an invalid block number on DATA/ACK packet
+			System.out.println("Created an invalid block number packet.");
+			byte[] blkNum = receivePacket2.getData();
+			byte lsb_blockNumber = blkNum[3];
+			lsb_blockNumber += 1;
+			blkNum[3] = lsb_blockNumber;
+			receivePacket2.setData(blkNum);
+			packetManager.printTFTPPacketData(receivePacket2.getData());
+			System.out.println("Invalid Block Number packet sent.");
+			receivePacket2.setPort(clientPort);
+			sendPacketToClient(receivePacket2);
+		}
+		else if(errorSelected2 == 3 && errorHost == 2){		//if server sends a delayed DATA/ACK packet
+
+		}
+	}
 	/*
 	 * Creates an Unknown Transfer ID
 	 */
@@ -564,7 +560,8 @@ public class ErrorSimulator {
 
 				}while (!validInput);
 				System.out.println("\nError simulator ready..");
-				createInvalidDataAckPacket();
+				sendInvalidDataAckPacket();
+				receiveInvalidDataAckPacket();
 			}
 		}
 		//keyboard.close();

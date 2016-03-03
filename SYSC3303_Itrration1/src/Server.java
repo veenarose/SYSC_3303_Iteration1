@@ -29,13 +29,13 @@ public class Server{
 	 * and pass them onto to new response handler threads.
 	 */
 	public Server(){
-		System.out.println("Server started");
-		System.out.println("Waiting for packet..");
+		System.out.println("Server started.");
 		packetManager = new PacketManager();
 		ioManager = new IOManager();
 		byte[] data = new byte[512];
 		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
 		printAllFolderContent();
+		System.out.println("\nWaiting for packet..");
 		
 		try{
 			receiveSocket = new DatagramSocket(pd.getServerPort()); //socket listening on port 1025
@@ -64,6 +64,7 @@ public class Server{
 	 * Prints all the file names from the specified path.
 	 */
 	public void printAllFolderContent(){
+		System.out.println("Server file contents");
 		File folder = new File(ServerDirectory);
 		File[] listOfFiles = folder.listFiles();
 
