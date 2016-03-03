@@ -1,6 +1,7 @@
 import java.util.Set;
 import java.io.*;
 import java.net.*;
+import java.util.Arrays;
 import java.util.HashSet;
 
 /**
@@ -74,11 +75,11 @@ public class Client { //the client class
         }
     }
     
-    public void handleInvalidAckPacket() {
+    public void handleInvalidAckPacket() { //finish?
     	
     }
     
-    public void handleInvalidDataPacket() {
+    public void handleInvalidDataPacket() { //finish?
     	
     }
     
@@ -128,13 +129,18 @@ public class Client { //the client class
         int serverPort; //variable to store the port of the sever
         InetAddress serverHost; //variable to store the address of the server's host
         
-        byte data[] = new byte[ioMan.getBufferSize() + 4];
+        byte data[] = new byte[ioMan.getBufferSize() + 4]; //the UDP data packet
         
         receivePacket = new DatagramPacket(data, data.length);
+        
+        /* TODO:
+         * NEED TO IMPLEMENT: TIMEOUT ON RECEIVING 
+         */
     	receivePacket(receivePacket, sendReceiveSocket);
+    	System.out.println("Received data");
     	serverHost = receivePacket.getAddress(); //get the host address from the server
-    	serverPort = receivePacket.getPort(); //get the port id
-    	int expectedBlockNumber;
+    	serverPort = receivePacket.getPort(); //get the port id of the new server thread
+    	int expectedBlockNumber; 
     	
     	if(!packMan.isErrorPacket(data)) {
         
@@ -144,12 +150,13 @@ public class Client { //the client class
 	        	
     			//variable to store the read requests data, 2 bytes for the opcode, 2 for the block number, 512 for the raw data
 	        	byte readData[] = data;
-	        	
+	        	System.out.println("Received block number = " + packMan.twoBytesToInt(data[2], data[3])
+	        		+ ". Expected block number = " + expectedBlockNumber);
 	        	if(packMan.twoBytesToInt(data[2], data[3]) == expectedBlockNumber) { //valid block number
 	        		
 		        	//create a new file with name filename which will be written to
 		        	File writeTo = new File(ClientDirectory + filename);
-		        	System.out.println("writeTo exists?: " +  writeTo.exists() + " 3");
+		        	System.out.println("writeTo exists?: " +  writeTo.exists());
 		        	
 		        	//write the data to local file with name filename
 		        	byte writeToFileData[];
@@ -163,35 +170,58 @@ public class Client { //the client class
 		        	
 		        	//send ack packets and receive data until last packet is reached
 		        	System.out.println("Last packet?: " + 
-		        			packMan.lastPacket(writeToFileData) + " 5");
+		        			packMan.lastPacket(writeToFileData));
 		        	
 		        	while (!packMan.lastPacket(writeToFileData)){ 
 		        		
 		        		//create ack
 		        		byte[] ack = packMan.createAck(readData);
-		        		
+		        		System.out.println(Arrays.toString(ack));
 		        		//send the ack packet
 		        		sendPacket = new DatagramPacket(ack, ack.length,
 						                                     serverHost, serverPort);
 		        		sendPacket(sendPacket, sendReceiveSocket);
+		        		System.out.println("Sent ACK with block number = " + 
+		        				packMan.twoBytesToInt(sendPacket.getData()[2], sendPacket.getData()[3]));
 		        		
 		        		expectedBlockNumber++;
+		        		
+		        		/* TODO:
+		                 * NEED TO IMPLEMENT: TIMEOUT ON RECEIVING 
+		                 */
 		        		//receive data from server
 		        		receivePacket = new DatagramPacket(readData, readData.length);
 		        		receivePacket(receivePacket, sendReceiveSocket);
-		        		byte[] err = packMan.createError(new byte[]{0, 5}, "Unknown PID.");
+		        		System.out.println("Received  DATA packet with block number = " + 
+		        				packMan.twoBytesToInt(receivePacket.getData()[2], receivePacket.getData()[3]));
+		        		
+		        		byte[] err = packMan.createError(new byte[]{0, 5}, "Unknown ID.");
+		        		
+		        		//checks if the received data packet comes from the appropriate
+		        		//TID
+		        		System.out.println("Receive packet's port " + receivePacket.getPort() +
+		        				"  VS  " + "Server port " + serverPort); 
 		        		while(receivePacket.getPort() != serverPort) {
 		        			sendPacket = new DatagramPacket(err, err.length,
 		        					receivePacket.getAddress(), receivePacket.getPort());
 		        			sendPacket(sendPacket, sendReceiveSocket);
+		        			
+		        			/* TODO:
+			                 * NEED TO IMPLEMENT: TIMEOUT ON RECEIVING 
+			                 */
 		        			receivePacket = new DatagramPacket(readData, readData.length);
 			        		receivePacket(receivePacket, sendReceiveSocket);
 			        	}
 		        		
-		        		if(packMan.twoBytesToInt(data[2], data[3]) != 
+		        		/* TODO:
+		                 * NEED TO IMPLEMENT: HANDLING OF DELAYED PACKET, BLOCK NUMBER 
+		                 * IS IMPORTANT HERE
+		                 */
+		        		System.out.println("Expected block number = " + expectedBlockNumber);
+		        		if(packMan.twoBytesToInt(readData[2], readData[3]) != 
 		        				expectedBlockNumber) {
 		        			sendPacket(packMan.handleInvalidBlock(expectedBlockNumber, 
-			        				packMan.twoBytesToInt(data[2], data[3])), sendReceiveSocket);
+			        				packMan.twoBytesToInt(readData[2], readData[3])), sendReceiveSocket);
 		        			break;
 		        		}
 		            	
@@ -202,6 +232,7 @@ public class Client { //the client class
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
+		            	System.out.println("Wrote to the file.");
 		        		
 		        	}  //end read request loop
 	        	
@@ -263,7 +294,10 @@ public class Client { //the client class
 		        		//wait to receive the acknowledgement just sent
 		        		//wait for a response from the server
 		        		receivePacket = new DatagramPacket(ackData, ackData.length);
-		        		receivePacket(receivePacket, sendReceiveSocket);
+		        		
+		        		/* TODO:
+		                 * NEED TO IMPLEMENT: TIMEOUT ON RECEIVING 
+		                 */
 		        		receivePacket(receivePacket, sendReceiveSocket);
 		        		byte[] err = packMan.createError(new byte[]{0, 5}, "Unknown PID.");
 		        		while(receivePacket.getPort() != serverPort) {
@@ -271,6 +305,10 @@ public class Client { //the client class
 		        					receivePacket.getAddress(), receivePacket.getPort());
 		        			sendPacket(sendPacket, sendReceiveSocket);
 		        			receivePacket = new DatagramPacket(ackData, ackData.length);
+		        			
+		        			/* TODO:
+			                 * NEED TO IMPLEMENT: TIMEOUT ON RECEIVING 
+			                 */
 			        		receivePacket(receivePacket, sendReceiveSocket);
 			        	}
 		        		

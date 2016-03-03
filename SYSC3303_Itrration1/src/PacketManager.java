@@ -132,10 +132,12 @@ public class PacketManager {
 		byte[] msg = errMessage.getBytes();
 		byte arr[] = {0};
 		byte dataPack[] = new byte[ERC.length+errCode.length+msg.length+arr.length]; 
-
+		
+		//System.out.println("COPYING ARRAYS");
 		System.arraycopy(ERC, 0, dataPack, 0, ERC.length);
 		System.arraycopy(errCode, 0, dataPack, ERC.length, errCode.length);
 		System.arraycopy(msg, 0, dataPack, errCode.length+ERC.length, msg.length);
+		//System.out.println("COPIED ARRAYS dataPack = " + new String(dataPack));
 		return dataPack;
 	}
 

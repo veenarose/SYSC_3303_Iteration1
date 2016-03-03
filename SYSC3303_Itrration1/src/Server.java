@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 
 //Server.java
@@ -136,6 +137,7 @@ public class Server{
 			clientAddr = p.getAddress();
 			clientPort = p.getPort();
 			contents = p.getData();
+		    
 
 			try {
 				socket = new DatagramSocket();
@@ -233,8 +235,6 @@ public class Server{
 				packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
 				socket.receive(packet);
 				
-				
-				
 				//If Packet arrives from an unknown TID
 				if(verifyClient(packet) == false){
 					handleErrReq(5 , packet.getAddress(), packet.getPort());
@@ -271,50 +271,62 @@ public class Server{
 		private void handleReadReq() throws IOException {
 			byte[] data; 
 			short blockNum = 1;
-			short expectedBlockNum = blockNum;
 			String filename = packetManager.getFilename(contents);
 			print("Attempting to read from file: " + filename);
+			byte[] ackData = new byte[4];
 
 			BufferedInputStream reader = new BufferedInputStream
 					(new FileInputStream(ServerDirectory + filename));
 
-			/* Convert block number from short to byte[] */
-			ByteBuffer buffer = ByteBuffer.allocate(2);
-			buffer.putShort(blockNum);
-			byte[] block = buffer.array();
-
+			byte[] block;
+			ByteBuffer buffer;
+			
 			do{
+				
+				System.out.println(blockNum);
+				/* Convert block number from short to byte[] */
+				buffer = ByteBuffer.allocate(2);
+				buffer.putShort(blockNum);
+				block = buffer.array();
+				System.out.println("The block numer as an array " + 
+						Arrays.toString(block));
+				
 				data = new byte[512];
 				/* get data from file and configure the offset*/
 
 				reader.read(data, 0, data.length);
+				System.out.println("Read from the file");
 
 				/* place data into packet to be sent to client */
 				packet = new DatagramPacket(packetManager.createData(data, block),
 						packetManager.createData(data, block).length,
 						clientAddr,
 						clientPort);
+				
 
 				/* send packet to client */
 				socket.send(packet);
-
-				/* iterate server side block number */
-				blockNum++;
-
-				/* wait to receive ACK confirmation */
-				socket.receive(packet);
+				System.out.println("Sent DATA packet with block number = " 
+						+ packetManager.twoBytesToInt(packet.getData()[2], packet.getData()[3]));
 				
+				
+				/* wait to receive ACK confirmation */
+				packet = new DatagramPacket(ackData, ackData.length,clientAddr,
+						clientPort);
+				socket.receive(packet);
+				System.out.println("Received ACK packet with block number = " 
+						+ packetManager.twoBytesToInt(packet.getData()[2], packet.getData()[3]));
 				
 				if(verifyClient(packet) == false){
 					handleErrReq(5, packet.getAddress(), packet.getPort());
 				}
 				
 				/* confirm validity of ACK */
+				System.out.println(Arrays.toString(packet.getData()));
 				if(packetManager.isAckPacket(packet.getData())){
-					byte[] ackData = packet.getData();
 					ByteBuffer b = ByteBuffer.allocate(2);
+					b.put(ackData[2]);
 					b.put(ackData[3]);
-					b.put(ackData[4]);
 
 					short bn = b.getShort(0);
 
@@ -325,8 +337,17 @@ public class Server{
 				} else {
 					handleErrReq(6, clientAddr, clientPort);
 				}
+				
+				/* iterate server side block number */
+				blockNum++;
+			
 			} while(!(packetManager.lastPacket(data)));
 
+			/* Convert block number from short to byte[] */
+			buffer = ByteBuffer.allocate(2);
+			buffer.putShort(blockNum);
+			block = buffer.array();
+			
 			/* exit loop for last packet */
 			reader.read(data, 0, data.length);
 			reader.close();
@@ -335,12 +356,11 @@ public class Server{
 					clientAddr,
 					clientPort);
 			socket.send(packet);
-			blockNum++;
 
 			socket.receive(packet);
 			if(packetManager.isAckPacket(packet.getData())){
 				/* ACK Packet Received */
-				byte[] ackData = packet.getData();
+				ackData = packet.getData();
 				ByteBuffer b = ByteBuffer.allocate(2);
 				b.put(ackData[3]);
 				b.put(ackData[4]);
