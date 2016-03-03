@@ -17,7 +17,7 @@ public class ErrorSimulator {
 	DatagramPacket sendPacket;				 //packet which relays request from client to server
 	private int errorSelected;				 //to store in user choice for error code 4
 	private int errorSelected2;
-	private int modeSelected;
+	private static int modeSelected;
 	private int packetDelay;
 	private int errorHost;					 //
 	private int errorBlkNum;				 //to store the user selected block number
@@ -123,10 +123,12 @@ public class ErrorSimulator {
 		}
 
 	}
+
 	/*
 	 * Check for user selection
 	 */
 	private void modeSelection(){
+		// Iteration2
 		if(modeSelected == 3){
 			System.out.println("Error simulator not running..\n");
 			receiveAndSend();
@@ -135,7 +137,42 @@ public class ErrorSimulator {
 			System.out.println("Error code 5 (UNKNOWN TID) simulated.");
 			unknownTID();
 		}
+		//**********************************************************************
+
+		//Iteration3
+		// Delayed Modes
 		if(modeSelected == 4){
+			System.out.println("You have selected Delayed Packets...\n");
+			// TODO: Delayed Packets
+		}		
+		if(modeSelected == 5){
+			System.out.println("You have selected Delayed ACK...\n");
+			// TODO: Delayed ACK
+		}
+
+		// Lost Modes
+		if(modeSelected == 6){
+			System.out.println("You have selected Lost Packets...\n");
+			// TODO: Lost Packets
+		}		
+		if(modeSelected == 7){
+			System.out.println("You have selected Lost ACK...\n");
+			// TODO: Lost ACK
+		}
+
+		// Duplicate Modes
+		if(modeSelected == 8){
+			System.out.println("You have selected Duplicate Packets...\n");
+			// TODO: Duplicate Packets
+		}		
+		if(modeSelected == 9){
+			System.out.println("You have selected Duplicate ACK...\n");
+			// TODO: Duplicate ACK
+		}
+
+		//**********************************************************************
+		// Shutdown
+		if(modeSelected == 10){
 			System.out.println("Attempting to shutdown server..\n");
 			shutDown(); //Attempting to shutdown server
 		}
@@ -186,7 +223,7 @@ public class ErrorSimulator {
 		//create packet in which to store server response
 		byte respData[] = new byte[100];
 		DatagramPacket lo = new DatagramPacket(respData, respData.length);
-//		serverPort = lo.getPort();
+		//		serverPort = lo.getPort();
 		serverIP = lo.getAddress();
 		try {
 			//block until a packet is received via sendReceiveSocket from server  
@@ -427,6 +464,20 @@ public class ErrorSimulator {
 		sendPackets.setData(arr);
 		sendPacketToServer(sendPackets);
 	}
+
+	/*System.out.println("Error simulator not running..\n");
+	System.out.println();
+	System.out.println("Pease choose what you would like to do... ");
+	System.out.println();
+	System.out.println("	(1) -  Delayed Data Packets");
+	System.out.println("	(2) -  Delayed ACK");
+	System.out.println("	(3) -  Lost Data Packets");
+	System.out.println("	(4) -  Lost ACK");
+	System.out.println("	(5) -  Duplicate Packets");
+	System.out.println("	(6) -  Duplicate ACK");
+	System.out.println();
+	System.out.println("	(7) - Shutdown SERVER");*/
+
 	/*
 	 * Error Simulation
 	 */
@@ -440,17 +491,31 @@ public class ErrorSimulator {
 		do
 		{
 			validInput = true;
+			// Iteration 2 Modes 
 			System.out.println("\nChoose your mode:");
 			System.out.println("	(1) - Error Code 4");
 			System.out.println("	(2) - Error Code 5");
 			System.out.println("	(3) - No error");
-			System.out.println("	(4) - Shutdown Server");
+
+			// Iteration 3 Modes 
+			System.out.println("	(4) - Delayed Data Packets");
+			System.out.println("	(5) - Delayed ACK");
+			System.out.println("	(6) - Lost Data Packets");
+			System.out.println("	(7) - Lost ACK");
+			System.out.println("	(8) - Duplicate Packets");
+			System.out.println("	(9) - Duplicate ACK");
+			System.out.println();
+
+			// Shutdown server 
+			System.out.println("	(10) - Shutdown SERVER");
 			inputMenu = keyboard.next();
 			modeSelected = Integer.valueOf(inputMenu);
-			if(inputMenu.equals("1") || inputMenu.equals("2") || inputMenu.equals("3")|| inputMenu.equals("4")){
+			if(inputMenu.equals("1") || inputMenu.equals("2") || inputMenu.equals("3")|| inputMenu.equals("4")
+					|| inputMenu.equals("5")|| inputMenu.equals("6")|| inputMenu.equals("7")|| inputMenu.equals("8")
+					|| inputMenu.equals("9")|| inputMenu.equals("10")){
 				validInput = true;
 			}else{
-				System.out.println("Please enter a value from 1 to 3, thank you");
+				System.out.println("Please enter a value from 1 to 10, thank you");
 				validInput = false;
 			}
 			modeSelection();
@@ -503,40 +568,17 @@ public class ErrorSimulator {
 					System.out.println("	(1) - Packet too large");
 					System.out.println("	(2) - Invalid opcode");
 					System.out.println("	(3) - Invalid block number");
-					System.out.println("	(4) - DATA/ACK delay");
-					System.out.println("	(5) - DATA/ACK duplicate");
-					System.out.println("	(6) - DATA/ACK loss");
+
+
 					inputDa = keyboard.next();
 
 					errorSelected2 = Integer.valueOf(inputDa);
 
-					if ((errorSelected2 < 1) || (errorSelected2 > 6)){
-						System.out.println("Please enter a value from 1 to 6, thank you");
+					if ((errorSelected2 < 1) || (errorSelected2 > 3)){
+						System.out.println("Please enter a value from 1 to 3, thank you");
 						validInput = false;
 					}
-					if (errorSelected2 == 4){
-						do
-						{
-							validInput = true;
-							System.out.println("Enter the delay amount in (ms) ");
-							inputDelay = keyboard.next();
 
-							try
-							{
-								packetDelay = Integer.valueOf(inputDelay);
-							}
-							catch (NumberFormatException e)
-							{
-								System.out.println("Please enter a value from " + 0 + " to " + 999999 );
-								validInput = false;
-							}
-							if ((packetDelay < 0) || (packetDelay > 999999))
-							{
-								System.out.println("Please enter a value from " + 0 + " to " + 999999 );
-								validInput = false;
-							}
-						}while (!validInput);
-					}
 				}while (!validInput);
 				do
 				{
@@ -571,7 +613,50 @@ public class ErrorSimulator {
 				receiveInvalidDataAckPacket();
 			}
 		}
-		//keyboard.close();
+
+		/* If mode selected is 4 - 9 user needs to select the ***block number*** for delay and 
+		 the ***time in milliseconds** for duplicate or lost packets and ACK. */
+
+		if (modeSelected >= 4 && modeSelected <= 9){
+
+			//************** Get Block number
+			do
+			{
+				validInput = true;
+				System.out.println("Enter the block number of the packet you wish to cause the error.");
+				inputNum = keyboard.next();
+
+				errorBlkNum = Integer.valueOf(inputNum);// Get block number to mess up from the user 
+				if ((errorBlkNum < 0) || (errorBlkNum > 65535)){
+					System.out.println("Please enter a value from 0 to 65535, thank you");
+					validInput = false;
+				}
+
+			}while (!validInput);
+
+			//******************** Get delay time to 
+			do{
+				validInput = true;
+				System.out.println("Enter the delay amount in (ms) ");
+				inputDelay = keyboard.next();
+
+				try
+				{
+					packetDelay = Integer.valueOf(inputDelay);
+				}
+				catch (NumberFormatException e)
+				{
+					System.out.println("Please enter a value from " + 0 + " to " + 999999 );
+					validInput = false;
+				}
+				if ((packetDelay < 0) || (packetDelay > 999999))
+				{
+					System.out.println("Please enter a value from " + 0 + " to " + 999999 );
+					validInput = false;
+				}
+			}while (!validInput);		
+
+		}
 	}
 
 	/*
@@ -584,7 +669,7 @@ public class ErrorSimulator {
 		h.startErr();
 		@SuppressWarnings("resource")
 		Scanner loop = new Scanner(System.in);
-		while(true){
+		while(true && modeSelected == 1){
 			System.out.println("\nDo you want to simulate an error (yes/no)? ");
 			String s = loop.next();
 			if(s.equals("yes") || s.equals("y"))
