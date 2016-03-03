@@ -23,7 +23,7 @@ public class ErrorSimulator {
 	private int errorBlkNum;				 //to store the user selected block number
 	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
 	private static int clientPort;
-	private static int serverPort;
+	//private static int serverPort;
 	private static InetAddress clientIP;
 	private static InetAddress serverIP;
 	private static ProfileData pd = new ProfileData();
@@ -186,7 +186,7 @@ public class ErrorSimulator {
 		//create packet in which to store server response
 		byte respData[] = new byte[100];
 		DatagramPacket lo = new DatagramPacket(respData, respData.length);
-		serverPort = lo.getPort();
+//		serverPort = lo.getPort();
 		serverIP = lo.getAddress();
 		try {
 			//block until a packet is received via sendReceiveSocket from server  
