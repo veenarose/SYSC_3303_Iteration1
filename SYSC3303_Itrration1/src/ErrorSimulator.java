@@ -52,77 +52,84 @@ public class ErrorSimulator {
 	 * Sends requests to the server and responses to the client
 	 */	
 	public void receiveAndSend() {
+		byte data[] = new byte[100];
+		DatagramPacket receiveSendPacket = new DatagramPacket(data, data.length);
+		try {
+			//block until a datagram is received via sendReceiveSocket.  
+			receiveSocket.receive(receiveSendPacket);
+		} catch(IOException e) {
+			e.printStackTrace();         
+			System.exit(1);
+		}
+		clientPort = receiveSendPacket.getPort();
+		setClientIP(receiveSendPacket.getAddress());
+		int len = receiveSendPacket.getLength();
+
+		String host = "Error Simulator";
+		//display packet received info from the Client to the console
+		packetManager.displayPacketInfo(receiveSendPacket, host, false);
+		System.out.print("Containing: ");
+		packetManager.printTFTPPacketData(receiveSendPacket.getData());
+		System.out.println();
+		//set the port for the packet to be that of the servers receive socket
+		receiveSendPacket.setPort(pd.getServerPort());
+		//display packet info being sent to Server to the console
+
+		packetManager.displayPacketInfo(receiveSendPacket, host, true);
+		System.out.print("Containing: ");
+		System.out.println(new String(receiveSendPacket.getData(),0,len));
+
+		//relay the socket to the server
+		try {
+			sendReceiveSocket.send(receiveSendPacket);
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+
+		//create packet in which to store server response
+		byte respData[] = new byte[100];
+		DatagramPacket responsePacket = new DatagramPacket(respData, respData.length);
+
+		try {
+			//block until a packet is received via sendReceiveSocket from server  
+			sendReceiveSocket.receive(responsePacket);
+		} catch(IOException e) {
+			e.printStackTrace();         
+			System.exit(1);
+		}
+		System.out.println();
+		len = responsePacket.getLength();
+		packetManager.displayPacketInfo(responsePacket, host, false);
+		//form a string from the byte array.
+		String response = new String(data,0,len);   
+		System.out.println(response+"\n");
+		//set the response packet's port destination to that of the client's sendReceive socket
+		responsePacket.setPort(clientPort);
+		len = responsePacket.getLength();
+		packetManager.displayPacketInfo(responsePacket, host, true);
+		System.out.print("Containing: ");
+		System.out.println(new String(responsePacket.getData(),0,len));
+
+		//relay response packet to client
+		try {
+			DatagramSocket relayToClient = new DatagramSocket();
+			relayToClient.send(responsePacket);
+			relayToClient.close();
+
+		} catch (IOException e) {
+			e.printStackTrace();         
+			System.exit(1);
+		}
+
+	}
+	/*
+	 * Check for user selection
+	 */
+	private void modeSelection(){
 		if(modeSelected == 3){
 			System.out.println("Error simulator not running..\n");
-			byte data[] = new byte[100];
-			DatagramPacket receiveSendPacket = new DatagramPacket(data, data.length);
-			try {
-				//block until a datagram is received via sendReceiveSocket.  
-				receiveSocket.receive(receiveSendPacket);
-			} catch(IOException e) {
-				e.printStackTrace();         
-				System.exit(1);
-			}
-			clientPort = receiveSendPacket.getPort();
-			setClientIP(receiveSendPacket.getAddress());
-			int len = receiveSendPacket.getLength();
-
-			String host = "Error Simulator";
-			//display packet received info from the Client to the console
-			packetManager.displayPacketInfo(receiveSendPacket, host, false);
-			System.out.print("Containing: ");
-			packetManager.printTFTPPacketData(receiveSendPacket.getData());
-			System.out.println();
-			//set the port for the packet to be that of the servers receive socket
-			receiveSendPacket.setPort(pd.getServerPort());
-			//display packet info being sent to Server to the console
-
-			packetManager.displayPacketInfo(receiveSendPacket, host, true);
-			System.out.print("Containing: ");
-			System.out.println(new String(receiveSendPacket.getData(),0,len));
-
-			//relay the socket to the server
-			try {
-				sendReceiveSocket.send(receiveSendPacket);
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(1);
-			}
-
-			//create packet in which to store server response
-			byte respData[] = new byte[100];
-			DatagramPacket responsePacket = new DatagramPacket(respData, respData.length);
-
-			try {
-				//block until a packet is received via sendReceiveSocket from server  
-				sendReceiveSocket.receive(responsePacket);
-			} catch(IOException e) {
-				e.printStackTrace();         
-				System.exit(1);
-			}
-			System.out.println();
-			len = responsePacket.getLength();
-			packetManager.displayPacketInfo(responsePacket, host, false);
-			//form a string from the byte array.
-			String response = new String(data,0,len);   
-			System.out.println(response+"\n");
-			//set the response packet's port destination to that of the client's sendReceive socket
-			responsePacket.setPort(clientPort);
-			len = responsePacket.getLength();
-			packetManager.displayPacketInfo(responsePacket, host, true);
-			System.out.print("Containing: ");
-			System.out.println(new String(responsePacket.getData(),0,len));
-
-			//relay response packet to client
-			try {
-				DatagramSocket relayToClient = new DatagramSocket();
-				relayToClient.send(responsePacket);
-				relayToClient.close();
-
-			} catch (IOException e) {
-				e.printStackTrace();         
-				System.exit(1);
-			}
+			receiveAndSend();
 		}
 		if (modeSelected == 2){
 			System.out.println("Error code 5 (UNKNOWN TID) simulated.");
@@ -132,9 +139,7 @@ public class ErrorSimulator {
 			System.out.println("Attempting to shutdown server..\n");
 			shutDown(); //Attempting to shutdown server
 		}
-
 	}
-
 	/*
 	 * Receives the data packet from the client
 	 * @return The DatagramPacket received 
@@ -305,10 +310,12 @@ public class ErrorSimulator {
 	 * Sends an invalid DATA\ACK packet to the server
 	 */
 	private void sendInvalidDataAckPacket(){
+		receiveAndSend();
 		DatagramPacket receivePacket1 = receiveClientPacket();  //receive DATA/ACK packet from client
 		clientPort = receivePacket1.getPort();
 		setClientIP(receivePacket1.getAddress());
-
+		//modeSelected=3;
+		receiveAndSend();
 		if(errorSelected2 == 1 && errorHost == 1){				//if client sends too larger packet
 			System.out.println("Created a very large packet.");
 			byte[] oldReq = receivePacket1.getData();
@@ -446,7 +453,7 @@ public class ErrorSimulator {
 				System.out.println("Please enter a value from 1 to 3, thank you");
 				validInput = false;
 			}
-			receiveAndSend();
+			modeSelection();
 		} while (!validInput);
 		//get user input to select the type of packet the error to be simulated on
 		if(modeSelected == 1){
