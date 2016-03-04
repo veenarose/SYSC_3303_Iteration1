@@ -27,6 +27,8 @@ public class ErrorSimulator {
 	private static InetAddress clientIP;
 	private static InetAddress serverIP;
 	private static ProfileData pd = new ProfileData();
+	private IOManager ioman; 
+	
 	public ErrorSimulator() {
 		try {
 			//construct a datagram socket and bind it to any available port on the local machine
@@ -45,6 +47,8 @@ public class ErrorSimulator {
 		packetDelay = -1;
 		errorHost = -1;
 		errorBlkNum = -1;
+		
+		ioman = new IOManager();
 	}
 
 	/* Method which: 
@@ -52,34 +56,33 @@ public class ErrorSimulator {
 	 * Sends requests to the server and responses to the client
 	 */	
 	public void receiveAndSend() {
-		byte data[] = new byte[100];
+		byte data[] = new byte[ioman.getBufferSize()];
 		DatagramPacket receiveSendPacket = new DatagramPacket(data, data.length);
+		
 		try {
-			//block until a datagram is received via sendReceiveSocket.  
+			//Receive packet from client.  
 			receiveSocket.receive(receiveSendPacket);
 		} catch(IOException e) {
 			e.printStackTrace();         
 			System.exit(1);
 		}
+		
+		//Set the packet data fields
 		clientPort = receiveSendPacket.getPort();
-		setClientIP(receiveSendPacket.getAddress());
-		int len = receiveSendPacket.getLength();
-
+		clientIP = receiveSendPacket.getAddress();
+		
+		//Print contents of packet that is received from client
 		String host = "Error Simulator";
-		//display packet received info from the Client to the console
 		packetManager.displayPacketInfo(receiveSendPacket, host, false);
 		System.out.print("Containing: ");
 		packetManager.printTFTPPacketData(receiveSendPacket.getData());
 		System.out.println();
-		//set the port for the packet to be that of the servers receive socket
-		receiveSendPacket.setPort(pd.getServerPort());
-		//display packet info being sent to Server to the console
-
-		packetManager.displayPacketInfo(receiveSendPacket, host, true);
-		System.out.print("Containing: ");
-		System.out.println(new String(receiveSendPacket.getData(),0,len));
-
-		//relay the socket to the server
+		System.out.println("Sending to server");
+		
+		//set packet's port to server port
+		receiveSendPacket.setPort(pd.getServerPort()); 
+		
+		//Send packet to server
 		try {
 			sendReceiveSocket.send(receiveSendPacket);
 		} catch (IOException e) {
@@ -88,42 +91,33 @@ public class ErrorSimulator {
 		}
 
 		//create packet in which to store server response
-		byte respData[] = new byte[100];
-		DatagramPacket responsePacket = new DatagramPacket(respData, respData.length);
+		DatagramPacket responsePacket = new DatagramPacket(data, data.length);
 
-		try {
-			//block until a packet is received via sendReceiveSocket from server  
+		//Receive server response
+		try {  
 			sendReceiveSocket.receive(responsePacket);
 		} catch(IOException e) {
 			e.printStackTrace();         
 			System.exit(1);
 		}
-		System.out.println();
-		len = responsePacket.getLength();
+		
+		//Print the server response
 		packetManager.displayPacketInfo(responsePacket, host, false);
-		//form a string from the byte array.
-		String response = new String(data,0,len);   
-		System.out.println(response+"\n");
+		
 		//set the response packet's port destination to that of the client's sendReceive socket
 		responsePacket.setPort(clientPort);
-		len = responsePacket.getLength();
-		packetManager.displayPacketInfo(responsePacket, host, true);
-		System.out.print("Containing: ");
-		System.out.println(new String(responsePacket.getData(),0,len));
-
+		
 		//relay response packet to client
 		try {
 			DatagramSocket relayToClient = new DatagramSocket();
 			relayToClient.send(responsePacket);
 			relayToClient.close();
-
 		} catch (IOException e) {
 			e.printStackTrace();         
 			System.exit(1);
 		}
-
 	}
-
+	
 	/*
 	 * Check for user selection
 	 */
@@ -131,7 +125,10 @@ public class ErrorSimulator {
 		// Iteration2
 		if(modeSelected == 3){
 			System.out.println("Error simulator not running..\n");
-			receiveAndSend();
+			for(;;){
+				receiveAndSend();
+			}
+			
 		}
 		if (modeSelected == 2){
 			System.out.println("Error code 5 (UNKNOWN TID) simulated.");
