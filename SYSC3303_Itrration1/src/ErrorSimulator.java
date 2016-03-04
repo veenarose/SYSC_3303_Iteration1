@@ -31,7 +31,7 @@ public class ErrorSimulator {
 	private IOManager ioman; 
 	private boolean isRunning;
 	private DatagramSocket sendSocket;
-	
+
 	public ErrorSimulator() {
 		try {
 			//construct a datagram socket and bind it to any available port on the local machine
@@ -50,20 +50,20 @@ public class ErrorSimulator {
 		packetDelay = -1;
 		errorHost = -1;
 		errorBlkNum = -1;
-		
+
 		isRunning = true;
 		ioman = new IOManager();
 	}
-	
+
 	public void listener(){
 		byte[] data = new byte[ioman.getBufferSize()+4];
 		DatagramPacket clientPacket = new DatagramPacket(data, data.length);
 		DatagramPacket serverPacket = new DatagramPacket(data, data.length);;
 		int clientPort = -1;
-		
+
 		//Get data from client
 		System.out.println("Waiting for packet from server");
-		
+
 		try {
 			receiveSocket.receive(clientPacket);
 		} catch (IOException e) {
@@ -71,21 +71,21 @@ public class ErrorSimulator {
 			System.exit(1);
 		}
 		System.out.println("Packet recieved from client");
-		
+
 		//Get client's information 
 		clientPort = clientPacket.getPort();
-		
+
 		try {
 			sendSocket = new DatagramSocket();
 		} catch (SocketException e1) {
 			e1.printStackTrace();
 		}
-		
+
 		serverPacket = new DatagramPacket(clientPacket.getData(), 
 				clientPacket.getData().length, 
 				clientPacket.getAddress(), 
 				pd.getServerPort());
-		
+
 		while(isRunning){
 			//Send client data to server
 			try {
@@ -95,10 +95,10 @@ public class ErrorSimulator {
 				System.exit(1);
 			}
 			System.out.println("Packet sent from Server");
-			
+
 			byte[] serverResponse = new byte[ioman.getBufferSize()+4];
 			serverPacket = new DatagramPacket(serverResponse, serverResponse.length);
-			
+
 			//Receive response from server
 			try {
 				sendReceiveSocket.receive(serverPacket);
@@ -106,17 +106,17 @@ public class ErrorSimulator {
 				e.printStackTrace();
 				System.exit(1);
 			}
-			
+
 			System.out.println("Packet recieved from Server");
-			
+
 			System.out.println(Arrays.toString(serverPacket.getData()));
-			
+
 			//Make packet to send back to the client
 			clientPacket = new DatagramPacket(serverPacket.getData(),
 					serverPacket.getData().length,
 					serverPacket.getAddress(),
 					clientPort);
-			
+
 			//Send server response back to client
 			try {
 				sendSocket.send(clientPacket);
@@ -124,15 +124,16 @@ public class ErrorSimulator {
 				e.printStackTrace();
 				System.exit(1);
 			}
-			
+
 			System.out.println("Packet sent from Client");
-			
-			
+
+
 			data = new byte[ioman.getBufferSize()+4];
+			clientPacket = new DatagramPacket(data, data.length);
 			
 			//Get data from client
 			System.out.println("Waiting for packet from server");
-			
+
 			try {
 				receiveSocket.receive(clientPacket);
 			} catch (IOException e) {
@@ -140,7 +141,7 @@ public class ErrorSimulator {
 				System.exit(1);
 			}
 			System.out.println("Packet recieved from client");
-			
+
 			//Create packet to be sent to the server
 			serverPacket = new DatagramPacket(clientPacket.getData(), 
 					clientPacket.getData().length, 
@@ -154,68 +155,70 @@ public class ErrorSimulator {
 	 * Sends requests to the server and responses to the client
 	 */	
 	public void receiveAndSend() {
-		byte data[] = new byte[ioman.getBufferSize()];
-		DatagramPacket receiveSendPacket = new DatagramPacket(data, data.length);
-		
-		try {
-			//Receive packet from client.  
-			receiveSocket.receive(receiveSendPacket);
-		} catch(IOException e) {
-			e.printStackTrace();         
-			System.exit(1);
-		}
-		
-		//Set the packet data fields
-		clientPort = receiveSendPacket.getPort();
-		clientIP = receiveSendPacket.getAddress();
-		
-		//Print contents of packet that is received from client
-		String host = "Error Simulator";
-		packetManager.displayPacketInfo(receiveSendPacket, host, false);
-		System.out.print("Containing: ");
-		packetManager.printTFTPPacketData(receiveSendPacket.getData());
-		System.out.println();
-		System.out.println("Sending to server");
-		
-		//set packet's port to server port
-		receiveSendPacket.setPort(pd.getServerPort()); 
-		
-		//Send packet to server
-		try {
-			sendReceiveSocket.send(receiveSendPacket);
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(1);
-		}
+		while(true){
+			byte data[] = new byte[ioman.getBufferSize()+4];
+			DatagramPacket receiveSendPacket = new DatagramPacket(data, data.length);
 
-		//create packet in which to store server response
-		DatagramPacket responsePacket = new DatagramPacket(data, data.length);
+			try {
+				//Receive packet from client.  
+				receiveSocket.receive(receiveSendPacket);
+			} catch(IOException e) {
+				e.printStackTrace();         
+				System.exit(1);
+			}
 
-		//Receive server response
-		try {  
-			sendReceiveSocket.receive(responsePacket);
-		} catch(IOException e) {
-			e.printStackTrace();         
-			System.exit(1);
-		}
-		
-		//Print the server response
-		packetManager.displayPacketInfo(responsePacket, host, false);
-		
-		//set the response packet's port destination to that of the client's sendReceive socket
-		responsePacket.setPort(clientPort);
-		
-		//relay response packet to client
-		try {
-			DatagramSocket relayToClient = new DatagramSocket();
-			relayToClient.send(responsePacket);
-			relayToClient.close();
-		} catch (IOException e) {
-			e.printStackTrace();         
-			System.exit(1);
+			//Set the packet data fields
+			clientPort = receiveSendPacket.getPort();
+			clientIP = receiveSendPacket.getAddress();
+
+			//Print contents of packet that is received from client
+			String host = "Error Simulator";
+			packetManager.displayPacketInfo(receiveSendPacket, host, false);
+			System.out.print("Containing: ");
+			packetManager.printTFTPPacketData(receiveSendPacket.getData());
+			System.out.println();
+			System.out.println("Sending to server");
+
+			//set packet's port to server port
+			receiveSendPacket.setPort(pd.getServerPort()); 
+
+			//Send packet to server
+			try {
+				sendReceiveSocket.send(receiveSendPacket);
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
+
+			//create packet in which to store server response
+			DatagramPacket responsePacket = new DatagramPacket(data, data.length);
+
+			//Receive server response
+			try {  
+				sendReceiveSocket.receive(responsePacket);
+			} catch(IOException e) {
+				e.printStackTrace();         
+				System.exit(1);
+			}
+
+			//Print the server response
+			packetManager.displayPacketInfo(responsePacket, host, false);
+
+			//set the response packet's port destination to that of the client's sendReceive socket
+			responsePacket.setPort(clientPort);
+
+			//relay response packet to client
+			try {
+				DatagramSocket relayToClient = new DatagramSocket();
+				relayToClient.send(responsePacket);
+				relayToClient.close();
+			} catch (IOException e) {
+				e.printStackTrace();         
+				System.exit(1);
+			}
 		}
 	}
-	
+
 	/*
 	 * Check for user selection
 	 */
@@ -224,7 +227,7 @@ public class ErrorSimulator {
 		if(modeSelected == 3){
 			System.out.println("Error simulator not running..\n");
 			listener();
-			
+
 		}
 		if (modeSelected == 2){
 			System.out.println("Error code 5 (UNKNOWN TID) simulated.");

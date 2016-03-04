@@ -37,7 +37,7 @@ public class Server{
 		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
 		printAllFolderContent();
 		System.out.println("\nWaiting for packet..");
-		
+
 		try{
 			receiveSocket = new DatagramSocket(pd.getServerPort()); //socket listening on port 1025
 			while(serverRuning){
@@ -46,9 +46,9 @@ public class Server{
 					if(receivePacket.getData() == shutdown){
 						stopServer();
 					}
-					
+
 					print("Packet recieved from client at " + getTimestamp());
-					
+
 					Response r = new Response(receivePacket); //dispatch new thread to handle the response, pass to it the request packet
 				} catch(IOException e) {
 					e.printStackTrace();         
@@ -83,7 +83,7 @@ public class Server{
 		receiveSocket.close();
 		print("Server shutting down");
 	}
-	
+
 	public static void main( String args[] ){
 		new Server(); //instantiate the server
 	}
@@ -137,7 +137,7 @@ public class Server{
 			clientAddr = p.getAddress();
 			clientPort = p.getPort();
 			contents = p.getData();
-		    
+
 
 			try {
 				socket = new DatagramSocket();
@@ -213,10 +213,10 @@ public class Server{
 			print("1");
 			byte[] inboundDatapacket = new byte[ioManager.getBufferSize() + 4];
 			byte[] rawData; 
-			int blockNum = 1;
+			int blockNum = 0;
 			String filename = packetManager.getFilename(contents); 
 			print("4");
-			print("Attempting to read from file: " + filename);
+			print("Attempting to write to file: " + filename);
 
 			File writeTo = new File(ServerDirectory + filename);
 			print("writeTo exists?: " +  writeTo.exists());
@@ -225,7 +225,7 @@ public class Server{
 
 			do{
 				rawData = new byte[ioManager.getBufferSize()];
-				
+
 				/* create and send ACK packet to client */
 				packet = new DatagramPacket(ack, ack.length, clientAddr, clientPort);
 				socket.send(packet);
@@ -234,16 +234,24 @@ public class Server{
 				/*  for next packet */
 				packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
 				socket.receive(packet);
-				
+
 				//If Packet arrives from an unknown TID
-				if(verifyClient(packet) == false){
-					handleErrReq(5 , packet.getAddress(), packet.getPort());
-					continue; //go back and wait for client packet
+				byte[] err = packetManager.createError(new byte[]{0, 5}, "Unknown PID.");
+				while(packet.getPort() != clientPort) {
+					packet = new DatagramPacket(err, err.length,
+							packet.getAddress(), packet.getPort());
+					socket.send(packet);
+
+					/* TODO:
+					 * NEED TO IMPLEMENT: TIMEOUT ON RECEIVING 
+					 */
+					packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
+					socket.receive(packet);
 				}
-				
+
 				blockNum++;
 				ack = packetManager.createAck(inboundDatapacket);
-				
+
 				rawData = packetManager.getData(inboundDatapacket);
 				//packetManager.printTFTPPacketData(inboundDatapacket);
 				//packetManager.printTFTPPacketData(rawData);
@@ -255,7 +263,7 @@ public class Server{
 			packet = new DatagramPacket(ack, ack.length, clientAddr, clientPort);
 			socket.send(packet);
 			blockNum++;
-			
+
 			/* wait for next packet */
 			packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
 			socket.receive(packet);
@@ -280,9 +288,9 @@ public class Server{
 
 			byte[] block;
 			ByteBuffer buffer;
-			
+
 			do{
-				
+
 				System.out.println(blockNum);
 				/* Convert block number from short to byte[] */
 				buffer = ByteBuffer.allocate(2);
@@ -290,7 +298,7 @@ public class Server{
 				block = buffer.array();
 				System.out.println("The block numer as an array " + 
 						Arrays.toString(block));
-				
+
 				data = new byte[512];
 				/* get data from file and configure the offset*/
 
@@ -302,25 +310,34 @@ public class Server{
 						packetManager.createData(data, block).length,
 						clientAddr,
 						clientPort);
-				
+
 
 				/* send packet to client */
 				socket.send(packet);
 				System.out.println("Sent DATA packet with block number = " 
 						+ packetManager.twoBytesToInt(packet.getData()[2], packet.getData()[3]));
-				
-				
+
+
 				/* wait to receive ACK confirmation */
-				packet = new DatagramPacket(ackData, ackData.length,clientAddr,
-						clientPort);
+				packet = new DatagramPacket(ackData, ackData.length);
 				socket.receive(packet);
 				System.out.println("Received ACK packet with block number = " 
 						+ packetManager.twoBytesToInt(packet.getData()[2], packet.getData()[3]));
-				
-				if(verifyClient(packet) == false){
-					handleErrReq(5, packet.getAddress(), packet.getPort());
+
+
+				byte[] err = packetManager.createError(new byte[]{0, 5}, "Unknown PID.");
+				while(packet.getPort() != clientPort) {
+					packet = new DatagramPacket(err, err.length,
+							packet.getAddress(), packet.getPort());
+					socket.send(packet);
+
+					/* TODO:
+					 * NEED TO IMPLEMENT: TIMEOUT ON RECEIVING 
+					 */
+					packet = new DatagramPacket(ackData, ackData.length);
+					socket.receive(packet);
 				}
-				
+
 				/* confirm validity of ACK */
 				System.out.println(Arrays.toString(packet.getData()));
 				if(packetManager.isAckPacket(packet.getData())){
@@ -337,17 +354,17 @@ public class Server{
 				} else {
 					handleErrReq(6, clientAddr, clientPort);
 				}
-				
+
 				/* iterate server side block number */
 				blockNum++;
-			
+
 			} while(!(packetManager.lastPacket(data)));
 
 			/* Convert block number from short to byte[] */
 			buffer = ByteBuffer.allocate(2);
 			buffer.putShort(blockNum);
 			block = buffer.array();
-			
+
 			/* exit loop for last packet */
 			reader.read(data, 0, data.length);
 			reader.close();
@@ -395,7 +412,7 @@ public class Server{
 
 			byte[] err = packetManager.createError(errCode, errMsg[i]);
 			packet = new DatagramPacket(err,err.length,addr,port);
-			
+
 			print(getTimestamp() + ": " + errMsg[i] + " thread exiting");
 			try {
 				socket.send(packet);
@@ -404,7 +421,7 @@ public class Server{
 				e.printStackTrace();
 			}
 		}
-		
+
 		/**
 		 * Verifies that that client is the original client for which the thread was made
 		 * @param p Packet received thats is to be verified

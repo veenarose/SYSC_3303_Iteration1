@@ -144,7 +144,7 @@ public class Client { //the client class
 		//Print packet contents
 		System.out.println("Received data");
 		serverHost = receivePacket.getAddress(); //get the host address from the server
-		serverPort = receivePacket.getPort(); //get the port id of the new server thread
+		serverPort = pd.getIntermediatePort(); //get the port id of the new server thread
 		int expectedBlockNumber; 
 
 		if(!packMan.isErrorPacket(data)) {
