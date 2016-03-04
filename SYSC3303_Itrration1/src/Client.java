@@ -37,7 +37,7 @@ public class Client { //the client class
 			//construct a datagram socket to be used to send and receive UDP Datagram requests and bind it to any available 
 			//port on the local host machine. 
 			sendReceiveSocket = new DatagramSocket();
-			sendReceiveSocket.setSoTimeout(300);
+			sendReceiveSocket.setSoTimeout(20000);
 			//populate fileNames list
 			fileNames.add(files[0]);
 			fileNames.add(files[1]);
@@ -164,6 +164,8 @@ public class Client { //the client class
 					System.out.println("writeTo exists?: " +  writeTo.exists());
 
 					//write the data to local file with name filename
+					System.out.println(Arrays.toString(readData));
+					
 					byte writeToFileData[];
 					writeToFileData = packMan.getData(readData);
 					try {

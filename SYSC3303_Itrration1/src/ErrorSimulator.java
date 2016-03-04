@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.util.Arrays;
 import java.util.Scanner;
 
 /* ErrorSimulator.java
@@ -28,6 +29,8 @@ public class ErrorSimulator {
 	private static InetAddress serverIP;
 	private static ProfileData pd = new ProfileData();
 	private IOManager ioman; 
+	private boolean isRunning;
+	private DatagramSocket sendSocket;
 	
 	public ErrorSimulator() {
 		try {
@@ -48,7 +51,102 @@ public class ErrorSimulator {
 		errorHost = -1;
 		errorBlkNum = -1;
 		
+		isRunning = true;
 		ioman = new IOManager();
+	}
+	
+	public void listener(){
+		byte[] data = new byte[ioman.getBufferSize()+4];
+		DatagramPacket clientPacket = new DatagramPacket(data, data.length);
+		DatagramPacket serverPacket = new DatagramPacket(data, data.length);;
+		int clientPort = -1;
+		
+		//Get data from client
+		System.out.println("Waiting for packet from server");
+		
+		try {
+			receiveSocket.receive(clientPacket);
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+		System.out.println("Packet recieved from client");
+		
+		//Get client's information 
+		clientPort = clientPacket.getPort();
+		
+		try {
+			sendSocket = new DatagramSocket();
+		} catch (SocketException e1) {
+			e1.printStackTrace();
+		}
+		
+		serverPacket = new DatagramPacket(clientPacket.getData(), 
+				clientPacket.getData().length, 
+				clientPacket.getAddress(), 
+				pd.getServerPort());
+		
+		while(isRunning){
+			//Send client data to server
+			try {
+				sendReceiveSocket.send(serverPacket);
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
+			System.out.println("Packet sent from Server");
+			
+			byte[] serverResponse = new byte[ioman.getBufferSize()+4];
+			serverPacket = new DatagramPacket(serverResponse, serverResponse.length);
+			
+			//Receive response from server
+			try {
+				sendReceiveSocket.receive(serverPacket);
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
+			
+			System.out.println("Packet recieved from Server");
+			
+			System.out.println(Arrays.toString(serverPacket.getData()));
+			
+			//Make packet to send back to the client
+			clientPacket = new DatagramPacket(serverPacket.getData(),
+					serverPacket.getData().length,
+					serverPacket.getAddress(),
+					clientPort);
+			
+			//Send server response back to client
+			try {
+				sendSocket.send(clientPacket);
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
+			
+			System.out.println("Packet sent from Client");
+			
+			
+			data = new byte[ioman.getBufferSize()+4];
+			
+			//Get data from client
+			System.out.println("Waiting for packet from server");
+			
+			try {
+				receiveSocket.receive(clientPacket);
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
+			System.out.println("Packet recieved from client");
+			
+			//Create packet to be sent to the server
+			serverPacket = new DatagramPacket(clientPacket.getData(), 
+					clientPacket.getData().length, 
+					clientPacket.getAddress(), 
+					pd.getServerPort());
+		}
 	}
 
 	/* Method which: 
@@ -125,9 +223,7 @@ public class ErrorSimulator {
 		// Iteration2
 		if(modeSelected == 3){
 			System.out.println("Error simulator not running..\n");
-			for(;;){
-				receiveAndSend();
-			}
+			listener();
 			
 		}
 		if (modeSelected == 2){
