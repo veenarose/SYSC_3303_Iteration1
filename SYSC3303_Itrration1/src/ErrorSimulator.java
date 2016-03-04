@@ -334,7 +334,7 @@ public class ErrorSimulator {
 	}
 
 	/*
-	 * Waits for the response from Server and relay back to Client
+	 * Waits for the response from Server and reply back to Client
 	 */
 	private void serverResponse(){
 		System.out.println("\nWaiting for a response..");
@@ -465,18 +465,6 @@ public class ErrorSimulator {
 		sendPacketToServer(sendPackets);
 	}
 
-	/*System.out.println("Error simulator not running..\n");
-	System.out.println();
-	System.out.println("Pease choose what you would like to do... ");
-	System.out.println();
-	System.out.println("	(1) -  Delayed Data Packets");
-	System.out.println("	(2) -  Delayed ACK");
-	System.out.println("	(3) -  Lost Data Packets");
-	System.out.println("	(4) -  Lost ACK");
-	System.out.println("	(5) -  Duplicate Packets");
-	System.out.println("	(6) -  Duplicate ACK");
-	System.out.println();
-	System.out.println("	(7) - Shutdown SERVER");*/
 
 	/*
 	 * Error Simulation
