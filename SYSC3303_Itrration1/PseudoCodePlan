@@ -1,0 +1,242 @@
+PACKET MANAGER
+
+opcode  operation
+1     Read request (RRQ)
+2     Write request (WRQ)
+3     Data (DATA)
+4     Acknowledgment (ACK)
+5     Error (ERROR)
+
+int[] opcodes = {1,2,3,4,5}
+
+twoBytesToInt(b, b1) //returns an int
+intToTwoBytes(i) //returns byte array of size 2
+
+//all the following methods return appropriate byte arrays containing data
+createReadRequestPacket(filename, type)
+createWriteRequestPacket(filename, type)
+createDataPacket(data)
+createAckPacket(blockNumber)
+createErrorPacket(error code, error message)
+
+//get various fields from the packet
+getFilenameFromRequestPacket(read/write request) //returns a string
+getTypeFromRequestPacket(read/write request) //returns a string
+getBlockNumFromPacket(data/ack packet) //returns an int
+getDataFromPacket(data packet) //returns byte array
+getOpcodeFromPacket(packet) //returns int
+getErrorCodeFromErrorPacket(error packet) //returns int
+getErrorMessageFromErrorPacket(error packet)  //returns string
+
+validateRequest(req) //throws exception for invalid, 1 for read and 2 for write
+validateDataPacket(data packet) //throws exception for invalid otherwise just returns
+validateAckPacket(ack packet) //throws exception for invalid otherwise just returns
+isErrorPacket(error packet) //true if error packet, false otherwise
+isLastData(data) //true if last block of data false otherwise
+
+
+//set various fields in a packet (for error checking)
+setOpcodeOfPacket(packet, opcode)
+setFilenameOfRequestPacket(packet, filename)
+setModeOfRequestPcket(packet, filename)
+setDataPacketData(packet, data)
+removeFirstZeroByte(request packet)
+removeLastZeroByte(request/error packet)
+
+Error Codes
+Value     Meaning
+0         Not defined, see error message (if any).
+1         File not found.
+2         Access violation.
+3         Disk full or allocation exceeded.
+4	   Illegal TFTP operation.
+5         Unknown transfer ID.
+6         File already exists.
+7         No such user.
+
+Int[] errorCodes = {0,1,2,3,4,5,6}
+
+SERVER
+
+load local file directory, store the names of the files inside of a set
+and begin running (shutdown server is vague along with synchronized methods???) 
+
+processes a request 
+1) try { PacketManager.validateRequest(req) }
+catch(invalid request) { create errorPacket, and send it back to the client }
+2) pass the datapacket's PID, data, filename, and what kind of request it is, to a newly dispatched thread for handling requests
+
+RESPONSE HANDLER
+
+if request is a READ
+
+	If the filename does not exist, generate an appropriate error packet(error code 1) and send it to 	the client. Finish thread execution.
+
+	The response handler is sending data of size 512 bytes to the client. 
+	Starts by sending block number 1 then waits for X milliseconds.
+	If the wait time times out without a response, then resend the data.
+		It resends 5 times after which it sends an error packet (error code 0) to the client and 			terminates the 	connection.
+	Upon receiving a response, 
+	If the PID is invalid, send error packet to unknown PID and listen again for a response. (Error 	code 5)
+	If the response is an error packet, print out the error and terminate the connection.
+	If the ack is invalid respond with error and terminate connection, 
+	If the block number is unexpected respond with error and terminate connection, 
+	Otherwise increase block number by 1, get next data block, send and repeat listening.
+	Do this until the last data block is sent and the corresponding ack packet is received.
+
+If request is a WRITE
+
+	if the filename is already present in the server, generate an appropriate error packet (error code 	1) and send it to the client. Finish thread execution.
+
+	The response handler starts by sending ack with blocknumber 0.
+	The server waits to receive data of 512 bytes. It waits for X milliseconds.
+	If the wait time times out without a response, then send an error packet (error code 0) to the 		client and terminate the connection.
+	Upon receiving a response, 
+	If the PID is invalid, send error packet to unknown PID and listen again for a response. (Error 	code 5)
+	If the response is an error packet, print out the error and terminate the connection.
+	If the datapacket is invalid respond with error and terminate connection.
+	Expected blocknumber = blocknumber + 1, if expected blocknumber does not equal the 	blocknumber of the received datapacket respond with error and terminate connection,
+	Otherwise increase the blocknumber by one, write the data to the file, generate ack with 	appropriate blocknumber, send the ack, begin listening again.
+	Do this until last data packet is received and send back the appropriate ack packet.
+
+CLIENT
+
+start the client
+prompt user to select the request it wishes to send
+if read is selected run handleRead
+if write is selected run handleWrite
+
+handleRead
+
+If the filename specified already exists locally on the client rerun the prompt method to get information from the user.
+
+	generate read request with specified filename and mode
+	send the request to the server
+	wait for a response
+	if it times out, respond with an errorPacket. the connection is presumed to be terminated
+	otherwise,
+		get the response expected to be data with block number 1, expectedblocknumber = 1
+	If the PID is invalid, send error packet to unknown PID and listen again for a response. (Error 	code 5)
+	If the response is an error packet, print out the error and throw exception.
+	If the datapacket is invalid respond with error and throw exception.
+	if expected blocknumber does not equal the 	blocknumber of the received datapacket respond 	with error and throw exception
+	Otherwise get data and write the data to a local file
+	generate ack with the same blocknumber as received data
+	send this ack
+	increase expectedblocknumber by 1
+	wait to receive next datapacket with expectedblocknumber and repeat
+
+	ON EACH RECEIVE
+	expecting data
+	check for valid TFTP datapacket
+		if error packet then print out error message and quit
+		if invalid then create error packet and send the error packet to the server 
+			
+
+
+
+
+
+
+
+
+
+
+
+
+
+handleWrite
+
+If the filename specified already exists locally on the client rerun the prompt method to get information from the user.
+
+	generate write request with specified filename and mode
+	send the request to the server
+	wait for a response
+	if it times out, resend up to 5 times, after which respond with an errorPacket. the 	connection is 			presumed to be terminated
+	expectedblocknumber = 0
+	otherwise,
+		get the response expected to be ack with block number 0
+	If the PID is invalid, send error packet to unknown PID and listen again for a response. (Error 	code 5)
+	If the response is an error packet, print out the error and terminate the connection.
+	If the ackpacket is invalid respond with error and terminate connection.
+	Otherwise create a new datapacket and read 512 bytes of data from a localfile
+	send this datapacket
+	increase expectedblocknumber by 1
+	wait to receive next ackpacket and repeat
+
+powerade owned by coca cola
+gatorade owned by pepsi
+
+
+ERROR SIMULATOR
+
+listens to incoming request/data/acks from the client on clientSocket
+
+listens to incoming data/acks from the server on the serverSocket
+
+
+PACKET EXTRACTION
+
+get DatagramPacket
+extract the port
+extract the address
+extract the data 
+
+validate the data 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Option 1: test for errors occurring on received TFTP packets, so any field of the packets, and unknown PIDs
+
+4         Illegal TFTP operation.
+5         Unknown transfer ID.
+
+
+1) WRQ/RRQ
+1)too large
+2)invalid opcode
+3)invalid mode
+4)missing filename
+5)no termination after ending 0
+6)no ending 0
+
+2) DATA/ACK 
+	
+	which host causes the error?
+	1) Client 2) Server 
+
+	boolean used to store user input: bool
+
+
+	enter the blocknumber of the packet you wish to destroy..
+
+	blocknumber variable to store user input
+	
+	select the type of error you would like to simulate
+1)too large
+2)invalid opcode
+3)invalid blocknumber
+
+	once we reach here do the following
+	clientSocket is initiliazed
+	serverSocket is initialized
+
+	create new thread called ErrorSimulatorServer
+
+
+Option 2: handle network errors
