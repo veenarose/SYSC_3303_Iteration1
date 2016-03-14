@@ -10,7 +10,7 @@ public class PacketManager {
 	private static byte[] WRQ = {0,2}; // Write opcode
 	private static byte[] DRQ = {0,3}; //data request
 	private static byte[] ERC = {0,5}; //error opcode
-
+	//error codes
 	private static byte[] NotDefined = {0,0};
 	private static byte[] FileNotFound = {0,1};
 	private static byte[] AccessViolation = {0,2};
@@ -18,7 +18,7 @@ public class PacketManager {
 	private static byte[] IllegalTFTPOp = {0,4};
 	private static byte[] UnknownTID = {0,5};
 	private static byte[] FileExists = {0,6};
-	
+
 	private static String[] validModes = {"netascii", "octet"};// The modes
 
 	/**
@@ -396,7 +396,7 @@ public class PacketManager {
 		DatagramPacket err = new DatagramPacket(errData, errData.length);
 		return err;
 	}
-	
+
 	//error code 5
 	public static DatagramPacket createInvalidTIDErrorPacket(int expected, int found) {
 		System.out.println("Incoming packet deteced to have an unidentifiable TID");
@@ -406,8 +406,42 @@ public class PacketManager {
 		DatagramPacket err = new DatagramPacket(errData, errData.length);
 		return err;
 	}
-	
-	
+
+	//error packet created when there is an access violation on the files.
+	public static DatagramPacket createAccessViolationErrorPacket(String filename, String errMessage) {
+		System.out.println("Incoming packet detected to have no access violation");
+		byte[] errBlock = AccessViolation;
+		byte[] errData = createError(errBlock, "Access violation on "+ filename + ". "+errMessage);
+		DatagramPacket err = new DatagramPacket(errData, errData.length);
+		return err;
+	}
+
+	//error packet created when disk is full in the directory.
+	public static DatagramPacket createDiskIsFullErrorPacket(String dir) {
+		System.out.println("Incoming packet detected to be disk full");
+		byte[] errBlock = DiskFull;
+		byte[] errData = createError(errBlock, "Disk is full "+".");
+		DatagramPacket err = new DatagramPacket(errData, errData.length);
+		return err;
+	}
+
+	//error packet created when received with an Invalid ACK Packet.
+	public static DatagramPacket createInvalidAckErrorPacket(byte[] ack){
+		byte[] expected = new byte[]{0,4,0,4};
+		byte[] errBlock = IllegalTFTPOp;
+		byte[] errData = createError(errBlock, "Invalid ACK received "+ack+"\nExample of an ACK packet"+expected);
+		DatagramPacket err = new DatagramPacket(errData, errData.length);
+		return err;
+	}
+
+	//error packet created when received with an Invalid DATA Packet.
+	public static DatagramPacket createInvalidDataErrorPacket(byte[] data){
+		byte[] expected = new byte[]{0,3,0,3};
+		byte[] errBlock = IllegalTFTPOp;
+		byte[] errData = createError(errBlock, "Invalid DATA received "+data+"\nExample of a DATA packet"+expected);
+		DatagramPacket err = new DatagramPacket(errData, errData.length);
+		return err;
+	}
 
 	public static String extractMessageFromErrorPacket(byte[] err) {
 		byte msg[] = new byte[err.length - 5];
