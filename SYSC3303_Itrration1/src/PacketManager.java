@@ -11,6 +11,14 @@ public class PacketManager {
 	private static byte[] DRQ = {0,3}; //data request
 	private static byte[] ERC = {0,5}; //error opcode
 
+	private static byte[] NotDefined = {0,0};
+	private static byte[] FileNotFound = {0,1};
+	private static byte[] AccessViolation = {0,2};
+	private static byte[] DiskFull = {0,3};
+	private static byte[] IllegalTFTPOp = {0,4};
+	private static byte[] UnknownTID = {0,5};
+	private static byte[] FileExists = {0,6};
+	
 	private static String[] validModes = {"netascii", "octet"};// The modes
 
 	/**
@@ -382,13 +390,24 @@ public class PacketManager {
 	public static DatagramPacket createInvalidBlockErrorPacket(int expected, int found) {
 		System.out.println("Unexpected block number detected, "
 				+ "terminating connection and sending error packet");
-		byte[] errBlock = new byte[]{0,4};
+		byte[] errBlock = IllegalTFTPOp;
 		byte[] errData = createError(errBlock,"Invalid block number detected. Was expecting " 
 				+ expected + " but received " + found + ".");
 		DatagramPacket err = new DatagramPacket(errData, errData.length);
-		//sendPacket(err, socket);
 		return err;
 	}
+	
+	//error code 5
+	public static DatagramPacket createInvalidTIDErrorPacket(int expected, int found) {
+		System.out.println("Incoming packet deteced to have an unidentifiable TID");
+		byte[] errBlock = UnknownTID;
+		byte[] errData = createError(errBlock, "Invalid TID detected. Was expecting "
+				+ expected + " but found " + found + ".");
+		DatagramPacket err = new DatagramPacket(errData, errData.length);
+		return err;
+	}
+	
+	
 
 	public static String extractMessageFromErrorPacket(byte[] err) {
 		byte msg[] = new byte[err.length - 5];
