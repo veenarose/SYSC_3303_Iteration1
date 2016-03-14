@@ -290,7 +290,7 @@ public class FixedErrorSimulator {
 			}while (!validInput);		
 		}
 		System.out.println("\nError simulator ready..");
-		boolean errorSimulation;
+		boolean errorSimulation = true;
 		try
 		{
 			byte[] data = new byte[ioman.getBufferSize()+4];
@@ -306,7 +306,6 @@ public class FixedErrorSimulator {
 				System.out.println(new String(clientRequestPacket.getData()));
 				System.out.println(Arrays.toString(clientRequestPacket.getData()));
 
-				errorSimulation = (java.lang.Thread.activeCount() == 1);
 				// Creates a thread to handle client request
 				Thread requestHandlerThread = new Thread(
 						new RequestHandler(clientRequestPacket, errorSimulation),
