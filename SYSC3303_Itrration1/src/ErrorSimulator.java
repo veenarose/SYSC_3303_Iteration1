@@ -6,7 +6,7 @@ import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.Scanner;
 
-public class FixedErrorSimulator {
+public class ErrorSimulator {
 	private static ProfileData pd = new ProfileData();
 	private IOManager ioman; 
 	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
@@ -17,10 +17,10 @@ public class FixedErrorSimulator {
 	private int errorHost = -1;					 //
 	private int errorBlkNum = -1;				 //to store the user selected block number
 
-	public FixedErrorSimulator() {
+	public ErrorSimulator() {
 		ioman = new IOManager();
 	}
-	
+
 	/*
 	 * Creates an invalid read/write request packet
 	 */
@@ -91,7 +91,7 @@ public class FixedErrorSimulator {
 			System.out.println();
 		}
 	}
-	
+
 	/*
 	 * Sends an invalid DATA\ACK packet to the server
 	 */
@@ -127,7 +127,7 @@ public class FixedErrorSimulator {
 			createUnknownThread(packet, packet.getAddress(),packet.getPort());
 		}
 	}
-	
+
 	/*
 	 * Creates an unknown TID to communicate between client and server
 	 */
@@ -143,7 +143,7 @@ public class FixedErrorSimulator {
 		// Start unknown TID handler thread
 		unknownTIDThread.start();
 	}
-	
+
 	/*
 	 * Error Simulation
 	 */
@@ -320,7 +320,7 @@ public class FixedErrorSimulator {
 			receiveSocket.close();
 		}
 	}
-	
+
 	/**
 	 *	An easy way to handle receive packets from either the server or client
 	 */
@@ -348,7 +348,7 @@ public class FixedErrorSimulator {
 	 */
 	public static void main( String args[] ) throws IOException
 	{
-		FixedErrorSimulator h = new FixedErrorSimulator();
+		ErrorSimulator h = new ErrorSimulator();
 		System.out.println("Welcome to Error Simulator.");
 
 		h.startErr();
@@ -367,7 +367,7 @@ public class FixedErrorSimulator {
 			}
 		}
 	}
-	
+
 	/**
 	 * Thread used to handle client requests
 	 */
@@ -394,12 +394,12 @@ public class FixedErrorSimulator {
 				transferHandlerThread = new Thread(
 						new ReadTransferHandler(requestPacket, errorSimulation),
 						"Read Transfer Handler Thread");
-				break;
+			break;
 			case(2):
 				transferHandlerThread = new Thread(
 						new WriteTransferHandler(requestPacket, errorSimulation),
 						"Write Transfer Handler Thread");
-				break;
+			break;
 			default:
 				throw new UnsupportedOperationException();
 			}
@@ -444,10 +444,10 @@ public class FixedErrorSimulator {
 
 				DatagramPacket serverRequestPacket = new DatagramPacket(clientRequestPacket.getData()
 						, clientRequestPacket.getData().length, clientRequestPacket.getAddress(),69);
-				
+
 				if(errorSimulation)
 					createInvalidRequestPacket(serverRequestPacket);
-					
+
 				System.out.println("Packet sent to server");
 				sendReceiveServerSocket.send(serverRequestPacket);
 				System.out.println(new String(serverRequestPacket.getData()));
@@ -485,10 +485,10 @@ public class FixedErrorSimulator {
 						// Sends data packet to client
 						DatagramPacket forwardedDataPacket = new DatagramPacket(dataPacket.getData(),
 								dataPacket.getData().length,clientAddressTID,clientPortTID);
-						
+
 						if(errorSimulation)
 							createInvalidDataAckPacket(forwardedDataPacket);
-						
+
 						System.out.println("\nPacket sent back to client");
 						sendReceiveClientSocket.send(forwardedDataPacket);
 						System.out.println(Arrays.toString(forwardedDataPacket.getData()));
@@ -502,10 +502,10 @@ public class FixedErrorSimulator {
 						System.out.println("\nPacket received from client");
 						System.out.println(new String(ackForFirstSentPacket.getData()));
 						System.out.println(Arrays.toString(ackForFirstSentPacket.getData()));
-						
+
 						DatagramPacket forwardedAckPacket = new DatagramPacket(ackForFirstSentPacket.getData(),
 								ackForFirstSentPacket.getData().length,serverAddressTID,serverPortTID);
-						
+
 						System.out.println("\nPacket sent to server");
 						sendReceiveServerSocket.send(forwardedAckPacket);
 						System.out.println(new String(forwardedAckPacket.getData()));
@@ -529,7 +529,7 @@ public class FixedErrorSimulator {
 			}
 		}
 	}
-	
+
 	/**
 	 * Thread used to handle client write transfers
 	 */
@@ -566,10 +566,10 @@ public class FixedErrorSimulator {
 
 				DatagramPacket serverRequestPacket = new DatagramPacket(clientRequestPacket.getData()
 						, clientRequestPacket.getData().length, clientRequestPacket.getAddress(),69);
-				
+
 				if(errorSimulation)
 					createInvalidRequestPacket(serverRequestPacket);
-					
+
 				System.out.println("Packet sent to server");
 				sendReceiveServerSocket.send(serverRequestPacket);
 				System.out.println(new String(serverRequestPacket.getData()));
@@ -607,10 +607,10 @@ public class FixedErrorSimulator {
 						// Sends data packet to client
 						DatagramPacket forwardedDataPacket = new DatagramPacket(dataPacket.getData(),
 								dataPacket.getData().length,clientAddressTID,clientPortTID);
-						
+
 						if(errorSimulation)
 							createInvalidDataAckPacket(forwardedDataPacket);
-						
+
 						System.out.println("\nPacket sent back to client");
 						sendReceiveClientSocket.send(forwardedDataPacket);
 						System.out.println(Arrays.toString(forwardedDataPacket.getData()));
@@ -624,10 +624,10 @@ public class FixedErrorSimulator {
 						System.out.println("\nPacket received from client");
 						System.out.println(new String(ackForFirstSentPacket.getData()));
 						System.out.println(Arrays.toString(ackForFirstSentPacket.getData()));
-						
+
 						DatagramPacket forwardedAckPacket = new DatagramPacket(ackForFirstSentPacket.getData(),
 								ackForFirstSentPacket.getData().length,serverAddressTID,serverPortTID);
-						
+
 						System.out.println("\nPacket sent to server");
 						sendReceiveServerSocket.send(forwardedAckPacket);
 						System.out.println(new String(forwardedAckPacket.getData()));
@@ -650,14 +650,14 @@ public class FixedErrorSimulator {
 				System.out.println("\nWrite Thread Handler thread terminated.\n");
 			}
 		}
-		
+
 	}
 	class UnknownTIDTransferHandler implements Runnable
 	{
 		private DatagramPacket packet;
 		private InetAddress addressTID;
 		private int portTID;
-		
+
 		public UnknownTIDTransferHandler(DatagramPacket packet, InetAddress addressTID, int portTID) {
 			this.packet = packet;
 			this.addressTID = addressTID;
@@ -680,8 +680,8 @@ public class FixedErrorSimulator {
 				e.printStackTrace();
 				return;
 			}
-			
+
 		}
-		
+
 	}
 }

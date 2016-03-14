@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 
+
 //Server.java
 //This class is the server for assignment 1.
 //
@@ -133,6 +134,7 @@ public class Server{
 		 * Verifies the packet as a legitimate packet. If the packet is a legitimate packet the thread runs this.start();
 		 * Otherwise the thread prints an error message and closes.
 		 * @param p DatagramPacket
+		 * @throws InvalidTFTPRequestException 
 		 */
 		public Response(DatagramPacket p){
 			packet = p;
@@ -145,7 +147,12 @@ public class Server{
 				socket = new DatagramSocket();
 
 				//Error handling data collection
-				packetType = PacketManager.validateRequest(contents);
+				try {
+					packetType = PacketManager.validateRequest(contents);
+				} catch (TFTPExceptions.InvalidTFTPRequestException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				mode = PacketManager.getMode(contents);
 				filename = PacketManager.getFilename(contents);
 

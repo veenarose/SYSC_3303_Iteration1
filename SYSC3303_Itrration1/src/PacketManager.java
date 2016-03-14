@@ -128,25 +128,28 @@ public class PacketManager {
 	 * 		   100 = no termination after 0, 200 = no terminating 0 
 	 * @throws IOException 
 	 */ 
-	public static int validateRequest(byte[] msg) throws IOException {
-		IOException invalid = new IOException(); 
+	public static int validateRequest(byte[] msg) throws TFTPExceptions.InvalidTFTPRequestException {
+
+		TFTPExceptions.InvalidTFTPRequestException invalid = new TFTPExceptions().new InvalidTFTPRequestException("invalid");
 		int zeroCount = 0; 	
 		String[] sfn;
 		byte[] delimiter = {0};
 
 		//checks leading 0 byte and read/write request byte
-		if(msg[0] != 0 || (msg[1] != 1 && msg[1] != 2)) {} 
+		if(msg[0] != 0 || (msg[1] != 1 && msg[1] != 2)) {
+			throw invalid;
+		} 
 
 		//checks if final byte is 0
 		if(msg[msg.length-1] != 0) { 
-			return 200;
+			throw invalid;
 		}
 
 		//makes sure there is a 0 byte between the filename and mode bytes 
-		//checks if bytes are valid ascii values between 0 and 128 
+		//checks if bytes are valid ascii values between -127 and 128 inclusive, and that it does not equal 0
 		for(int i=2; i< msg.length-1; i++) { 
 			if(msg[i] == 0) { zeroCount++; } 
-			if(msg[i] >= 128) { 
+			if(msg[i] >= 128 || msg[i] <= -127) { 
 				throw invalid;
 			} 
 			i++; 
@@ -157,25 +160,25 @@ public class PacketManager {
 		sfn = new String(msg).split(new String(delimiter));
 
 		if (sfn.length > 3){
-			return 200;
+			throw invalid;
 		}
 
 		//returns a value which is either a 1 for a read request or a 2 for a write request 
 		return msg[1]; 
 	}
-	
+
 	public boolean isDataPacket(byte[] data) {
 		if(data[1] != 4) { return false; }
 		int bufferSize = 516;
 		if(data.length != bufferSize) { return false; }
 		return true;
 	}
-	
+
 	public static boolean verifyDataPacket(byte[] data, int blockNumber, String[] errorMessage)
 	{
 		assert((blockNumber >= 0) && (blockNumber <= 65535));
 
-		
+
 		int dataLength = data.length;
 
 		try
@@ -209,7 +212,7 @@ public class PacketManager {
 			return false;
 		}
 	}
-	
+
 	/**
 	 * Quick and dirty check of whether a packet is an ACK packet
 	 * @param data
@@ -303,12 +306,12 @@ public class PacketManager {
 	 */
 	public static int getOpCode(byte[] data) {
 		byte[] opCodeBytes = new byte[2];
-		
+
 		System.arraycopy(data,0,opCodeBytes,0,2);
 		int opCode = (opCodeBytes[1] & 0xFF);
 		return opCode;
 	}
-	
+
 	/**
 	 * This method is used to extract the Block number from the data received
 	 * @param data byte[]: The data that is received
@@ -318,7 +321,7 @@ public class PacketManager {
 		byte[] blk = {data[2],data[3]};
 		return twoBytesToInt(blk);
 	}
-	
+
 	/**
 	 * Takes two byte numbers and returns there associated int value
 	 * @param leftByte
@@ -363,7 +366,7 @@ public class PacketManager {
 		int len = dPacket.getLength();
 		System.out.println("Length: " + len);
 	}
-	
+
 	public static void printTFTPPacketData(byte[] p) {
 		int length = p.length;
 		System.out.print("[");
@@ -375,7 +378,7 @@ public class PacketManager {
 			}
 		}
 	}
-	
+
 	public static DatagramPacket createInvalidBlockErrorPacket(int expected, int found) {
 		System.out.println("Unexpected block number detected, "
 				+ "terminating connection and sending error packet");
