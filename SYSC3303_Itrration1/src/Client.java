@@ -14,7 +14,7 @@ public class Client { //the client class
 	private DatagramSocket sendReceiveSocket; //socket which sends and receives UDP packets
 	private DatagramPacket sendPacket, receivePacket; //UDP send (request) and receive (acknowledgement) packets
 
-	private PacketManager packMan = new PacketManager(); //instance of the PacketManager class, used to handle read/write packets
+	//private PacketManager PacketManager = new PacketManager(); //instance of the PacketManager class, used to handle read/write packets
 	private IOManager ioMan = new IOManager(); //instance of the IOManager class, used to read/write to files
 	private ProfileData pd = new ProfileData(); //profile data for port numbers
 
@@ -102,9 +102,9 @@ public class Client { //the client class
 		//HANDLING THE REQUEST
 
 		if(req == 1) { //a read request
-			request = packMan.createRead(filename, modes[mode]);
+			request = PacketManager.createRead(filename, modes[mode]);
 		} else { //a write request
-			request = packMan.createWrite(filename, modes[mode]);
+			request = PacketManager.createWrite(filename, modes[mode]);
 		}
 
 		//SENDING THE REQUEST
@@ -137,17 +137,17 @@ public class Client { //the client class
 				receivePacket(receivePacket, sendReceiveSocket);
 				break;
 			} catch(SocketTimeoutException e){
-				continue;
+				
 			}
 		}
 
 		//Print packet contents
 		System.out.println("Received data");
 		serverHost = receivePacket.getAddress(); //get the host address from the server
-		serverPort = pd.getIntermediatePort(); //get the port id of the new server thread
-		int expectedBlockNumber; 
-
-		if(!packMan.isErrorPacket(data)) {
+		serverPort = receivePacket.getPort();//pd.getIntermediatePort(); //get the port id of the new server thread
+		int expectedBlockNumber = 0; 
+		
+		if(!PacketManager.isErrorPacket(data)) {
 
 			if (req == 1) { //a read request
 
@@ -155,9 +155,10 @@ public class Client { //the client class
 
 				//variable to store the read requests data, 2 bytes for the opcode, 2 for the block number, 512 for the raw data
 				byte readData[] = data;
-				System.out.println("Received block number = " + packMan.twoBytesToInt(data[2], data[3])
+				System.out.println("Received block number = " + PacketManager.twoBytesToInt(data)
 				+ ". Expected block number = " + expectedBlockNumber);
-				if(packMan.twoBytesToInt(data[2], data[3]) == expectedBlockNumber) { //valid block number
+				
+				if(PacketManager.twoBytesToInt(data) == expectedBlockNumber) { //valid block number
 
 					//create a new file with name filename which will be written to
 					File writeTo = new File(ClientDirectory + filename);
@@ -167,7 +168,7 @@ public class Client { //the client class
 					System.out.println(Arrays.toString(readData));
 					
 					byte writeToFileData[];
-					writeToFileData = packMan.getData(readData);
+					writeToFileData = PacketManager.getData(readData);
 					try {
 						ioMan.write(writeTo, writeToFileData);
 					} catch (IOException e1) {
@@ -177,20 +178,22 @@ public class Client { //the client class
 
 					//send ack packets and receive data until last packet is reached
 					System.out.println("Last packet?: " + 
-							packMan.lastPacket(writeToFileData));
+							PacketManager.lastPacket(writeToFileData));
 
-					while (!packMan.lastPacket(writeToFileData)){ 
+					while (true){ 
 
 						//create ack
-						byte[] ack = packMan.createAck(readData);
+						byte[] ack = PacketManager.createAck(readData);
 						System.out.println(Arrays.toString(ack));
 						//send the ack packet
 						sendPacket = new DatagramPacket(ack, ack.length,
 								serverHost, serverPort);
 						sendPacket(sendPacket, sendReceiveSocket);
 						System.out.println("Sent ACK with block number = " + 
-								packMan.twoBytesToInt(sendPacket.getData()[2], sendPacket.getData()[3]));
-
+								PacketManager.twoBytesToInt(sendPacket.getData()));
+						if(PacketManager.lastPacket(writeToFileData)){
+							break;
+						}
 						expectedBlockNumber++;
 
 						/* TODO:
@@ -204,14 +207,14 @@ public class Client { //the client class
 								receivePacket(receivePacket, sendReceiveSocket);
 								break;
 							} catch(SocketTimeoutException e){
-								continue;
+								
 							}
 						}
 
 						System.out.println("Received  DATA packet with block number = " + 
-								packMan.twoBytesToInt(receivePacket.getData()[2], receivePacket.getData()[3]));
+								PacketManager.twoBytesToInt(receivePacket.getData()));
 
-						byte[] err = packMan.createError(new byte[]{0, 5}, "Unknown ID.");
+						byte[] err = PacketManager.createError(new byte[]{0, 5}, "Unknown ID.");
 
 						//checks if the received data packet comes from the appropriate
 						//TID
@@ -232,7 +235,7 @@ public class Client { //the client class
 									receivePacket(receivePacket, sendReceiveSocket);
 									break;
 								} catch(SocketTimeoutException e){
-									continue;
+									
 								}
 							}   
 						}
@@ -242,15 +245,15 @@ public class Client { //the client class
 						 * IS IMPORTANT HERE
 						 */
 						System.out.println("Expected block number = " + expectedBlockNumber);
-						if(packMan.twoBytesToInt(readData[2], readData[3]) != 
+						if(PacketManager.twoBytesToInt(readData) != 
 								expectedBlockNumber) {
-							sendPacket(packMan.handleInvalidBlock(expectedBlockNumber, 
-									packMan.twoBytesToInt(readData[2], readData[3])), sendReceiveSocket);
+							sendPacket(PacketManager.createInvalidBlockErrorPacket(expectedBlockNumber, 
+									PacketManager.twoBytesToInt(readData)), sendReceiveSocket);
 							break;
 						}
 
 						//write the data to the file
-						writeToFileData = packMan.getData(readData);
+						writeToFileData = PacketManager.getData(readData);
 						try {
 							ioMan.write(writeTo, writeToFileData);
 						} catch (IOException e) {
@@ -261,8 +264,8 @@ public class Client { //the client class
 					}  //end read request loop
 
 				} else { //unexpected block number
-					sendPacket(packMan.handleInvalidBlock(expectedBlockNumber, 
-							packMan.twoBytesToInt(data[2], data[3])), sendReceiveSocket);
+					sendPacket(PacketManager.createInvalidBlockErrorPacket(expectedBlockNumber, 
+							PacketManager.twoBytesToInt(data)), sendReceiveSocket);
 				}
 
 			} else { //a write request
@@ -278,15 +281,15 @@ public class Client { //the client class
 					ackData[i] = data[i];
 				}
 
-				if(packMan.twoBytesToInt(ackData[2], ackData[3]) == expectedBlockNumber) { //valid block number
+				if(PacketManager.twoBytesToInt(ackData) == expectedBlockNumber) { //valid block number
 
 					//get block number from the ack and increment it
-					int blockNumAsInt = packMan.twoBytesToInt(ackData[2], ackData[3]); 
+					int blockNumAsInt = PacketManager.twoBytesToInt(ackData); 
 					System.out.println(blockNumAsInt);
 					blockNumAsInt++; //increment the block number
 					System.out.println(blockNumAsInt);
 					//convert int back to two bytes
-					byte blockNum[] = packMan.intToBytes(blockNumAsInt);
+					byte blockNum[] = PacketManager.intToBytes(blockNumAsInt);
 					System.out.println(blockNum[0] + " " + blockNum[1]);
 
 					//byte buffer to be filled with data from local file
@@ -297,8 +300,8 @@ public class Client { //the client class
 
 					try {
 						reader.read(readFromFileData, 0, ioMan.getBufferSize());
-						writeData = packMan.createData(readFromFileData, blockNum);
-						packMan.printTFTPPacketData(writeData);
+						writeData = PacketManager.createData(readFromFileData, blockNum);
+						PacketManager.printTFTPPacketData(writeData);
 					} catch (IOException e1) {
 						e1.printStackTrace();
 					}
@@ -309,7 +312,7 @@ public class Client { //the client class
 					sendPacket(sendPacket, sendReceiveSocket);
 
 					//receive ack packets and send data until there is no more data to send
-					while (!packMan.lastPacket(readFromFileData)) { 
+					while (!PacketManager.lastPacket(readFromFileData)) { 
 
 						readFromFileData = new byte[ioMan.getBufferSize()];
 
@@ -331,7 +334,7 @@ public class Client { //the client class
 					        }
 				        }
 					    
-						byte[] err = packMan.createError(new byte[]{0, 5}, "Unknown PID.");
+						byte[] err = PacketManager.createError(new byte[]{0, 5}, "Unknown PID.");
 						while(receivePacket.getPort() != serverPort) {
 							sendPacket = new DatagramPacket(err, err.length,
 									receivePacket.getAddress(), receivePacket.getPort());
@@ -352,27 +355,27 @@ public class Client { //the client class
 						    
 						}
 
-						if(packMan.twoBytesToInt(ackData[2], ackData[3]) != 
+						if(PacketManager.twoBytesToInt(ackData) != 
 								expectedBlockNumber) {
-							sendPacket(packMan.handleInvalidBlock(expectedBlockNumber, 
-									packMan.twoBytesToInt(ackData[2], ackData[3])), sendReceiveSocket);
+							sendPacket(PacketManager.createInvalidBlockErrorPacket(expectedBlockNumber, 
+									PacketManager.twoBytesToInt(ackData)), sendReceiveSocket);
 							break;
 						}
 
 						//get the two-byte block number from the ack and convert it to an int
-						blockNumAsInt = packMan.twoBytesToInt(ackData[2], ackData[3]); 
+						blockNumAsInt = PacketManager.twoBytesToInt(ackData); 
 						System.out.println(blockNumAsInt);
 						blockNumAsInt++; //increment the block number
 						System.out.println(blockNumAsInt);
 						//convert int back to two bytes
-						blockNum = packMan.intToBytes(blockNumAsInt);
+						blockNum = PacketManager.intToBytes(blockNumAsInt);
 						System.out.println(blockNum[0] + " " + blockNum[1]);
 
 						//read 512 bytes from local file and create a data packet to send 
 						//these to-be-written bytes to the server
 						try {
 							reader.read(readFromFileData, 0, ioMan.getBufferSize());
-							writeData = packMan.createData(readFromFileData, blockNum);
+							writeData = PacketManager.createData(readFromFileData, blockNum);
 						} catch (IOException e1) {
 							e1.printStackTrace();
 						}
@@ -384,8 +387,8 @@ public class Client { //the client class
 					} //end write request loop
 
 				} else { //invalid block number
-					sendPacket(packMan.handleInvalidBlock(expectedBlockNumber, 
-							packMan.twoBytesToInt(ackData[2], ackData[3])), sendReceiveSocket);
+					sendPacket(PacketManager.createInvalidBlockErrorPacket(expectedBlockNumber, 
+							PacketManager.twoBytesToInt(ackData)), sendReceiveSocket);
 				}
 
 			}//end handle else write request

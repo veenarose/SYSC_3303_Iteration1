@@ -13,8 +13,10 @@ import java.util.Date;
 public class Server{
 
 	private DatagramSocket receiveSocket;
+	private DatagramPacket receivePacket;
 	private PacketManager packetManager;
 	private IOManager ioManager;
+	private Response rep;
 	private static boolean serverRuning = true;
 	private ProfileData pd = new ProfileData();
 	private final byte[] shutdown = {1,1};
@@ -33,8 +35,8 @@ public class Server{
 		System.out.println("Server started.");
 		packetManager = new PacketManager();
 		ioManager = new IOManager();
-		byte[] data = new byte[512];
-		DatagramPacket receivePacket = new DatagramPacket(data, data.length);
+		byte[] data = new byte[ioManager.getBufferSize()+4];
+		receivePacket = new DatagramPacket(data, data.length);
 		printAllFolderContent();
 		System.out.println("\nWaiting for packet..");
 
@@ -47,9 +49,9 @@ public class Server{
 						stopServer();
 					}
 
-					print("Packet recieved from client at " + getTimestamp());
-
-					Response r = new Response(receivePacket); //dispatch new thread to handle the response, pass to it the request packet
+					print("Packet received from client at " + getTimestamp());
+					
+					rep = new Response(receivePacket); //dispatch new thread to handle the response, pass to it the request packet
 				} catch(IOException e) {
 					e.printStackTrace();         
 					System.exit(1);
@@ -143,9 +145,9 @@ public class Server{
 				socket = new DatagramSocket();
 
 				//Error handling data collection
-				packetType = packetManager.validateRequest(contents);
-				mode = packetManager.getMode(contents);
-				filename = packetManager.getFilename(contents);
+				packetType = PacketManager.validateRequest(contents);
+				mode = PacketManager.getMode(contents);
+				filename = PacketManager.getFilename(contents);
 
 			} catch (SocketException e){
 				error("Socket Exception");
@@ -277,11 +279,11 @@ public class Server{
 		}
 
 		private void handleReadReq() throws IOException {
-			byte[] data; 
+			byte[] data = new byte[ioManager.getBufferSize()+4]; 
 			short blockNum = 1;
 			String filename = packetManager.getFilename(contents);
 			print("Attempting to read from file: " + filename);
-			byte[] ackData = new byte[4];
+			byte[] ackData = packetManager.createAck(data);
 
 			BufferedInputStream reader = new BufferedInputStream
 					(new FileInputStream(ServerDirectory + filename));
@@ -299,7 +301,7 @@ public class Server{
 				System.out.println("The block numer as an array " + 
 						Arrays.toString(block));
 
-				data = new byte[512];
+				data = new byte[ioManager.getBufferSize()+4];
 				/* get data from file and configure the offset*/
 
 				reader.read(data, 0, data.length);
@@ -315,17 +317,16 @@ public class Server{
 				/* send packet to client */
 				socket.send(packet);
 				System.out.println("Sent DATA packet with block number = " 
-						+ packetManager.twoBytesToInt(packet.getData()[2], packet.getData()[3]));
+						+ PacketManager.twoBytesToInt(packet.getData()));
 
 
 				/* wait to receive ACK confirmation */
-				packet = new DatagramPacket(ackData, ackData.length);
-				socket.receive(packet);
+				DatagramPacket simPacket = new DatagramPacket(ackData, ackData.length,packet.getAddress(),packet.getPort());
+				socket.receive(simPacket);
 				System.out.println("Received ACK packet with block number = " 
-						+ packetManager.twoBytesToInt(packet.getData()[2], packet.getData()[3]));
+						+ PacketManager.twoBytesToInt(simPacket.getData()));
 
-
-				byte[] err = packetManager.createError(new byte[]{0, 5}, "Unknown PID.");
+				byte[] err = PacketManager.createError(new byte[]{0, 5}, "Unknown PID.");
 				while(packet.getPort() != clientPort) {
 					packet = new DatagramPacket(err, err.length,
 							packet.getAddress(), packet.getPort());
@@ -339,8 +340,8 @@ public class Server{
 				}
 
 				/* confirm validity of ACK */
-				System.out.println(Arrays.toString(packet.getData()));
-				if(packetManager.isAckPacket(packet.getData())){
+				System.out.println(Arrays.toString(simPacket.getData()));
+				if(packetManager.isAckPacket(simPacket.getData())){
 					ByteBuffer b = ByteBuffer.allocate(2);
 					b.put(ackData[2]);
 					b.put(ackData[3]);

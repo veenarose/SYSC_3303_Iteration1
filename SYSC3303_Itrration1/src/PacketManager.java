@@ -128,7 +128,7 @@ public class PacketManager {
 	 * 		   100 = no termination after 0, 200 = no terminating 0 
 	 * @throws IOException 
 	 */ 
-	public int validateRequest(byte[] msg) throws IOException {
+	public static int validateRequest(byte[] msg) throws IOException {
 		IOException invalid = new IOException(); 
 		int zeroCount = 0; 	
 		String[] sfn;
@@ -326,8 +326,8 @@ public class PacketManager {
 	 * @return
 	 */
 	public static int twoBytesToInt(byte[] b) {
-		byte leftByte = b[0];
-		byte rightByte = b[1];
+		byte leftByte = b[2];
+		byte rightByte = b[3];
 		return ((leftByte << 8) & 0x0000ff00) | (rightByte & 0x000000ff);
 	}
 
