@@ -427,7 +427,7 @@ public class FixedErrorSimulator {
 			{
 				System.out.println("\nRead Transfer Handler thread started.\n");
 
-				// Socket used for sending and receiving packets from server
+				// Socket used  sending and receiving packets from server
 				DatagramSocket sendReceiveServerSocket = new DatagramSocket();
 
 				// Socket will time out after a couple of seconds
