@@ -299,7 +299,7 @@ public class PacketManager {
 	 *
 	 * @param packet A TFTP DatagramPacket
 	 *
-	 * @return The OP code of the TFTP packet
+	 * @return the OP code of the TFTP packet
 	 */
 	public static int getOpCode(byte[] data) {
 		byte[] opCodeBytes = new byte[2];
