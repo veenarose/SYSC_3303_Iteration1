@@ -224,7 +224,7 @@ public class PacketManager {
 	/**
 	 * Quick and dirty check of whether a packet is an ACK packet
 	 * @param data
-	 * @return
+	 * @return boolean
 	 */
 	public static boolean isAckPacket(byte[] data){
 		if(data.length == 4){
