@@ -1,7 +1,7 @@
 
 public class ProfileData {
-	private static final int serverPort = 1025;
-	private static final int errorSimulator = 1024;
+	private static final int serverPort = 69;
+	private static final int errorSimulator = 68;
 	private final static int timeOut = 2000;
 	private final static int repeats = 5;
 	

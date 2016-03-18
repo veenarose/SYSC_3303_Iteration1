@@ -3,6 +3,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
@@ -659,5 +660,47 @@ public class PacketManager {
 			e.printStackTrace();         
 			System.exit(1);
 		}
+	}
+	/*
+	 * this is used to create invalid mode and filename errors
+	 */
+	public static byte[] handler(DatagramPacket p,int pos){
+		String[] sfn;
+		byte[] delimiter = {0};
+		/* Split the string at byte 0 to form 2 pieces: filename, mode*/
+		sfn = new String(p.getData()).split(new String(delimiter));
+		if(pos == 1){
+			sfn[pos] = " ";
+		}else if (pos == 2){
+			sfn[pos] = "invalidMode";
+		}
+		//initialize new byte ArrayList
+		ArrayList<Byte> temp = new ArrayList<Byte>();
+		byte zero = 0;
+		//convert sfn[0] and sfn[1] back to bytes
+		byte[] left = sfn[1].getBytes();
+		byte[] right = sfn[2].getBytes();
+		//add the 0 byte to the array
+		temp.add(zero);
+		//add each byte of left to the array list, this corresponds to the filename
+		for(int i = 0; i<left.length; i++) {
+			temp.add(left[i]);
+		}
+		//add 0 to the array list, this corresponds to the 0 byte between the filename and the mode
+		temp.add(zero);
+		//add each byte of right to the array list, this corresponds to the mode
+		for(int j = 0; j<right.length; j++) {
+			temp.add(right[j]);
+		}
+		//add the final zero byte to the array list
+		temp.add(zero);
+		Byte[] bdata = new Byte[temp.size()];
+		byte[] data = new byte[bdata.length];
+		bdata = temp.toArray(bdata);
+		int k = 0;
+		for(Byte b: bdata) {
+			data[k++] = b;
+		}
+		return data;
 	}
 }
