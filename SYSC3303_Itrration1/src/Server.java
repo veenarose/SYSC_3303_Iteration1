@@ -223,14 +223,14 @@ public class Server{
 			byte[] inboundDatapacket = new byte[ioManager.getBufferSize() + 4];
 			byte[] rawData; 
 			int blockNum = 0;
-			String filename = packetManager.getFilename(contents); 
+			String filename = PacketManager.getFilename(contents); 
 			print("4");
 			print("Attempting to write to file: " + filename);
 
 			File writeTo = new File(ServerDirectory + filename);
 			print("writeTo exists?: " +  writeTo.exists());
 
-			byte[] ack = packetManager.createAck(new byte[]{0,0,0,0});
+			byte[] ack = PacketManager.createAck(new byte[]{0,0,0,0});
 
 			do{
 				rawData = new byte[ioManager.getBufferSize()];
@@ -245,7 +245,7 @@ public class Server{
 				socket.receive(packet);
 
 				//If Packet arrives from an unknown TID
-				byte[] err = packetManager.createError(new byte[]{0, 5}, "Unknown PID.");
+				byte[] err = PacketManager.createError(new byte[]{0, 5}, "Unknown PID.");
 				while(packet.getPort() != clientPort) {
 					packet = new DatagramPacket(err, err.length,
 							packet.getAddress(), packet.getPort());
@@ -259,14 +259,14 @@ public class Server{
 				}
 
 				blockNum++;
-				ack = packetManager.createAck(inboundDatapacket);
+				ack = PacketManager.createAck(inboundDatapacket);
 
-				rawData = packetManager.getData(inboundDatapacket);
+				rawData = PacketManager.getData(inboundDatapacket);
 				//packetManager.printTFTPPacketData(inboundDatapacket);
 				//packetManager.printTFTPPacketData(rawData);
 				ioManager.write(writeTo, rawData);
 
-			} while(!(packetManager.lastPacket(rawData)));
+			} while(!(PacketManager.lastPacket(rawData)));
 
 			/* create and send ACK packet to client */
 			packet = new DatagramPacket(ack, ack.length, clientAddr, clientPort);
@@ -277,9 +277,9 @@ public class Server{
 			packet = new DatagramPacket(inboundDatapacket, inboundDatapacket.length);
 			socket.receive(packet);
 
-			ack = packetManager.createAck(inboundDatapacket);
+			ack = PacketManager.createAck(inboundDatapacket);
 
-			rawData = packetManager.getData(inboundDatapacket);
+			rawData = PacketManager.getData(inboundDatapacket);
 			ioManager.write(writeTo, rawData);
 
 			print("write complete!!!");
@@ -288,9 +288,9 @@ public class Server{
 		private void handleReadReq() throws IOException {
 			byte[] data = new byte[ioManager.getBufferSize()+4]; 
 			short blockNum = 1;
-			String filename = packetManager.getFilename(contents);
+			String filename = PacketManager.getFilename(contents);
 			print("Attempting to read from file: " + filename);
-			byte[] ackData = packetManager.createAck(data);
+			byte[] ackData = PacketManager.createAck(data);
 
 			BufferedInputStream reader = new BufferedInputStream
 					(new FileInputStream(ServerDirectory + filename));
@@ -315,8 +315,8 @@ public class Server{
 				System.out.println("Read from the file");
 
 				/* place data into packet to be sent to client */
-				packet = new DatagramPacket(packetManager.createData(data, block),
-						packetManager.createData(data, block).length,
+				packet = new DatagramPacket(PacketManager.createData(data, block),
+						PacketManager.createData(data, block).length,
 						clientAddr,
 						clientPort);
 
@@ -348,7 +348,7 @@ public class Server{
 
 				/* confirm validity of ACK */
 				System.out.println(Arrays.toString(simPacket.getData()));
-				if(packetManager.isAckPacket(simPacket.getData())){
+				if(PacketManager.isAckPacket(simPacket.getData())){
 					ByteBuffer b = ByteBuffer.allocate(2);
 					b.put(ackData[2]);
 					b.put(ackData[3]);
@@ -366,7 +366,7 @@ public class Server{
 				/* iterate server side block number */
 				blockNum++;
 
-			} while(!(packetManager.lastPacket(data)));
+			} while(!(PacketManager.lastPacket(data)));
 
 			/* Convert block number from short to byte[] */
 			buffer = ByteBuffer.allocate(2);
@@ -376,14 +376,14 @@ public class Server{
 			/* exit loop for last packet */
 			reader.read(data, 0, data.length);
 			reader.close();
-			packet = new DatagramPacket(packetManager.createData(data, block),
-					packetManager.createData(data, block).length,
+			packet = new DatagramPacket(PacketManager.createData(data, block),
+					PacketManager.createData(data, block).length,
 					clientAddr,
 					clientPort);
 			socket.send(packet);
 
 			socket.receive(packet);
-			if(packetManager.isAckPacket(packet.getData())){
+			if(PacketManager.isAckPacket(packet.getData())){
 				/* ACK Packet Received */
 				ackData = packet.getData();
 				ByteBuffer b = ByteBuffer.allocate(2);
@@ -418,7 +418,7 @@ public class Server{
 					"Invalid ACK recieved"
 			};
 
-			byte[] err = packetManager.createError(errCode, errMsg[i]);
+			byte[] err = PacketManager.createError(errCode, errMsg[i]);
 			packet = new DatagramPacket(err,err.length,addr,port);
 
 			print(getTimestamp() + ": " + errMsg[i] + " thread exiting");

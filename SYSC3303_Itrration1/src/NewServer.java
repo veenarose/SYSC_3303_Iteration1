@@ -1,606 +1,488 @@
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
-public class NewServer {
+public class NewServer implements Runnable{
+	
 	private DatagramSocket receiveSocket;
 	private DatagramPacket receivePacket;
+	
+	private final static String ServerDirectory =  
+			(System.getProperty("user.dir") + "/src/ServerData/");
 
-	private PacketManager packetManager;
-	private IOManager ioManager;
-	private ProfileData pd;
-
-	private boolean serverRunning = true;
-
-	private final byte[] shutdown = {1,1};
-	private final static String ServerDirectory = (System.getProperty("user.dir") + "/src/ServerData/");
-	private final static String[] files = {"originServer1.txt", "originServer2.txt"};
-
-	public static void main( String args[] ){
-		new NewServer();
-	}
-
-	public NewServer(){
-		packetManager = new PacketManager();
-		ioManager = new IOManager();
-		pd = new ProfileData();
-		connect();
-	}
-
-	public void connect(){
-		byte[] data = new byte[ioManager.getBufferSize()+4];
-		receivePacket = new DatagramPacket(data, data.length);
-		printAllFolderContent();
-		System.out.println("\nWaiting for packet..");
-
-		try{
-			receiveSocket = new DatagramSocket(pd.getServerPort()); //socket listening on port 1025
-			while(serverRunning){
-				try {
-					receiveSocket.receive(receivePacket);//receive the request from the client
-					if(receivePacket.getData() == shutdown){
-						break;
-					}
-
-					System.out.println(getTimestamp() +": Packet received from client");		
-					new Response(receivePacket); //dispatch new thread to handle the response, pass to it the request packet
-
-				} catch(IOException e) {
-					e.printStackTrace();         
-					System.exit(1);
-				}
+	private Set<String> fileNames; //java set to store file names
+	
+	private final static int timeout = ProfileData.getTimeOut(); //milliseconds
+	private static final int bufferSize = IOManager.getBufferSize();
+	private static final int ackSize = 4;
+	private static final int dataSize = bufferSize + ackSize;
+	
+	public NewServer(int lp) {
+		try {
+			receiveSocket = new DatagramSocket(lp);
+			//populate fileNames list
+			File dir = new File(ServerDirectory);
+			fileNames = new HashSet<String>(Arrays.asList(dir.list()));
+			System.out.println("Local files:");
+			for(String s: fileNames) {
+				System.out.println(s);
 			}
-		} catch(SocketException e) {
-			System.err.println("Socket Exception");
+			System.out.println("\n");
+		} catch (SocketException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
-	/**
-	 * Makes time stamp of current time as YYYY.MM.DD.HH.MM.SS
-	 * @return String representation of time stamp
-	 */
-	public String getTimestamp(){
-		return new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
-	}
-
-
-	/**
-	 * Prints all the file names from the specified path.
-	 */
-	public void printAllFolderContent(){
-		System.out.println("Server file contents");
-		File folder = new File(ServerDirectory);
-		File[] listOfFiles = folder.listFiles();
-
-		for (int i = 0; i < listOfFiles.length; i++) {
-			if (listOfFiles[i].isFile()) {
-				System.out.println("File " +(i+1) +": "+ listOfFiles[i].getName());
-			} else if (listOfFiles[i].isDirectory()) {
-				System.out.println("Directory " + listOfFiles[i].getName());
+	//server's run method
+	public void run() {
+		//Thread response;
+		byte[] requestData = new byte[dataSize];
+		receivePacket = new DatagramPacket(requestData, requestData.length);
+		int clientPort;
+		InetAddress clientAddr;
+		while(true) {
+			//receive incoming request and pass it onto a new thread
+			try {
+				receiveSocket.receive(receivePacket);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
+			clientAddr = receivePacket.getAddress();
+			clientPort = receivePacket.getPort();
+			
+			Thread response = new Thread(new ResponseHandler(requestData, clientAddr, clientPort));
+			response.start();
 		}
 	}
+	
+	private class ResponseHandler implements Runnable {
+		
+		private byte[] requestData;
+		private InetAddress clientHost;
+		private int clientPort;
+		private DatagramSocket sendReceiveSocket;
+		private DatagramPacket receivePacket, sendPacket;
+		private int requestType;
+		
+		public ResponseHandler(byte[] rp, InetAddress h, int p) {
+			requestData = rp;
+			clientHost = h;
+			clientPort = p;
+			try {
+				sendReceiveSocket = new DatagramSocket();
+				sendReceiveSocket.setSoTimeout(timeout);
+			} catch (SocketException e) {
+				e.printStackTrace();
+			}
+		}
 
-	class Response extends Thread{
+		public void handleInvalidRequest(byte[] data, InetAddress host, int destinationPort) { //finish?
 
-		protected DatagramSocket socket;
-		protected DatagramPacket packet;
+			//create error packet
+			DatagramPacket errorPacket = 
+					PacketManager.createInvalidDataErrorPacket(data, host, destinationPort);
 
-		protected InetAddress clientAddr;
-		protected int clientPort;
+			//send error packet
+			PacketManager.send(errorPacket, sendReceiveSocket);
+		
+		}
+		
+		public void run() {
+			//check for valid request
+			try {
+				int request = PacketManager.validateRequest(requestData);
+				System.out.println(request);
+				if(request == 1) {
+					try {
+						handleReadRequest(PacketManager.getFilename(requestData));
+					} catch (SocketTimeoutException | FileNotFoundException | TFTPExceptions.InvalidTFTPAckException
+							| TFTPExceptions.InvalidBlockNumberException | TFTPExceptions.InvalidTFTPDataException | TFTPExceptions.ErrorReceivedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				} else if (request == 2) {
+					try {
+						handleWriteRequest(PacketManager.getFilename(requestData));
+					} catch (SocketTimeoutException | TFTPExceptions.FileAlreadyExistsException | TFTPExceptions.InvalidBlockNumberException
+							| TFTPExceptions.InvalidTFTPDataException | TFTPExceptions.ErrorReceivedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			} catch (TFTPExceptions.InvalidTFTPRequestException e) {
+				PacketManager.handleInvalidRequest
+					(requestData, clientHost, clientPort, sendReceiveSocket);
+			}
+		}
+		
+		public void handleReadRequest(String filename) throws 
+			SocketTimeoutException, 
+			TFTPExceptions.InvalidTFTPAckException, 
+			TFTPExceptions.InvalidBlockNumberException, 
+			FileNotFoundException, 
+			TFTPExceptions.InvalidTFTPDataException, 
+			TFTPExceptions.ErrorReceivedException {
+			
+			//reader used for local 512 byte block reads
+			BufferedInputStream reader = IOManager.getReader(ServerDirectory + filename);
+			int blockNumber = 1;
+			
+			//byte buffer to be filled with 512 bytes of data from local file
+			byte readFromFileData[] = new byte[bufferSize]; 
+			
+			//byte buffer for write data packets
+			byte readData[] = new byte[bufferSize + ackSize];
+			byte receivedAck[] = new byte[ackSize + bufferSize]; 
 
-		protected String mode = "";
-		protected String filename = "";
-		protected int reqType = 0;
-
-		public Response(DatagramPacket p){
-
-			clientAddr = p.getAddress();
-			clientPort = p.getPort();
-
-			try { //init socket
-				socket = new DatagramSocket();
-				socket.setSoTimeout(1000);
-			} catch (SocketException e1) {
+			try {
+				readFromFileData = IOManager.read(reader, bufferSize, readFromFileData);
+				readData = PacketManager.createData(readFromFileData, blockNumber);
+				readFromFileData = new byte[readFromFileData.length];
+				//PacketManager.printTFTPPacketData(writeData);
+			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
 
-			//if packet is validated and all fields are extracted properly then start
-			if(extractPacketData(p.getData())){
-				this.start();
-			} 
-		}
+			sendPacket = new DatagramPacket(readData, readData.length, 
+					clientHost, clientPort);
+			receivePacket = new DatagramPacket(receivedAck, receivedAck.length);
 
-		/**
-		 * Extracts data from the packet and places them in the correct fields
-		 * @param data packet.getdata()
-		 * @return boolean if packet is valid and all fields are correctly filled
-		 */
-		public boolean extractPacketData(byte[] data){
+			int tries = ProfileData.getRepeats(); //number of times to re-listen
+			boolean received = false;
+			while(!received) { //repeat until a successful receive
+				try {
+					PacketManager.send(sendPacket, sendReceiveSocket);
+					PacketManager.receive(receivePacket, sendReceiveSocket);
+					received = true; //first data packet received
+				} catch(SocketTimeoutException e) { //
+					if(--tries == 0) 
+						PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
+					throw e;
+				}
+			}
 
-			try{ //validate request packet
-				reqType = PacketManager.validateRequest(data);
+			//check for PID
+			while(receivePacket.getPort() != clientPort) {
+				PacketManager.handleInvalidPort(clientPort, receivePacket.getPort(), clientHost, sendReceiveSocket);
+				tries = ProfileData.getRepeats(); //number of times to re-listen
+				received = false;
+				while(!received) { //repeat until a successful receive
+					try {
+						PacketManager.receive(receivePacket, sendReceiveSocket);
+						received = true; 
+					} catch(SocketTimeoutException e) { //
+						if(--tries == 0) 
+							PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
+						throw e;
+					}
+				}
+			}
 
-			} catch(TFTPExceptions.InvalidTFTPRequestException e){
-				//Send error packet to client if invalid packet
-				byte[] IllegalTFTPOp = {0,4};
-				byte[] err = PacketManager.createError(IllegalTFTPOp, "Invalid TFTP Request");
+			//check for error packet
+			if(PacketManager.isErrorPacket(receivedAck)) {
+				System.out.println("Received an error packet with code: " + receivedAck[3]
+						+ " Exiting connection and terminating file transfer.");
+				byte[] errorMsg = new byte[receivedAck.length - 4];
+				System.arraycopy(receivedAck, 4, errorMsg, 0, errorMsg.length);
+				System.out.println("Error message: " + new String(errorMsg));
+				throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
+			}
 
-				try { //send packet
-					socket.send(new DatagramPacket(err, err.length, clientAddr, clientPort));
+			//known not to be an error packet so the receivedAck buffer is now truncated
+			receivedAck = PacketManager.createAck(receivedAck);
+
+			//check for valid ack
+			try {
+				PacketManager.validateAckPacket(receivedAck);
+			} catch (TFTPExceptions.InvalidTFTPAckException e) {
+				PacketManager.handleInvalidAckPacket(receivedAck, clientHost, clientPort, sendReceiveSocket);
+				throw e;
+			}
+
+			//check block number
+			if(blockNumber != PacketManager.getBlockNum(receivedAck)) {
+				PacketManager.handleInvalidBlockNumber(blockNumber, PacketManager.getBlockNum(receivedAck), clientHost, clientPort, sendReceiveSocket);
+				throw new TFTPExceptions().new InvalidBlockNumberException(
+						"Invalid block number detected. "
+								+ "Expected " + blockNumber + "." 
+								+ "Found " + PacketManager.getBlockNum(receivedAck));
+			}
+
+			blockNumber++;
+			
+			while(!PacketManager.lastPacket(PacketManager.getData(readData))) { 
+				
+				//byte buffer for write data packets
+				readData = new byte[bufferSize + ackSize];
+				receivedAck = new byte[ackSize + bufferSize]; //4 bytes
+
+				try {
+					readFromFileData = IOManager.read(reader, bufferSize, readFromFileData);
+					readData = PacketManager.createData(readFromFileData, blockNumber);
+					readFromFileData = new byte[readFromFileData.length];
+					//PacketManager.printTFTPPacketData(writeData);
 				} catch (IOException e1) {
-					System.err.println("Error packet not sent");
 					e1.printStackTrace();
 				}
 
-				return false;
-			}
-			//extract additional fields 
-			mode = PacketManager.getMode(data);
-			filename = PacketManager.getFilename(data);
+				sendPacket = new DatagramPacket(readData, readData.length, 
+						clientHost, clientPort);
+				receivePacket = new DatagramPacket(receivedAck, receivedAck.length);
 
-			//check if all data is valid
-			if(reqType == 1 || reqType == 2){
-				if(mode.toLowerCase().equals("octet") || mode.toLowerCase().equals("netascii")){
-					if(filename != ""){
-						return true;
-					} else {
-						//if filename error
-						byte[] fnf = {0,1};
-						byte[] err = PacketManager.createError(fnf, "File not found");
-
-						try { //send packet
-							socket.send(new DatagramPacket(err, err.length, clientAddr, clientPort));
-						} catch (IOException e1) {
-							System.err.println("Error packet not sent");
-							e1.printStackTrace();
-						}
-					}
-				} else {
-					//if invalid mode
-					byte[] invalidmode = {0,1};
-					byte[] err = PacketManager.createError(invalidmode, "Invalid mode");
-					try{ //send packet
-						socket.send(new DatagramPacket(err, err.length, clientAddr, clientPort));
-					} catch (IOException e1) {
-						System.err.println("Error packet not sent");
-						e1.printStackTrace();
+				tries = ProfileData.getRepeats(); //number of times to re-listen
+				received = false;
+				while(!received) { //repeat until a successful receive
+					try {
+						PacketManager.send(sendPacket, sendReceiveSocket);
+						PacketManager.receive(receivePacket, sendReceiveSocket);
+						received = true; //first data packet received
+					} catch(SocketTimeoutException e) { //
+						if(--tries == 0) 
+							PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
+						throw e;
 					}
 				}
-			} else {
-				//if invalid request
-				byte[] invalidreq = {0,0};
-				byte[] err = PacketManager.createError(invalidreq, "Invalid mode");
-				try{ //send packet
-					socket.send(new DatagramPacket(err, err.length, clientAddr, clientPort));
+
+				//check for PID
+				while(receivePacket.getPort() != clientPort) {
+					PacketManager.handleInvalidPort(clientPort, receivePacket.getPort(), clientHost, sendReceiveSocket);
+					tries = ProfileData.getRepeats(); //number of times to re-listen
+					received = false;
+					while(!received) { //repeat until a successful receive
+						try {
+							PacketManager.receive(receivePacket, sendReceiveSocket);
+							received = true; 
+						} catch(SocketTimeoutException e) { //
+							if(--tries == 0) 
+								PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
+							throw e;
+						}
+					}
+				}
+
+				//check for error packet
+				if(PacketManager.isErrorPacket(receivedAck)) {
+					System.out.println("Received an error packet with code: " + receivedAck[3]
+							+ " Exiting connection and terminating file transfer.");
+					byte[] errorMsg = new byte[receivedAck.length - 4];
+					System.arraycopy(receivedAck, 4, errorMsg, 0, errorMsg.length);
+					System.out.println("Error message: " + new String(errorMsg));
+					throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
+				}
+
+				//known not to be an error packet so the receivedAck buffer is now truncated
+				receivedAck = PacketManager.createAck(receivedAck);
+
+				//check for valid ack
+				try {
+					PacketManager.validateAckPacket(receivedAck);
+				} catch (TFTPExceptions.InvalidTFTPAckException e) {
+					PacketManager.handleInvalidAckPacket(receivedAck, clientHost, clientPort, sendReceiveSocket);
+					throw e;
+				}
+
+				//check block number
+				if(blockNumber != PacketManager.getBlockNum(receivedAck)) {
+					PacketManager.handleInvalidBlockNumber(blockNumber, PacketManager.getBlockNum(receivedAck), clientHost, clientPort, sendReceiveSocket);
+					throw new TFTPExceptions().new InvalidBlockNumberException(
+							"Invalid block number detected. "
+									+ "Expected " + blockNumber + "." 
+									+ "Found " + PacketManager.getBlockNum(receivedAck));
+				}
+
+				blockNumber++;
+
+			}
+			
+			
+		}
+			
+		public void handleWriteRequest(String filename) throws 
+			TFTPExceptions.FileAlreadyExistsException, 
+			SocketTimeoutException,
+			TFTPExceptions.InvalidBlockNumberException,
+			TFTPExceptions.InvalidTFTPDataException, 
+			TFTPExceptions.ErrorReceivedException {
+			
+			//check if the file already exists locally on the client
+			TFTPExceptions.FileAlreadyExistsException fileExists = 
+					new TFTPExceptions().new FileAlreadyExistsException
+						("File " + filename + " already exists locally. "
+								+ "To avoid overwriting data the read request has been denied.");
+			if(fileNames.contains(filename)) { 
+				//TODO handleFileExists
+				throw fileExists; 
+			}
+			
+			System.out.println("GOT HERE 1");
+			
+			byte receivedData[] = new byte[ackSize + bufferSize]; 
+			
+			int blockNumber = 0;
+			
+			byte ackToBeSent[] = PacketManager.createAck(receivedData);
+			
+			sendPacket = new DatagramPacket(ackToBeSent, ackToBeSent.length, 
+					clientHost, clientPort);
+			receivePacket = new DatagramPacket(receivedData, receivedData.length);
+			
+			PacketManager.send(sendPacket, sendReceiveSocket);
+			blockNumber++;
+			
+			System.out.println("GOT HERE 2");
+			
+			int tries = ProfileData.getRepeats(); //number of times to relisten
+			boolean received = false;
+			while(!received) { //repeat until a successful receive
+				try {
+					PacketManager.receive(receivePacket, sendReceiveSocket);
+					received = true; //first data packet received
+				} catch(SocketTimeoutException e) { //
+					if(--tries == 0) 
+						PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
+					throw e;
+				}
+			}
+			
+			System.out.println("GOT HERE 3");
+			
+			//check for error packet
+			if(PacketManager.isErrorPacket(receivedData)) {
+				System.out.println("Received an error packet with code: " + receivedData[3]
+						+ " Exiting connection and terminating file transfer.");
+				byte[] errorMsg = new byte[receivedData.length - 4];
+				System.arraycopy(receivedData, 4, errorMsg, 0, errorMsg.length);
+				System.out.println("Error message: " + new String(errorMsg));
+				throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
+			}
+			
+			//check for valid data
+			try {
+				PacketManager.validateDataPacket(receivedData);
+			} catch (TFTPExceptions.InvalidTFTPDataException e) {
+				PacketManager.handleInvalidDataPacket(receivedData, clientHost, clientPort, sendReceiveSocket);
+				throw e;
+			}
+			
+			//check block number
+			if(blockNumber != PacketManager.getBlockNum(receivedData)) {
+				PacketManager.handleInvalidBlockNumber(blockNumber, PacketManager.getBlockNum(receivedData), clientHost, clientPort, sendReceiveSocket);
+				throw new TFTPExceptions().new InvalidBlockNumberException(
+						"Invalid block number detected. "
+								+ "Expected " + blockNumber + "." 
+								+ "Found " + PacketManager.getBlockNum(receivedData));
+			}
+			
+			File writeTo = new File(ServerDirectory + filename); //file to write to locally
+			byte writeToFileData[];
+			writeToFileData = PacketManager.getData(receivedData);
+			try {
+				IOManager.write(writeTo, writeToFileData);
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+			
+			while(!PacketManager.lastPacket(PacketManager.getData(receivedData))) {
+				
+				ackToBeSent = PacketManager.createAck(receivedData);
+				
+				sendPacket = new DatagramPacket(ackToBeSent, ackToBeSent.length, 
+						clientHost, clientPort);
+				receivePacket = new DatagramPacket(receivedData, receivedData.length);
+				
+				PacketManager.send(sendPacket, sendReceiveSocket);
+				blockNumber++;
+				
+				tries = ProfileData.getRepeats(); //number of times to relisten
+				received = false;
+				while(!received) { //repeat until a successful receive
+					try {
+						PacketManager.receive(receivePacket, sendReceiveSocket);
+						received = true; //first data packet received
+					} catch(SocketTimeoutException e) { //
+						if(--tries == 0) 
+							PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
+						throw e;
+					}
+				}
+				
+				//check for error packet
+				if(PacketManager.isErrorPacket(receivedData)) {
+					System.out.println("Received an error packet with code: " + receivedData[3]
+							+ " Exiting connection and terminating file transfer.");
+					byte[] errorMsg = new byte[receivedData.length - 4];
+					System.arraycopy(receivedData, 4, errorMsg, 0, errorMsg.length);
+					System.out.println("Error message: " + new String(errorMsg));
+					throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
+				}
+				
+				//check for valid data
+				try {
+					PacketManager.validateDataPacket(receivedData);
+				} catch (TFTPExceptions.InvalidTFTPDataException e) {
+					PacketManager.handleInvalidDataPacket(receivedData, clientHost, clientPort, sendReceiveSocket);
+					throw e;
+				}
+				
+				//check block number
+				if(blockNumber != PacketManager.getBlockNum(receivedData)) {
+					PacketManager.handleInvalidBlockNumber(blockNumber, PacketManager.getBlockNum(receivedData), clientHost, clientPort, sendReceiveSocket);
+					throw new TFTPExceptions().new InvalidBlockNumberException(
+							"Invalid block number detected. "
+									+ "Expected " + blockNumber + "." 
+									+ "Found " + PacketManager.getBlockNum(receivedData));
+				}
+				
+				writeToFileData = PacketManager.getData(receivedData);
+				try {
+					IOManager.write(writeTo, writeToFileData);
 				} catch (IOException e1) {
-					System.err.println("Error packet not sent");
 					e1.printStackTrace();
 				}
+				
 			}
-			return false;
+			
+			ackToBeSent = PacketManager.createAck(receivedData);
+			sendPacket = new DatagramPacket(ackToBeSent, ackToBeSent.length, 
+					clientHost, clientPort);
+			PacketManager.send(sendPacket, sendReceiveSocket);
+			
+			System.out.println("Write complete.");
+			
+			
 		}
-
-		/**
-		 * Verifies that that client is the original client for which the thread was made
-		 * @param p Packet received thats is to be verified
-		 * @return boolean
-		 */
-		private boolean verifyClient(DatagramPacket p){
-			if(p.getAddress() == clientAddr && p.getPort() == clientPort){
-				return true;
-			}
-			return false;
-		}
-
-		public void run(){
-			switch (reqType){
-			case 1: 
-				handleReadReq();
+		
+	}
+	
+	public static void main(String args[]) throws IOException {
+		
+		Thread server = new Thread(new NewServer(ProfileData.getServerPort()));
+		server.start();
+		System.out.println("Server running...accepting incoming read or write requests.");
+		String userInput;
+		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+		while(true) {
+			System.out.println("Enter 'quit' to shutdown the server.");
+			userInput = reader.readLine();
+			if(userInput.equals("quit"))  {
+				server.interrupt();
+				System.out.println("Server has been shut down. No longer accepting incoming requests.");
 				break;
-			case 2:
-				handleWriteReq();
-				break;
-			default:
-				break;
 			}
 		}
-
-		public void handleReadReq(){
-			byte[] data = new byte[ioManager.getBufferSize()+4];
-			byte[] ack = new byte[4];
-			int blockNum = 1;
-			File f = new File(ServerDirectory + filename);
-			BufferedInputStream reader = null;
-			DatagramPacket recievedPacket = new DatagramPacket(ack, ack.length);
-			int retryAttempts = 0;
-
-			if(!f.exists() || !f.isDirectory()) { 
-				//if file does not exist send error packet
-				data = PacketManager.createError(new byte[]{0,1}, "File not found");
-				try {
-					socket.send(new DatagramPacket(data, data.length, clientAddr, clientPort));
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				//end communication
-				return;
-			}
-
-			try {
-				reader = new BufferedInputStream(new FileInputStream(f));
-			} catch (FileNotFoundException e) {
-				System.err.println("File not found");
-				e.printStackTrace();
-			}
-
-			//If file does exist send contents
-			do {
-				retryAttempts = 0;
-
-				//Read data from file
-				data = new byte[ioManager.getBufferSize()+4];
-				try {
-					System.out.println("Reading from the file for block " + blockNum);
-					reader.read(data, 0, data.length);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				//create data block using PacketManager
-				byte[] blocknumber = PacketManager.intToBytes(blockNum);
-				byte[] datapacket = PacketManager.createData(data, blocknumber);
-
-				//form packet to be sent
-				packet = new DatagramPacket(datapacket, 
-						datapacket.length, clientAddr, clientPort);
-
-				//Only try to send packet 5 times in case of timeouts
-				//if 5 timeouts occur then send error and terminate connection
-				while(retryAttempts < 5){
-
-					try { //send packet
-						socket.send(packet);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-
-					try { //wait for ACK
-						socket.receive(recievedPacket);
-
-						//once we receive an ACK verify if client is the same
-						if(!verifyClient(recievedPacket)){
-							//if client is different send error and listen again
-							DatagramPacket x = PacketManager.createInvalidTIDErrorPacket(clientPort, recievedPacket.getPort());
-							x.setAddress(recievedPacket.getAddress());
-							x.setPort(recievedPacket.getPort());
-
-							try {
-								socket.send(x);
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-							continue;
-						} else {
-							//if client is the same break out of loop
-							break;
-						}
-
-					} catch (SocketTimeoutException e) {
-						retryAttempts++;
-
-						//if we have failed to get an ACK 5 times
-						if(retryAttempts >= 5){
-							data = PacketManager.createError(new byte[]{0,0}, "No ACK recieved");
-							packet = new DatagramPacket(data, data.length, clientAddr, clientPort);
-
-							try { //send error packet to client
-								socket.send(packet);
-							} catch (IOException e3) {
-								e3.printStackTrace();
-							}
-							//end connection
-							return;
-						} else {
-							//If no ACK arrives before timeout and we have not yet attempted 5 times
-							System.out.println("No ACK recieved trying to send packet again");
-							continue;
-						}
-					} catch(IOException e){
-						e.printStackTrace();
-					}
-				}
-
-				//Once ACK received from correct client
-				if(PacketManager.isAckPacket(recievedPacket.getData())){
-
-					//if valid ACK, verify block number
-					if(PacketManager.getBlockNum(recievedPacket.getData())== blockNum){
-						//if valid ACK and block numbers matches
-						blockNum++;
-					} else {
-						//If Block number has error, send error to client and end connection
-						DatagramPacket x = PacketManager.createInvalidBlockErrorPacket(blockNum,
-								PacketManager.getBlockNum(recievedPacket.getData()));
-						x.setAddress(recievedPacket.getAddress());
-						x.setPort(recievedPacket.getPort());
-
-						try {
-							socket.send(x);
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-
-						//end connection
-						return;
-					}
-				} else {
-					//if ACK error, send error to client and end connection
-					DatagramPacket x = PacketManager.createInvalidAckErrorPacket(recievedPacket.getData());
-					x.setAddress(recievedPacket.getAddress());
-					x.setPort(recievedPacket.getPort());
-
-					try {
-						socket.send(x);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-
-					//end connection
-					return;
-				}
-			} while(!(PacketManager.lastPacket(data)));
-
-			//exit loop for last data block
-			retryAttempts = 0;
-
-			//Read data from file
-			data = new byte[ioManager.getBufferSize()+4];
-			try {
-				System.out.println("Reading from the file for block " + blockNum);
-				reader.read(data, 0, data.length);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			//create data block using PacketManager
-			byte[] blocknumber = PacketManager.intToBytes(blockNum);
-			byte[] datapacket = PacketManager.createData(data, blocknumber);
-
-			//form packet to be sent
-			packet = new DatagramPacket(datapacket, 
-					datapacket.length, clientAddr, clientPort);
-
-			//Only try to send packet 5 times in case of timeouts
-			//if 5 timeouts occur then send error and terminate connection
-			while(retryAttempts < 5){
-
-				try { //send packet
-					socket.send(packet);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-
-				try { //wait for ACK
-					socket.receive(recievedPacket);
-
-					//once we receive an ACK verify if client is the same
-					if(!verifyClient(recievedPacket)){
-						//if client is different send error and listen again
-						DatagramPacket x = PacketManager.createInvalidTIDErrorPacket(clientPort, recievedPacket.getPort());
-						x.setAddress(recievedPacket.getAddress());
-						x.setPort(recievedPacket.getPort());
-
-						try {
-							socket.send(x);
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-						continue;
-					} else {
-						//if client is the same break out of loop
-						break;
-					}
-
-				} catch (SocketTimeoutException e) {
-					retryAttempts++;
-
-					//if we have failed to get an ACK 5 times
-					if(retryAttempts >= 5){
-						data = PacketManager.createError(new byte[]{0,0}, "No ACK recieved");
-						packet = new DatagramPacket(data, data.length, clientAddr, clientPort);
-
-						try { //send error packet to client
-							socket.send(packet);
-						} catch (IOException e3) {
-							e3.printStackTrace();
-						}
-						//end connection
-						return;
-					} else {
-						//If no ACK arrives before timeout and we have not yet attempted 5 times
-						System.out.println("No ACK recieved trying to send packet again");
-						continue;
-					}
-				} catch(IOException e){
-					e.printStackTrace();
-				}
-			}
-
-			//Once ACK received from correct client
-			if(PacketManager.isAckPacket(recievedPacket.getData())){
-
-				//if valid ACK, verify block number
-				if(PacketManager.getBlockNum(recievedPacket.getData())== blockNum){
-					//if valid ACK and block numbers matches
-					blockNum++;
-				} else {
-					//If Block number has error, send error to client and end connection
-					DatagramPacket x = PacketManager.createInvalidBlockErrorPacket(blockNum,
-							PacketManager.getBlockNum(recievedPacket.getData()));
-					x.setAddress(recievedPacket.getAddress());
-					x.setPort(recievedPacket.getPort());
-
-					try {
-						socket.send(x);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-
-					//end connection
-					return;
-				}
-			} else {
-				//if ACK error, send error to client and end connection
-				DatagramPacket x = PacketManager.createInvalidAckErrorPacket(recievedPacket.getData());
-				x.setAddress(recievedPacket.getAddress());
-				x.setPort(recievedPacket.getPort());
-
-				try {
-					socket.send(x);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				//end connection
-				return;
-			}
-		}
-
-		public void handleWriteReq(){
-			byte[] data = new byte[ioManager.getBufferSize()+4];
-			int blockNum = 0;
-			File f = new File(ServerDirectory + filename);
-			DatagramPacket recievedPacket = new DatagramPacket(data, data.length);
-
-			if(f.exists() || f.isDirectory()) { 
-				//if file name exists send error packet
-				data = PacketManager.createError(new byte[]{0,6}, "Filename used");
-				try {
-					socket.send(new DatagramPacket(data, data.length, clientAddr, clientPort));
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				//end communication
-				return;
-			}
-
-			//send ACK 0 packet
-			byte[] block = PacketManager.intToBytes(blockNum);
-			byte[] a = PacketManager.createAck(block);
-
-			DatagramPacket ackpacket = new DatagramPacket(a, a.length, clientAddr, clientPort);
-
-			try{
-				socket.send(ackpacket);
-			} catch(IOException e){
-				e.printStackTrace();
-			}
-
-			do{
-				try{
-					socket.receive(recievedPacket);
-				} catch (SocketTimeoutException e){
-					//if no packet received before timeout
-					data = PacketManager.createError(new byte[]{0,0}, "No data recieved");
-					try {
-						socket.send(new DatagramPacket(data, data.length, clientAddr, clientPort));
-					} catch (IOException e2) {
-						e2.printStackTrace();
-					}
-					//end communication
-					return;
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-
-				if(!verifyClient(recievedPacket)){
-					//if client is different send error and listen again
-					DatagramPacket x = PacketManager.createInvalidTIDErrorPacket(clientPort, recievedPacket.getPort());
-					x.setAddress(recievedPacket.getAddress());
-					x.setPort(recievedPacket.getPort());
-
-					try {
-						socket.send(x);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-					continue;
-				}
-
-				if(PacketManager.isErrorPacket(recievedPacket.getData())){
-					//if we receive an error packet
-					String x = PacketManager.extractMessageFromErrorPacket(recievedPacket.getData());
-					System.out.println(getTimestamp() + " : Error packet received from client");
-					System.out.println(x);
-					//end connection
-					return;
-				}
-
-				if(packetManager.isDataPacket(recievedPacket.getData())){
-					if(PacketManager.getBlockNum(recievedPacket.getData())==blockNum+1){
-						//if valid data packet and block numbers match
-						byte[] dataToWrite = PacketManager.getData(recievedPacket.getData());
-						data = recievedPacket.getData();
-						
-						try { //write to file
-							ioManager.write(f, dataToWrite);
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-
-						//send ack packet
-						byte[] byteblock = PacketManager.intToBytes(blockNum);
-						byte[] q = PacketManager.createAck(byteblock);
-						DatagramPacket ap = new DatagramPacket(q, q.length, clientAddr, clientPort);
-						try{
-							socket.send(ap);
-						} catch(IOException e){
-							e.printStackTrace();
-						}
-						
-						//increment block number
-						blockNum++;
-							
-					} else {
-						//If Block number has error, send error to client and end connection
-						DatagramPacket x = PacketManager.createInvalidBlockErrorPacket(blockNum,
-								PacketManager.getBlockNum(recievedPacket.getData()));
-						x.setAddress(recievedPacket.getAddress());
-						x.setPort(recievedPacket.getPort());
-
-						try {
-							socket.send(x);
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-
-						//end connection
-						return;
-					}
-				} else {
-					//if data packet is invalid
-					DatagramPacket x = PacketManager.createInvalidDataErrorPacket(recievedPacket.getData());
-					x.setAddress(recievedPacket.getAddress());
-					x.setPort(recievedPacket.getPort());
-
-					try {
-						socket.send(x);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-
-					//end connection
-					return;
-				}
-			} while(!(PacketManager.lastPacket(data)));
-		}
+		
 	}
 }

@@ -1,7 +1,7 @@
 import java.io.*;
 
 public class IOManager {
-	private final int bufferSize = 512;
+	private static final int bufferSize = 512;
 	
 	public IOManager(){}
 	
@@ -31,7 +31,7 @@ public class IOManager {
 	 * @param data information of 512 bytes to be written
 	 * @throws IOException
 	 */
-	public synchronized void write(File file, byte[] data) throws IOException{
+	public static void write(File file, byte[] data) throws IOException{
 		String s = new String(data);
 		
 		BufferedWriter w = new BufferedWriter(new FileWriter(file,true));
@@ -40,7 +40,19 @@ public class IOManager {
 		w.close();
 	}
 	
-	public synchronized int getBufferSize() {
+	public static int getBufferSize() {
 		return bufferSize;
+	}
+	
+	public static byte[] read(BufferedInputStream reader, int buffSize, byte[] data) 
+			throws IOException {
+		reader.read(data, 0, buffSize);
+		return data;
+	}
+	
+	public static BufferedInputStream getReader(String pathToFileName) throws FileNotFoundException {
+		BufferedInputStream reader = new BufferedInputStream
+				(new FileInputStream(pathToFileName));
+		return reader;
 	}
 }

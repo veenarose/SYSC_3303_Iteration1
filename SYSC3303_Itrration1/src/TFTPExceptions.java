@@ -1,6 +1,13 @@
 import java.io.IOException;
  
 public class TFTPExceptions {
+	
+	//ERROR CODE 0
+	public class InvalidBlockNumberException extends Exception {
+        public InvalidBlockNumberException(String message) {
+            super(message);
+        }
+    }
  
     //ERROR CODE 1
     //called by the client when it performs a local read on a file that 
@@ -69,6 +76,12 @@ public class TFTPExceptions {
     //which already exists on the server side
     public class FileAlreadyExistsException extends Exception {
         public FileAlreadyExistsException(String message) {
+            super(message);
+        }
+    }
+    
+    public class ErrorReceivedException extends Exception {
+        public ErrorReceivedException(String message) {
             super(message);
         }
     }
