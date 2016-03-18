@@ -771,7 +771,6 @@ public class ErrorSimulator {
 							System.out.println(Arrays.toString(forwardedAckPacket.getData()));
 							errorSimulation = false;
 						}
-
 						//Packet delayed error on ACK packet
 						else if(modeSelected == 5 && delayedPack == 2 && errorHost == 1){
 
@@ -822,7 +821,6 @@ public class ErrorSimulator {
 							errorSimulation = false;	
 							return;
 						}
-						
 						//Packet Duplicate error on ACK packet
 						else if(modeSelected == 6 && delayedPack == 2 && errorHost == 1){
 							
@@ -837,31 +835,17 @@ public class ErrorSimulator {
 								e.printStackTrace();
 							}
 							
-							DatagramPacket dataPack = receivePacket(sendReceiveServerSocket);
-							if (dataPack == null) return;
-							
-							System.out.println("Receive Packet from Server ");
-							System.out.println(new String (dataPack.getData()));
-							System.out.println(Arrays.toString(dataPack.getData()));
-							
-							DatagramPacket forwardPack = new DatagramPacket(dataPack.getData()
-									,dataPack.getData().length,clientAddressTID,clientPortTID);
-											
-							
-							System.out.println("Sending data to client ");
-							sendReceiveClientSocket.send(forwardPack);
-							System.out.println(Arrays.toString(forwardPack.getData()));
-							
 							System.out.println("Sending duplicate ACK packet to server");
 							sendReceiveServerSocket.send(forwardedAckPacket);
 							System.out.println(Arrays.toString(forwardedAckPacket.getData()));		
 							
 							errorSimulation = false;	
 							return;					
+						}
+						//Lost packet error on ACK packet
+						else if(modeSelected == 7 && delayedPack == 2 && errorHost == 1){
 							
 						}
-
-
 						System.out.println("\nPacket sent to server");
 						sendReceiveServerSocket.send(forwardedAckPacket);
 						System.out.println(new String(forwardedAckPacket.getData()));
