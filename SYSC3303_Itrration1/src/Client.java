@@ -598,17 +598,16 @@ public class Client { //the client class
 				} catch (SocketTimeoutException e) {
 					System.out.println(e.getMessage() + "\n");
 				} catch (TFTPExceptions.ErrorReceivedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+					System.out.println(e.getMessage() + "\n");
+				} 
 				continue;
 			} else { //write request
 				try {
 					c.handleWriteRequest(filename, mode);
-				} catch ( TFTPExceptions.InvalidTFTPAckException | TFTPExceptions.InvalidBlockNumberException | TFTPExceptions.InvalidTFTPDataException | TFTPExceptions.ErrorReceivedException e) {
+				} catch (FileNotFoundException | TFTPExceptions.InvalidTFTPAckException | TFTPExceptions.InvalidBlockNumberException | TFTPExceptions.InvalidTFTPDataException | TFTPExceptions.ErrorReceivedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
-				}
+				} 
 				continue;
 			}
 

@@ -75,7 +75,6 @@ public class NewServer implements Runnable{
 		private int clientPort;
 		private DatagramSocket sendReceiveSocket;
 		private DatagramPacket receivePacket, sendPacket;
-		private int requestType;
 		
 		public ResponseHandler(byte[] rp, InetAddress h, int p) {
 			requestData = rp;
@@ -88,17 +87,6 @@ public class NewServer implements Runnable{
 				e.printStackTrace();
 			}
 		}
-
-		public void handleInvalidRequest(byte[] data, InetAddress host, int destinationPort) { //finish?
-
-			//create error packet
-			DatagramPacket errorPacket = 
-					PacketManager.createInvalidDataErrorPacket(data, host, destinationPort);
-
-			//send error packet
-			PacketManager.send(errorPacket, sendReceiveSocket);
-		
-		}
 		
 		public void run() {
 			//check for valid request
@@ -110,16 +98,14 @@ public class NewServer implements Runnable{
 						handleReadRequest(PacketManager.getFilename(requestData));
 					} catch (SocketTimeoutException | FileNotFoundException | TFTPExceptions.InvalidTFTPAckException
 							| TFTPExceptions.InvalidBlockNumberException | TFTPExceptions.InvalidTFTPDataException | TFTPExceptions.ErrorReceivedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+						System.out.println(e);
 					}
 				} else if (request == 2) {
 					try {
 						handleWriteRequest(PacketManager.getFilename(requestData));
 					} catch (SocketTimeoutException | TFTPExceptions.FileAlreadyExistsException | TFTPExceptions.InvalidBlockNumberException
 							| TFTPExceptions.InvalidTFTPDataException | TFTPExceptions.ErrorReceivedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+						System.out.println(e);
 					}
 				}
 			} catch (TFTPExceptions.InvalidTFTPRequestException e) {
