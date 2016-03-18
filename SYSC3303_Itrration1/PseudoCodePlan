@@ -75,9 +75,9 @@ if request is a READ
 	The response handler is sending data of size 512 bytes to the client. 
 	Starts by sending block number 1 then waits for X milliseconds.
 	If the wait time times out without a response, then resend the data.
-		It resends 5 times after which it sends an error packet (error code 0) to the client and 			terminates the 	connection.
+		It resends 5 times after which it sends an error packet (error code 0) to the client and terminates the connection.
 	Upon receiving a response, 
-	If the PID is invalid, send error packet to unknown PID and listen again for a response. (Error 	code 5)
+	If the PID is invalid, send error packet to unknown PID and listen again for a response. (Error code 5)
 	If the response is an error packet, print out the error and terminate the connection.
 	If the ack is invalid respond with error and terminate connection, 
 	If the block number is unexpected respond with error and terminate connection, 

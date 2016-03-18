@@ -51,7 +51,7 @@ public class Server{
 					}
 
 					print("Packet received from client at " + getTimestamp());
-					
+
 					rep = new Response(receivePacket); //dispatch new thread to handle the response, pass to it the request packet
 				} catch(IOException e) {
 					e.printStackTrace();         

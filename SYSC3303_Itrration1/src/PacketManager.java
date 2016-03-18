@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
@@ -10,6 +11,14 @@ public class PacketManager {
 	private static byte[] WRQ = {0,2}; // Write opcode
 	private static byte[] DRQ = {0,3}; //data request
 	private static byte[] ERC = {0,5}; //error opcode
+	//error codes
+	private static byte[] NotDefined = {0,0};
+	private static byte[] FileNotFound = {0,1};
+	private static byte[] AccessViolation = {0,2};
+	private static byte[] DiskFull = {0,3};
+	private static byte[] IllegalTFTPOp = {0,4};
+	private static byte[] UnknownTID = {0,5};
+	private static byte[] FileExists = {0,6};
 
 	private static String[] validModes = {"netascii", "octet"};// The modes
 
@@ -216,7 +225,7 @@ public class PacketManager {
 	/**
 	 * Quick and dirty check of whether a packet is an ACK packet
 	 * @param data
-	 * @return
+	 * @return boolean
 	 */
 	public static boolean isAckPacket(byte[] data){
 		if(data.length == 4){
@@ -318,10 +327,19 @@ public class PacketManager {
 	 * @return A byte array containing the Block code
 	 */
 	public static int getBlockNum(byte[] data){
-		byte[] blk = {data[2],data[3]};
-		return twoBytesToInt(blk);
+		// Get the block number as a byte array
+		byte[] blockNumberBytes = new byte[2];
+		System.arraycopy(data,2,blockNumberBytes,0,2);
+		int blk = bytesToInt(blockNumberBytes);
+		return blk;
 	}
-
+	
+	public static int bytesToInt(byte[] b) {
+		if (b.length != 2) throw new IllegalArgumentException();
+		int msb = (int)(b[0] & 0xFF);
+		int lsb = (int)(b[1] & 0xFF);
+		return msb*256 + lsb;
+	}
 	/**
 	 * Takes two byte numbers and returns there associated int value
 	 * @param leftByte
@@ -382,11 +400,56 @@ public class PacketManager {
 	public static DatagramPacket createInvalidBlockErrorPacket(int expected, int found) {
 		System.out.println("Unexpected block number detected, "
 				+ "terminating connection and sending error packet");
-		byte[] errBlock = new byte[]{0,4};
+		byte[] errBlock = IllegalTFTPOp;
 		byte[] errData = createError(errBlock,"Invalid block number detected. Was expecting " 
 				+ expected + " but received " + found + ".");
 		DatagramPacket err = new DatagramPacket(errData, errData.length);
-		//sendPacket(err, socket);
+		return err;
+	}
+
+	//error code 5
+	public static DatagramPacket createInvalidTIDErrorPacket(int expected, int found) {
+		System.out.println("Incoming packet deteced to have an unidentifiable TID");
+		byte[] errBlock = UnknownTID;
+		byte[] errData = createError(errBlock, "Invalid TID detected. Was expecting "
+				+ expected + " but found " + found + ".");
+		DatagramPacket err = new DatagramPacket(errData, errData.length);
+		return err;
+	}
+
+	//error packet created when there is an access violation on the files.
+	public static DatagramPacket createAccessViolationErrorPacket(String filename, String errMessage) {
+		System.out.println("Incoming packet detected to have no access violation");
+		byte[] errBlock = AccessViolation;
+		byte[] errData = createError(errBlock, "Access violation on "+ filename + ". "+errMessage);
+		DatagramPacket err = new DatagramPacket(errData, errData.length);
+		return err;
+	}
+
+	//error packet created when disk is full in the directory.
+	public static DatagramPacket createDiskIsFullErrorPacket(String dir) {
+		System.out.println("Incoming packet detected to be disk full");
+		byte[] errBlock = DiskFull;
+		byte[] errData = createError(errBlock, "Disk is full "+".");
+		DatagramPacket err = new DatagramPacket(errData, errData.length);
+		return err;
+	}
+
+	//error packet created when received with an Invalid ACK Packet.
+	public static DatagramPacket createInvalidAckErrorPacket(byte[] ack){
+		byte[] expected = new byte[]{0,4,0,4};
+		byte[] errBlock = IllegalTFTPOp;
+		byte[] errData = createError(errBlock, "Invalid ACK received "+ack+"\nExample of an ACK packet"+expected);
+		DatagramPacket err = new DatagramPacket(errData, errData.length);
+		return err;
+	}
+
+	//error packet created when received with an Invalid DATA Packet.
+	public static DatagramPacket createInvalidDataErrorPacket(byte[] data){
+		byte[] expected = new byte[]{0,3,0,3};
+		byte[] errBlock = IllegalTFTPOp;
+		byte[] errData = createError(errBlock, "Invalid DATA received "+data+"\nExample of a DATA packet"+expected);
+		DatagramPacket err = new DatagramPacket(errData, errData.length);
 		return err;
 	}
 
@@ -398,5 +461,48 @@ public class PacketManager {
 
 	public static boolean isErrorPacket(byte[] p) {
 		return p[1] == 5;
+	}
+	
+	/*
+	 * this is used to create invalid mode and filename errors
+	 */
+	public static byte[] handler(DatagramPacket p,int pos){
+		String[] sfn;
+		byte[] delimiter = {0};
+		/* Split the string at byte 0 to form 2 pieces: filename, mode*/
+		sfn = new String(p.getData()).split(new String(delimiter));
+		if(pos == 1){
+			sfn[pos] = " ";
+		}else if (pos == 2){
+			sfn[pos] = "invalidMode";
+		}
+		//initialize new byte ArrayList
+		ArrayList<Byte> temp = new ArrayList<Byte>();
+		byte zero = 0;
+		//convert sfn[0] and sfn[1] back to bytes
+		byte[] left = sfn[1].getBytes();
+		byte[] right = sfn[2].getBytes();
+		//add the 0 byte to the array
+		temp.add(zero);
+		//add each byte of left to the array list, this corresponds to the filename
+		for(int i = 0; i<left.length; i++) {
+			temp.add(left[i]);
+		}
+		//add 0 to the array list, this corresponds to the 0 byte between the filename and the mode
+		temp.add(zero);
+		//add each byte of right to the array list, this corresponds to the mode
+		for(int j = 0; j<right.length; j++) {
+			temp.add(right[j]);
+		}
+		//add the final zero byte to the array list
+		temp.add(zero);
+		Byte[] bdata = new Byte[temp.size()];
+		byte[] data = new byte[bdata.length];
+		bdata = temp.toArray(bdata);
+		int k = 0;
+		for(Byte b: bdata) {
+			data[k++] = b;
+		}
+		return data;
 	}
 }
