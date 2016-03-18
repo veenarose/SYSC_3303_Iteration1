@@ -874,8 +874,8 @@ public class ErrorSimulator {
 							DatagramPacket ackPacks = new DatagramPacket(receiveACK.getData(),
 									receiveACK.getData().length, serverAddressTID, serverPortTID);
 
-							System.out.println("Sending the ACK to the client");
-							sendReceiveClientSocket.send(ackPacks);
+							System.out.println("Sending the ACK to the server");
+							sendReceiveServerSocket.send(ackPacks);
 							System.out.println(Arrays.toString(ackPacks.getData()));
 							
 							errorSimulation = false;	
