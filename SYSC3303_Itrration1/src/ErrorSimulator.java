@@ -823,34 +823,35 @@ public class ErrorSimulator {
 						}
 						//Packet Duplicate error on ACK packet
 						else if(modeSelected == 6 && delayedPack == 2 && errorHost == 1){
-							
+
 							System.out.println("\n Packet sent back to server");
 							sendReceiveServerSocket.send(forwardedAckPacket);
 							System.out.println(Arrays.toString(forwardedAckPacket.getData()));	
-							
+
 							// Let the thread sleep
 							try{
 								Thread.sleep(1000);
 							}catch(InterruptedException e){
 								e.printStackTrace();
 							}
-							
+
 							System.out.println("Sending duplicate ACK packet to server");
 							sendReceiveServerSocket.send(forwardedAckPacket);
 							System.out.println(Arrays.toString(forwardedAckPacket.getData()));		
-							
+
 							errorSimulation = false;	
 							return;					
 						}
 						//Lost packet error on ACK packet
 						else if(modeSelected == 7 && delayedPack == 2 && errorHost == 1){
-							
-						}
-						System.out.println("\nPacket sent to server");
-						sendReceiveServerSocket.send(forwardedAckPacket);
-						System.out.println(new String(forwardedAckPacket.getData()));
-						System.out.println(Arrays.toString(forwardedAckPacket.getData()));
 
+						}
+						else{
+							System.out.println("\nPacket sent to server");
+							sendReceiveServerSocket.send(forwardedAckPacket);
+							System.out.println(new String(forwardedAckPacket.getData()));
+							System.out.println(Arrays.toString(forwardedAckPacket.getData()));
+						}
 						//check if it is an error packet from client and break the loop
 						int checkOp1 = PacketManager.getOpCode(forwardedAckPacket.getData());
 						if(checkOp1 == 5) {
