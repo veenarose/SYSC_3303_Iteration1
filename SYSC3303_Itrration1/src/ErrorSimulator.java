@@ -568,11 +568,12 @@ public class ErrorSimulator {
 						// creating a data packet to receive from server
 						DatagramPacket forwardedDataPacket = new DatagramPacket(dataPacket.getData(),
 								dataPacket.getData().length,clientAddressTID,clientPortTID);
-
-						if(errorSimulation)
+						
+						//if error caused by the server
+						if(errorSimulation && errorHost == 2)
 							createInvalidDataAckPacket(forwardedDataPacket);
 
-						if(modeSelected == 4){
+						if(modeSelected == 4 && errorHost == 2){
 							createUnknownThread(forwardedDataPacket,clientAddressTID,clientPortTID);
 							System.out.println("\nPacket sent back to client");
 							sendReceiveClientSocket.send(forwardedDataPacket);
@@ -584,7 +585,7 @@ public class ErrorSimulator {
 							if(firstIteration){
 								System.out.println("\nClient resends RRQ packet...");
 								try {
-									Thread.sleep(2000);
+									Thread.sleep(2100);
 								} catch (InterruptedException e) {
 									e.printStackTrace();
 								}
@@ -637,7 +638,7 @@ public class ErrorSimulator {
 
 								//send the recreated DATA packet back to client
 								System.out.println("\nPacket sent back to client");
-								sendReceiveServerSocket.send(forwardedResendDataPacket);
+								sendReceiveClientSocket.send(forwardedResendDataPacket);
 								System.out.println(Arrays.toString(forwardedResendDataPacket.getData()));
 
 								//create a packet to receive an ACK packet
@@ -659,8 +660,8 @@ public class ErrorSimulator {
 								System.out.println(Arrays.toString(forwardedACKPacket.getData()));
 
 								//send the delayed DATA packet to client
-								System.out.println("Sending a delayed DATA packet ");
-								System.out.println("\nPacket sent back to client");
+								System.out.println("\nSending a delayed DATA packet ");
+								System.out.println("Packet sent back to client");
 								sendReceiveClientSocket.send(forwardedDataPacket);
 								System.out.println(Arrays.toString(forwardedDataPacket.getData()));
 
@@ -669,15 +670,69 @@ public class ErrorSimulator {
 						}
 						//packet duplicate error on DATA/ACK packet
 						else if(modeSelected == 6 && delayedPack == 2 && errorHost == 2){
-
-
-
+							System.out.println("\nPacket sent back to client");
+							sendReceiveClientSocket.send(forwardedDataPacket);
+							System.out.println(Arrays.toString(forwardedDataPacket.getData()));
+							try {
+								Thread.sleep(1000);
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
+							//receive ACK on the first DATA packet sent
+							DatagramPacket firstACK = receivePacket(sendReceiveClientSocket);
+							if(firstACK == null) return;
+							
+							System.out.println("\nPacket received from client");
+							System.out.println(new String(firstACK.getData()));
+							System.out.println(Arrays.toString(firstACK.getData()));
+							
+							//creating an ACK packet to be sent to server
+							DatagramPacket forwardedFirstACK = new DatagramPacket(firstACK.getData(),
+									firstACK.getData().length,serverAddressTID,serverPortTID);
+							
+							//send the ACK packet to server
+							System.out.println("\nPacket sent to server");
+							sendReceiveServerSocket.send(forwardedFirstACK);
+							System.out.println(new String(forwardedFirstACK.getData()));
+							System.out.println(Arrays.toString(forwardedFirstACK.getData()));
+							
+							//client sends the same DATA packet
+							System.out.println("\nSending a duplicate DATA packet to client");
+							System.out.println("Packet sent back to client");
+							sendReceiveClientSocket.send(forwardedDataPacket);
+							System.out.println(Arrays.toString(forwardedDataPacket.getData()));
+							
+							errorSimulation = false;
+							return;
 						}
 						//packet loss error on DATA/ACK packet
 						else if(modeSelected == 7 && delayedPack == 2 && errorHost == 2){
-
-
-
+							System.out.println("\nLosing a request from client..");
+							System.out.println("Server resends DATA packet...\n");
+							try {
+								Thread.sleep(1000);
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
+							//receive data packet from server
+							DatagramPacket respDATA = receivePacket(sendReceiveServerSocket);
+							if(respDATA == null) return;
+							
+							System.out.println("\nPacket received from server");
+							System.out.println(new String(respDATA.getData()));
+							System.out.println(Arrays.toString(respDATA.getData()));
+							
+							//creating a packet to send back the resend 
+							DatagramPacket forwardedrespDATA = new DatagramPacket(respDATA.getData(),
+									respDATA.getData().length,clientAddressTID,clientPortTID);
+							
+							//send the recreated DATA packet back to client
+							System.out.println("\nPacket sent back to client");
+							sendReceiveClientSocket.send(forwardedrespDATA);
+							System.out.println(Arrays.toString(forwardedrespDATA.getData()));
+							
+							errorSimulation = false;
+							return;
 						}
 						else{
 							System.out.println("\nPacket sent back to client");
@@ -704,7 +759,25 @@ public class ErrorSimulator {
 
 						DatagramPacket forwardedAckPacket = new DatagramPacket(ackPacket.getData(),
 								ackPacket.getData().length,serverAddressTID,serverPortTID);
+						
+						//if error is caused by the client
+						if(errorSimulation && errorHost == 1)
+							createInvalidDataAckPacket(forwardedAckPacket);
 
+						if(modeSelected == 4 && errorHost == 1){
+							createUnknownThread(forwardedAckPacket,serverAddressTID,serverPortTID);
+							System.out.println("\nPacket sent back to server");
+							sendReceiveServerSocket.send(forwardedAckPacket);
+							System.out.println(Arrays.toString(forwardedAckPacket.getData()));
+							errorSimulation = false;
+						}
+						//packet delayed error on DATA/ACK packet
+						else if(modeSelected == 5 && delayedPack == 2 && errorHost == 1){
+							
+						}
+						
+						
+						
 						System.out.println("\nPacket sent to server");
 						sendReceiveServerSocket.send(forwardedAckPacket);
 						System.out.println(new String(forwardedAckPacket.getData()));
