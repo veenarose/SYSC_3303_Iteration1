@@ -233,12 +233,6 @@ public class PacketManager {
 
 		TFTPExceptions.InvalidTFTPAckException invalid = 
 				new TFTPExceptions().new InvalidTFTPAckException("invalid");
-		
-		//check the size of the packet
-		int size = ack.length;
-		if(size != ackSize) { 
-			throw invalid;
-		}
 
 		byte[] opcode = new byte[2];
 		opcode[0] = ack[0];
@@ -247,6 +241,12 @@ public class PacketManager {
 		//check if the opcode is correct 
 		if(opcode[0] != ARQ[0] || opcode[1] != ARQ[1]) {
 			throw invalid;
+		}
+		
+		for(int i = 4; i < ack.length; i++){
+			if(ack[i] != 0){
+				throw invalid;
+			}
 		}
 	}
 

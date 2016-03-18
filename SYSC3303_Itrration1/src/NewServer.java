@@ -329,20 +329,22 @@ public class NewServer implements Runnable{
 			
 			System.out.println("GOT HERE 1");
 			
+			
 			byte receivedData[] = new byte[ackSize + bufferSize]; 
-			
 			int blockNumber = 0;
+			byte ackToBeSent[] = new byte[4];
 			
-			byte ackToBeSent[] = PacketManager.createAck(receivedData);
+			ackToBeSent = PacketManager.createAck(receivedData);
 			
 			sendPacket = new DatagramPacket(ackToBeSent, ackToBeSent.length, 
 					clientHost, clientPort);
 			receivePacket = new DatagramPacket(receivedData, receivedData.length);
 			
+			//send ACK 0
 			PacketManager.send(sendPacket, sendReceiveSocket);
 			blockNumber++;
 			
-			System.out.println("GOT HERE 2");
+			System.out.println("Blocknum print 1: " + blockNumber);
 			
 			int tries = ProfileData.getRepeats(); //number of times to relisten
 			boolean received = false;
@@ -356,8 +358,6 @@ public class NewServer implements Runnable{
 					throw e;
 				}
 			}
-			
-			System.out.println("GOT HERE 3");
 			
 			//check for error packet
 			if(PacketManager.isErrorPacket(receivedData)) {
@@ -386,6 +386,8 @@ public class NewServer implements Runnable{
 								+ "Found " + PacketManager.getBlockNum(receivedData));
 			}
 			
+			System.out.println("Blocknum recieved data " + PacketManager.getBlockNum(receivedData));
+			
 			File writeTo = new File(ServerDirectory + filename); //file to write to locally
 			byte writeToFileData[];
 			writeToFileData = PacketManager.getData(receivedData);
@@ -395,16 +397,18 @@ public class NewServer implements Runnable{
 				e1.printStackTrace();
 			}
 			
-			while(!PacketManager.lastPacket(PacketManager.getData(receivedData))) {
-				
+			while(!PacketManager.lastPacket(PacketManager.getData(receivedData))) { 
 				ackToBeSent = PacketManager.createAck(receivedData);
+				receivedData = new byte[ackSize + bufferSize];
 				
+				//send ACK
 				sendPacket = new DatagramPacket(ackToBeSent, ackToBeSent.length, 
 						clientHost, clientPort);
 				receivePacket = new DatagramPacket(receivedData, receivedData.length);
 				
 				PacketManager.send(sendPacket, sendReceiveSocket);
 				blockNumber++;
+				System.out.println("Blocknum loop: " + blockNumber);
 				
 				tries = ProfileData.getRepeats(); //number of times to relisten
 				received = false;
@@ -418,6 +422,8 @@ public class NewServer implements Runnable{
 						throw e;
 					}
 				}
+				
+				System.out.println("Blocknum recieved packet: " + PacketManager.getBlockNum(receivedData));
 				
 				//check for error packet
 				if(PacketManager.isErrorPacket(receivedData)) {

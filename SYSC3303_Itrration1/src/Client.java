@@ -324,6 +324,8 @@ public class Client { //the client class
 		//upon a successfully established connection
 		int blockNumber = PacketManager.getBlockNum(receivedAck); 
 		
+		System.out.println("recieved Block Num: " + blockNumber);
+		
 		//check the block number
 		if(blockNumber != expectedBlockNumber) {
 			PacketManager.handleInvalidBlockNumber(expectedBlockNumber, blockNumber, serverHost, serverPort, sendReceiveSocket);
@@ -333,8 +335,7 @@ public class Client { //the client class
 					+ "Found " + blockNumber);
 		}
 		
-		blockNumber ++;
-		
+		expectedBlockNumber++;
 		//read 512 bytes from local file
 		
 		//byte buffer to be filled with 512 bytes of data from local file
@@ -345,7 +346,7 @@ public class Client { //the client class
 
 		try {
 			readFromFileData = IOManager.read(reader, bufferSize, readFromFileData);
-			writeData = PacketManager.createData(readFromFileData, blockNumber);
+			writeData = PacketManager.createData(readFromFileData, expectedBlockNumber);
 			readFromFileData = new byte[readFromFileData.length];
 			//PacketManager.printTFTPPacketData(writeData);
 		} catch (IOException e1) {
@@ -357,7 +358,7 @@ public class Client { //the client class
 				serverHost, serverPort); 
 		PacketManager.send(sendPacket, sendReceiveSocket);
 		
-		while(!PacketManager.lastPacket(readFromFileData)) {
+		while(!PacketManager.lastPacket(PacketManager.getData(writeData))) {
 			
 			receivedAck = new byte[bufferSize + ackSize]; //4 bytes
 			receivePacket = new DatagramPacket(receivedAck, receivedAck.length);
@@ -365,9 +366,13 @@ public class Client { //the client class
 			//receive ack
 			tries = ProfileData.getRepeats(); //number of times to relisten
 			received = false;
+			int x = tries;
 			while(!received) { //repeat until a successful receive, resend data
 				try {
-					PacketManager.send(sendPacket, sendReceiveSocket);
+					
+					if(tries < x){
+						PacketManager.send(sendPacket, sendReceiveSocket);
+					}
 					PacketManager.receive(receivePacket, sendReceiveSocket);
 					received = true; //first data packet received
 				} catch(SocketTimeoutException e) { //
@@ -416,7 +421,6 @@ public class Client { //the client class
 			}
 			
 			//increase expected block number and get the block number from the received packet
-			expectedBlockNumber++;
 			blockNumber = PacketManager.getBlockNum(receivedAck); 
 			
 			//check block number
@@ -428,6 +432,8 @@ public class Client { //the client class
 						+ "Found " + blockNumber);
 			}
 			
+			expectedBlockNumber++;
+			
 			//read locally
 			//byte buffer to be filled with 512 bytes of data from local file
 			readFromFileData = new byte[bufferSize]; 
@@ -437,7 +443,7 @@ public class Client { //the client class
 
 			try {
 				readFromFileData = IOManager.read(reader, bufferSize, readFromFileData);
-				writeData = PacketManager.createData(readFromFileData, blockNumber);
+				writeData = PacketManager.createData(readFromFileData, expectedBlockNumber);
 				readFromFileData = new byte[readFromFileData.length];
 				//PacketManager.printTFTPPacketData(writeData);
 			} catch (IOException e1) {
@@ -458,7 +464,6 @@ public class Client { //the client class
 		received = false;
 		while(!received) { //repeat until a successful receive, resend data
 			try {
-				PacketManager.send(sendPacket, sendReceiveSocket);
 				PacketManager.receive(receivePacket, sendReceiveSocket);
 				received = true; //first data packet received
 			} catch(SocketTimeoutException e) { //
@@ -507,7 +512,6 @@ public class Client { //the client class
 		}
 		
 		//increase expected block number and get the block number from the received packet
-		expectedBlockNumber++;
 		blockNumber = PacketManager.getBlockNum(receivedAck); 
 		
 		//check block number
