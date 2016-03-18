@@ -469,20 +469,16 @@ public class NewServer {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-
 				//end connection
 				return;
 			}
-
 		}
 
 		public void handleWriteReq(){
 			byte[] data = new byte[ioManager.getBufferSize()+4];
-			byte[] ack = new byte[4];
 			int blockNum = 0;
 			File f = new File(ServerDirectory + filename);
 			DatagramPacket recievedPacket = new DatagramPacket(data, data.length);
-			int retryAttempts = 0;
 
 			if(f.exists() || f.isDirectory()) { 
 				//if file name exists send error packet
@@ -495,19 +491,19 @@ public class NewServer {
 				//end communication
 				return;
 			}
-			
+
 			//send ACK 0 packet
 			byte[] block = PacketManager.intToBytes(blockNum);
 			byte[] a = PacketManager.createAck(block);
-			
+
 			DatagramPacket ackpacket = new DatagramPacket(a, a.length, clientAddr, clientPort);
-			
+
 			try{
 				socket.send(ackpacket);
 			} catch(IOException e){
 				e.printStackTrace();
 			}
-			
+
 			do{
 				try{
 					socket.receive(recievedPacket);
@@ -524,7 +520,7 @@ public class NewServer {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-				
+
 				if(!verifyClient(recievedPacket)){
 					//if client is different send error and listen again
 					DatagramPacket x = PacketManager.createInvalidTIDErrorPacket(clientPort, recievedPacket.getPort());
@@ -552,19 +548,18 @@ public class NewServer {
 					if(PacketManager.getBlockNum(recievedPacket.getData())==blockNum+1){
 						//if valid data packet and block numbers match
 						byte[] dataToWrite = PacketManager.getData(recievedPacket.getData());
+						data = recievedPacket.getData();
 						
 						try { //write to file
 							ioManager.write(f, dataToWrite);
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
-						
+
 						//send ack packet
 						byte[] byteblock = PacketManager.intToBytes(blockNum);
 						byte[] q = PacketManager.createAck(byteblock);
-						
 						DatagramPacket ap = new DatagramPacket(q, q.length, clientAddr, clientPort);
-						
 						try{
 							socket.send(ap);
 						} catch(IOException e){
@@ -573,7 +568,7 @@ public class NewServer {
 						
 						//increment block number
 						blockNum++;
-						
+							
 					} else {
 						//If Block number has error, send error to client and end connection
 						DatagramPacket x = PacketManager.createInvalidBlockErrorPacket(blockNum,
@@ -605,10 +600,7 @@ public class NewServer {
 					//end connection
 					return;
 				}
-				
-			} while(!(packetManager.lastPacket(data)));
-
-
+			} while(!(PacketManager.lastPacket(data)));
 		}
 	}
 }
