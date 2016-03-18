@@ -23,7 +23,7 @@ public class ErrorSimulator {
 		ioman = new IOManager();
 		// Socket used for receiving packets from client
 		try {
-			receiveSocket = new DatagramSocket(pd.getIntermediatePort());
+			receiveSocket = new DatagramSocket(ProfileData.getErrorPort());
 		} catch (SocketException e) {
 			e.printStackTrace();
 		}
@@ -964,7 +964,7 @@ public class ErrorSimulator {
 				int clientPortTID = clientRequestPacket.getPort();
 
 				DatagramPacket serverRequestPacket = new DatagramPacket(clientRequestPacket.getData()
-						, clientRequestPacket.getData().length, clientRequestPacket.getAddress(),pd.getServerPort());
+						, clientRequestPacket.getData().length, clientRequestPacket.getAddress(),ProfileData.getServerPort());
 
 				if(errorSimulation)
 					createInvalidRequestPacket(serverRequestPacket);
