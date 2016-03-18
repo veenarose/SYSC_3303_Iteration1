@@ -686,7 +686,7 @@ public class PacketManager {
 		for(int i = 0; i<left.length; i++) {
 			temp.add(left[i]);
 		}
-		//add 0 to the array list, this corresponds to the 0 byte between all the filename and the mode
+		//add 0 to the array list, this corresponds to the 0 byte between the filename and the mode
 		temp.add(zero);
 		//add each byte of right to the array list, this corresponds to the mode
 		for(int j = 0; j<right.length; j++) {

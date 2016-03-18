@@ -9,8 +9,6 @@ import java.util.Scanner;
 
 public class ErrorSimulator {
 	DatagramSocket receiveSocket;
-	private static ProfileData pd = new ProfileData();
-	private IOManager ioman; 
 	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
 	private int errorSelected = -1;				 			//to store in user choice for error code 4
 	private int errorSelected2 = -1;
@@ -20,7 +18,6 @@ public class ErrorSimulator {
 	private int delayedPack = -1;
 
 	public ErrorSimulator() {
-		ioman = new IOManager();
 		// Socket used for receiving packets from client
 		try {
 			receiveSocket = new DatagramSocket(ProfileData.getErrorPort());
@@ -300,7 +297,7 @@ public class ErrorSimulator {
 		boolean errorSimulation = true;
 		try
 		{
-			byte[] data = new byte[ioman.getBufferSize()+4];
+			byte[] data = new byte[IOManager.getBufferSize()+4];
 
 			while (true)
 			{
@@ -334,7 +331,7 @@ public class ErrorSimulator {
 	 */
 	public DatagramPacket receivePacket(DatagramSocket socket) throws IOException
 	{
-		byte[] data = new byte[ioman.getBufferSize()+4];
+		byte[] data = new byte[IOManager.getBufferSize()+4];
 		DatagramPacket packet = new DatagramPacket(data,data.length);
 
 		do
@@ -437,7 +434,7 @@ public class ErrorSimulator {
 				int clientPortTID = clientRequestPacket.getPort();
 
 				DatagramPacket serverRequestPacket = new DatagramPacket(clientRequestPacket.getData()
-						, clientRequestPacket.getData().length, clientRequestPacket.getAddress(),pd.getServerPort());
+						, clientRequestPacket.getData().length, clientRequestPacket.getAddress(),ProfileData.getServerPort());
 
 				if(errorSimulation)
 					createInvalidRequestPacket(serverRequestPacket);
@@ -1481,7 +1478,7 @@ public class ErrorSimulator {
 				// Sends the packet to the host using this new TID
 				socket.send(packet);
 
-				byte[] data = new byte[ioman.getBufferSize()+4];
+				byte[] data = new byte[IOManager.getBufferSize()+4];
 				//received packet is an error
 				DatagramPacket errPacket = new DatagramPacket(data,data.length);
 
