@@ -219,13 +219,12 @@ public class ErrorSimulator {
 				System.out.println("	(1) - Packet too large");
 				System.out.println("	(2) - Invalid opcode");
 				System.out.println("	(3) - Invalid block number");
-				System.out.println("	(4) - Unknown TID");
 				inputData = keyboard.next();
 
 				errorSelected2 = Integer.valueOf(inputData);
 
-				if ((errorSelected2 < 1) || (errorSelected2 > 4)){
-					System.out.println("Please enter a value from 1 to 4, thank you");
+				if ((errorSelected2 < 1) || (errorSelected2 > 3)){
+					System.out.println("Please enter a value from 1 to 3, thank you");
 					validInput = false;
 				}
 
@@ -882,8 +881,7 @@ public class ErrorSimulator {
 							errorSimulation = false;	
 							return;	
 						}
-
-
+						
 						else{
 							System.out.println("\nPacket sent to server");
 							sendReceiveServerSocket.send(forwardedAckPacket);
