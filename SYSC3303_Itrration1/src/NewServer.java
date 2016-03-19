@@ -44,7 +44,6 @@ public class NewServer implements Runnable{
 			}
 			System.out.println("\n");
 		} catch (SocketException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
