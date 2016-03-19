@@ -607,10 +607,11 @@ public class Client { //the client class
 				} catch (FileNotFoundException | TFTPExceptions.InvalidTFTPAckException | TFTPExceptions.InvalidBlockNumberException | TFTPExceptions.InvalidTFTPDataException | TFTPExceptions.ErrorReceivedException e) {
 					// TODO Auto-generated catch block
 					System.out.println(e.getMessage() + "\n");
-				} 
+				} catch (SocketTimeoutException e) {
+					System.out.println(e.getMessage() + "\n");
+				}
 				continue;
 			}
-
 		}
 
 	} //end of main
