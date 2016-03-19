@@ -95,7 +95,6 @@ public class NewServer implements Runnable{
 			//check for valid request
 			try {
 				int request = PacketManager.validateRequest(requestData);
-				System.out.println(request);
 				if(request == 1) {
 					try {
 						handleReadRequest(PacketManager.getFilename(requestData));
@@ -115,7 +114,8 @@ public class NewServer implements Runnable{
 							| TFTPExceptions.FileAlreadyExistsException 
 							| TFTPExceptions.InvalidBlockNumberException
 							| TFTPExceptions.InvalidTFTPDataException 
-							| TFTPExceptions.ErrorReceivedException e) {
+							| TFTPExceptions.ErrorReceivedException
+							| TFTPExceptions.DiskFullException e) {
 						System.out.println(e);
 					}
 				}
@@ -318,7 +318,8 @@ public class NewServer implements Runnable{
 			SocketTimeoutException,
 			TFTPExceptions.InvalidBlockNumberException,
 			TFTPExceptions.InvalidTFTPDataException, 
-			TFTPExceptions.ErrorReceivedException {
+			TFTPExceptions.ErrorReceivedException,
+			TFTPExceptions.DiskFullException {
 			
 			//check if the file already exists locally on the client
 			TFTPExceptions.FileAlreadyExistsException fileExists = 
@@ -329,9 +330,6 @@ public class NewServer implements Runnable{
 				//TODO handleFileExists
 				throw fileExists; 
 			}
-			
-			System.out.println("GOT HERE 1");
-			
 			
 			byte receivedData[] = new byte[ackSize + bufferSize]; 
 			int blockNumber = 0;
@@ -347,7 +345,7 @@ public class NewServer implements Runnable{
 			PacketManager.send(sendPacket, sendReceiveSocket);
 			blockNumber++;
 			
-			System.out.println("Blocknum print 1: " + blockNumber);
+			//System.out.println("Blocknum print 1: " + blockNumber);
 			
 			int tries = ProfileData.getRepeats(); //number of times to relisten
 			boolean received = false;
@@ -389,7 +387,12 @@ public class NewServer implements Runnable{
 								+ "Found " + PacketManager.getBlockNum(receivedData));
 			}
 			
-			System.out.println("Blocknum recieved data " + PacketManager.getBlockNum(receivedData));
+			//System.out.println("Blocknum recieved data " + PacketManager.getBlockNum(receivedData));
+			
+			if(!PacketManager.diskSpaceCheck(ServerDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
+				//if we dont have enough space to write the next block
+				throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
+			}
 			
 			File writeTo = new File(ServerDirectory + filename); //file to write to locally
 			byte writeToFileData[];
@@ -453,6 +456,11 @@ public class NewServer implements Runnable{
 							"Invalid block number detected. "
 									+ "Expected " + blockNumber + "." 
 									+ "Found " + PacketManager.getBlockNum(receivedData));
+				}
+				
+				if(!PacketManager.diskSpaceCheck(ServerDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
+					//if we dont have enough space to write the next block
+					throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
 				}
 				
 				writeToFileData = PacketManager.getData(receivedData);
