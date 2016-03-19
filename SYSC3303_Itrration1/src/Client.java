@@ -1,7 +1,11 @@
 import java.util.Set;
 
+
 import java.io.*;
 import java.net.*;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashSet;
 
@@ -267,7 +271,13 @@ public class Client { //the client class
 				   TFTPExceptions.InvalidBlockNumberException, 
 				   FileNotFoundException, 
 				   TFTPExceptions.InvalidTFTPDataException, 
-				   TFTPExceptions.ErrorReceivedException {
+				   TFTPExceptions.ErrorReceivedException,
+				   TFTPExceptions.AccessViolationException {
+
+		Path path = FileSystems.getDefault().getPath(ClientDirectory, filename);
+		if(!Files.isReadable(path)){
+			throw new TFTPExceptions().new AccessViolationException("Cannot Read from this file");
+		}
 		
 		//reader used for local 512 byte block reads
 		BufferedInputStream reader = IOManager.getReader(ClientDirectory + filename);
@@ -604,8 +614,12 @@ public class Client { //the client class
 			} else { //write request
 				try {
 					c.handleWriteRequest(filename, mode);
-				} catch (FileNotFoundException | TFTPExceptions.InvalidTFTPAckException | TFTPExceptions.InvalidBlockNumberException | TFTPExceptions.InvalidTFTPDataException | TFTPExceptions.ErrorReceivedException e) {
-					// TODO Auto-generated catch block
+				} catch (FileNotFoundException 
+						| TFTPExceptions.InvalidTFTPAckException 
+						| TFTPExceptions.InvalidBlockNumberException 
+						| TFTPExceptions.InvalidTFTPDataException 
+						| TFTPExceptions.ErrorReceivedException
+						| TFTPExceptions.AccessViolationException e) {
 					System.out.println(e.getMessage() + "\n");
 				} catch (SocketTimeoutException e) {
 					System.out.println(e.getMessage() + "\n");
