@@ -135,6 +135,7 @@ public class NewServer implements Runnable{
 			
 			Path path = FileSystems.getDefault().getPath(ServerDirectory, filename);
 			if(!Files.isReadable(path)){
+				PacketManager.createAccessViolationErrorPacket(filename, "Access Violation", clientHost, clientPort);
 				throw new TFTPExceptions().new AccessViolationException("Cannot Read from this file");
 			}
 			
@@ -390,7 +391,7 @@ public class NewServer implements Runnable{
 			
 			if(!PacketManager.diskSpaceCheck(ServerDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
 				//if we dont have enough space to write the next block
-				PacketManager.handleDiskFull(receivedData, clientHost, clientPort, sendReceiveSocket);
+				PacketManager.handleDiskFull(ServerDirectory, clientHost, clientPort, sendReceiveSocket);
 				throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
 			}
 			
@@ -460,7 +461,7 @@ public class NewServer implements Runnable{
 				
 				if(!PacketManager.diskSpaceCheck(ServerDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
 					//if we dont have enough space to write the next block
-					PacketManager.handleDiskFull(receivedData, clientHost, clientPort, sendReceiveSocket);
+					PacketManager.handleDiskFull(ServerDirectory, clientHost, clientPort, sendReceiveSocket);
 					throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
 				}
 				

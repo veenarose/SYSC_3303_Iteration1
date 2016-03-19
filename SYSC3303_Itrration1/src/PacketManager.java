@@ -650,11 +650,22 @@ public class PacketManager {
 	
 	}
 	
-	public static void handleDiskFull(byte[] data, InetAddress host, int destinationPort, DatagramSocket socket) { //finish?
+	public static void handleDiskFull(String dir, InetAddress host, int destinationPort, DatagramSocket socket) { //finish?
 
 		//create error packet
 		DatagramPacket errorPacket = 
-				PacketManager.createInvalidDataErrorPacket(data, host, destinationPort);
+				PacketManager.createDiskIsFullErrorPacket(dir, host, destinationPort);
+
+		//send error packet
+		PacketManager.send(errorPacket, socket);
+	
+	}
+	
+	public static void handleAccessViolation(String fn, String msg, InetAddress host, int destinationPort, DatagramSocket socket) { //finish?
+
+		//create error packet
+		DatagramPacket errorPacket = 
+				PacketManager.createAccessViolationErrorPacket(fn, msg, host, destinationPort);
 
 		//send error packet
 		PacketManager.send(errorPacket, socket);

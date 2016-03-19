@@ -1,6 +1,5 @@
 import java.util.Set;
 
-
 import java.io.*;
 import java.net.*;
 import java.nio.file.FileSystems;
@@ -88,7 +87,8 @@ public class Client { //the client class
 				   SocketTimeoutException,
 				   TFTPExceptions.InvalidBlockNumberException,
 				   TFTPExceptions.InvalidTFTPDataException, 
-				   TFTPExceptions.ErrorReceivedException
+				   TFTPExceptions.ErrorReceivedException,
+				   TFTPExceptions.DiskFullException
 				{
 		
 		//check if the file already exists locally on the client
@@ -157,6 +157,12 @@ public class Client { //the client class
 					"Invalid block number detected. "
 					+ "Expected " + expectedBlockNumber + "." 
 					+ "Found " + blockNumber);
+		}
+		
+		if(!PacketManager.diskSpaceCheck(ClientDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
+			//if we dont have enough space to write the next block
+			PacketManager.handleDiskFull(ClientDirectory, serverHost, serverPort, sendReceiveSocket);
+			throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
 		}
 		
 		File writeTo = new File(ClientDirectory + filename); //file to write to locally
@@ -245,6 +251,12 @@ public class Client { //the client class
 						+ "Found " + blockNumber);
 			}
 			
+			if(!PacketManager.diskSpaceCheck(ClientDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
+				//if we dont have enough space to write the next block
+				PacketManager.handleDiskFull(ClientDirectory, serverHost, serverPort, sendReceiveSocket);
+				throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
+			}
+			
 			//write the block
 			writeToFileData = PacketManager.getData(receivedData);
 			try {
@@ -275,10 +287,6 @@ public class Client { //the client class
 				   TFTPExceptions.AccessViolationException {
 
 		Path path = FileSystems.getDefault().getPath(ClientDirectory, filename);
-		if(!Files.isReadable(path)){
-			throw new TFTPExceptions().new AccessViolationException("Cannot Read from this file");
-		}
-		
 		//reader used for local 512 byte block reads
 		BufferedInputStream reader = IOManager.getReader(ClientDirectory + filename);
 
@@ -311,7 +319,10 @@ public class Client { //the client class
 		}
 		
 		int serverPort = receivePacket.getPort();
-		
+		if(!Files.isReadable(path)){
+			PacketManager.createAccessViolationErrorPacket(filename, "Access Violation", serverHost, serverPort);
+			throw new TFTPExceptions().new AccessViolationException("Cannot Read from this file");
+		}
 		//check for error packet
 		if(PacketManager.isErrorPacket(receivedAck)) {
 			System.out.println("Received an error packet with code: " + receivedAck[3]
@@ -609,6 +620,9 @@ public class Client { //the client class
 					System.out.println(e.getMessage() + "\n");
 				} catch (TFTPExceptions.ErrorReceivedException e) {
 					System.out.println(e.getMessage() + "\n");
+				} catch (TFTPExceptions.DiskFullException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
 				continue;
 			} else { //write request
