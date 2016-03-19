@@ -599,14 +599,14 @@ public class Client { //the client class
 					System.out.println(e.getMessage() + "\n");
 				} catch (TFTPExceptions.ErrorReceivedException e) {
 					System.out.println(e.getMessage() + "\n");
-				} 
+				}
 				continue;
 			} else { //write request
 				try {
 					c.handleWriteRequest(filename, mode);
 				} catch (FileNotFoundException | TFTPExceptions.InvalidTFTPAckException | TFTPExceptions.InvalidBlockNumberException | TFTPExceptions.InvalidTFTPDataException | TFTPExceptions.ErrorReceivedException e) {
 					// TODO Auto-generated catch block
-					e.printStackTrace();
+					System.out.println(e.getMessage() + "\n");
 				} 
 				continue;
 			}

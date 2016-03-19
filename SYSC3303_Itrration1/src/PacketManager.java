@@ -179,6 +179,11 @@ public class PacketManager {
 			throw invalid;
 		}
 
+		//if packet is too large
+		if(data.length > 512){
+			throw invalid;
+		}
+		
 		//makes sure there is a 0 byte between the filename and mode bytes 
 		//checks if bytes are valid ascii values between -127 and 128 inclusive, and that it does not equal 0
 		for(int i=2; i< data.length-1; i++) { 
@@ -568,8 +573,8 @@ public class PacketManager {
 		expected[2] = 0;
 		expected[3] = 3;
 		byte[] errBlock = IllegalTFTPOp;
-		byte[] errData = createError(errBlock, "Invalid DATA packet received: "+data+"\n"
-				+ "Example of a DATA packet: "+expected);
+		byte[] errData = createError(errBlock, "Invalid DATA packet received: "+Arrays.toString(data)+"\n"
+				+ "Example of a DATA packet: "+Arrays.toString(expected));
 		DatagramPacket err = new DatagramPacket(errData, errData.length, host, destinationPort);
 		return err;
 	}
@@ -656,6 +661,8 @@ public class PacketManager {
 		try {
 			//block until a datagram is received via sendReceiveSocket  
 			socket.receive(receivePacket);
+		} catch(SocketTimeoutException e) {
+			throw e;
 		} catch(IOException e) {
 			e.printStackTrace();         
 			System.exit(1);

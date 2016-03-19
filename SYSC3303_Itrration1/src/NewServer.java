@@ -57,7 +57,6 @@ public class NewServer implements Runnable{
 			try {
 				receiveSocket.receive(receivePacket);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			clientAddr = receivePacket.getAddress();
