@@ -9,9 +9,13 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+
 
 public class NewServer implements Runnable{
 	
@@ -95,15 +99,23 @@ public class NewServer implements Runnable{
 				if(request == 1) {
 					try {
 						handleReadRequest(PacketManager.getFilename(requestData));
-					} catch (SocketTimeoutException | FileNotFoundException | TFTPExceptions.InvalidTFTPAckException
-							| TFTPExceptions.InvalidBlockNumberException | TFTPExceptions.InvalidTFTPDataException | TFTPExceptions.ErrorReceivedException e) {
+					} catch (SocketTimeoutException 
+							| FileNotFoundException 
+							| TFTPExceptions.InvalidTFTPAckException
+							| TFTPExceptions.InvalidBlockNumberException 
+							| TFTPExceptions.InvalidTFTPDataException 
+							| TFTPExceptions.ErrorReceivedException 
+							| TFTPExceptions.AccessViolationException e) {
 						System.out.println(e);
 					}
 				} else if (request == 2) {
 					try {
 						handleWriteRequest(PacketManager.getFilename(requestData));
-					} catch (SocketTimeoutException | TFTPExceptions.FileAlreadyExistsException | TFTPExceptions.InvalidBlockNumberException
-							| TFTPExceptions.InvalidTFTPDataException | TFTPExceptions.ErrorReceivedException e) {
+					} catch (SocketTimeoutException 
+							| TFTPExceptions.FileAlreadyExistsException 
+							| TFTPExceptions.InvalidBlockNumberException
+							| TFTPExceptions.InvalidTFTPDataException 
+							| TFTPExceptions.ErrorReceivedException e) {
 						System.out.println(e);
 					}
 				}
@@ -119,7 +131,13 @@ public class NewServer implements Runnable{
 			TFTPExceptions.InvalidBlockNumberException, 
 			FileNotFoundException, 
 			TFTPExceptions.InvalidTFTPDataException, 
-			TFTPExceptions.ErrorReceivedException {
+			TFTPExceptions.ErrorReceivedException, 
+			TFTPExceptions.AccessViolationException {
+			
+			Path path = FileSystems.getDefault().getPath(ServerDirectory, filename);
+			if(!Files.isReadable(path)){
+				throw new TFTPExceptions().new AccessViolationException("Cannot Read from this file");
+			}
 			
 			//reader used for local 512 byte block reads
 			BufferedInputStream reader = IOManager.getReader(ServerDirectory + filename);
