@@ -1,3 +1,4 @@
+import java.io.File;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -5,6 +6,10 @@ import java.net.InetAddress;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Class is used to handle the read / write packets between the clients and server
@@ -709,5 +714,33 @@ public class PacketManager {
 			data[k++] = b;
 		}
 		return data;
+	}
+	
+	/**
+	 * Checks the path to see if their is enough space to write to disk 
+	 * @param path filepath
+	 * @return boolean
+	 */
+	public static boolean diskSpaceCheck(String path, int size){
+		File f = new File(path);
+		boolean b = f.exists();
+		
+		if(b){ //if file exists
+			long x = f.getFreeSpace();
+			if(x > size){
+				//if we have enough space to write
+				return true;
+			} else {
+				return false;
+			}
+		}
+		return false;
+	}
+	
+	public static int filesize(byte[] file){
+		List byteList = Arrays.asList(file);
+		
+		int x = Collections.frequency(byteList,0);
+		return (file.length - x);
 	}
 }
