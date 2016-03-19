@@ -157,7 +157,7 @@ public class NewServer implements Runnable{
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-
+			
 			sendPacket = new DatagramPacket(readData, readData.length, 
 					clientHost, clientPort);
 			receivePacket = new DatagramPacket(receivedAck, receivedAck.length);
@@ -175,7 +175,7 @@ public class NewServer implements Runnable{
 					throw e;
 				}
 			}
-
+			
 			//check for PID
 			while(receivePacket.getPort() != clientPort) {
 				PacketManager.handleInvalidPort(clientPort, receivePacket.getPort(), clientHost, sendReceiveSocket);
@@ -213,7 +213,7 @@ public class NewServer implements Runnable{
 				PacketManager.handleInvalidAckPacket(receivedAck, clientHost, clientPort, sendReceiveSocket);
 				throw e;
 			}
-
+			
 			//check block number
 			if(blockNumber != PacketManager.getBlockNum(receivedAck)) {
 				PacketManager.handleInvalidBlockNumber(blockNumber, PacketManager.getBlockNum(receivedAck), clientHost, clientPort, sendReceiveSocket);
@@ -390,6 +390,7 @@ public class NewServer implements Runnable{
 			
 			if(!PacketManager.diskSpaceCheck(ServerDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
 				//if we dont have enough space to write the next block
+				PacketManager.handleDiskFull(receivedData, clientHost, clientPort, sendReceiveSocket);
 				throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
 			}
 			
@@ -459,6 +460,7 @@ public class NewServer implements Runnable{
 				
 				if(!PacketManager.diskSpaceCheck(ServerDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
 					//if we dont have enough space to write the next block
+					PacketManager.handleDiskFull(receivedData, clientHost, clientPort, sendReceiveSocket);
 					throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
 				}
 				

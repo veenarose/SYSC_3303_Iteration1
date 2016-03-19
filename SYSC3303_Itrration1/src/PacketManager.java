@@ -183,7 +183,7 @@ public class PacketManager {
 		}
 
 		//if packet is too large
-		if(data.length > 512){
+		if(data.length > 516){
 			throw invalid;
 		}
 		
@@ -640,6 +640,17 @@ public class PacketManager {
 	}
 	
 	public static void handleInvalidRequest(byte[] data, InetAddress host, int destinationPort, DatagramSocket socket) { //finish?
+
+		//create error packet
+		DatagramPacket errorPacket = 
+				PacketManager.createInvalidDataErrorPacket(data, host, destinationPort);
+
+		//send error packet
+		PacketManager.send(errorPacket, socket);
+	
+	}
+	
+	public static void handleDiskFull(byte[] data, InetAddress host, int destinationPort, DatagramSocket socket) { //finish?
 
 		//create error packet
 		DatagramPacket errorPacket = 
