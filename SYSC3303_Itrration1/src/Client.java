@@ -1,7 +1,4 @@
 import java.util.Set;
-
-import org.omg.CORBA.Request;
-
 import java.io.*;
 import java.net.*;
 import java.nio.file.FileSystems;
@@ -310,8 +307,15 @@ public class Client { //the client class
 		byte[] writePacketData = PacketManager.createWritePacketData(filename, mode);
 		byte[] receivedAck = new byte[ackSize + bufferSize]; //4 bytes
 
+		int p = -1;
+		if(request == 1){
+			p = ProfileData.getServerPort();
+		} else if(request == 2){
+			p = ProfileData.getErrorPort();
+		}
+		
 		sendPacket = new DatagramPacket(writePacketData, writePacketData.length, 
-				serverHost, ProfileData.getErrorPort());
+				serverHost, p);
 		receivePacket = new DatagramPacket(receivedAck, receivedAck.length);
 
 		//initially expecting the first block of data to be read from the file on the server
@@ -358,9 +362,9 @@ public class Client { //the client class
 		//the port through which the client will communicate with the server
 		//upon a successfully established connection
 		int blockNumber = PacketManager.getBlockNum(receivedAck);
-
-		System.out.println("recieved Block Num: " + blockNumber);
-
+		
+		PacketManager.ackPacketPrinter(receivePacket);
+		
 		//check the block number
 		if(blockNumber != expectedBlockNumber) {
 			PacketManager.handleInvalidBlockNumber(expectedBlockNumber, blockNumber, serverHost, serverPort, sendReceiveSocket);
@@ -437,11 +441,11 @@ public class Client { //the client class
 
 			//check for error packet
 			if(PacketManager.isErrorPacket(receivedAck)) {
-				System.out.println("Received an error packet with code: " + receivedAck[3]
-						+ " Exiting connection and terminating file transfer.");
+				PacketManager.errorPacketPrinter(receivePacket);
+				//System.out.println("Received an error packet with code: " + receivedAck[3]+ " Exiting connection and terminating file transfer.");
 				byte[] errorMsg = new byte[receivedAck.length - 4];
 				System.arraycopy(receivedAck, 4, errorMsg, 0, errorMsg.length);
-				System.out.println("Error message: " + new String(errorMsg));
+				//System.out.println("Error message: " + new String(errorMsg));
 				throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
 			}
 
@@ -458,7 +462,7 @@ public class Client { //the client class
 
 			//increase expected block number and get the block number from the received packet
 			blockNumber = PacketManager.getBlockNum(receivedAck); 
-
+			
 			//check block number
 			if(blockNumber != expectedBlockNumber) {
 				PacketManager.handleInvalidBlockNumber(expectedBlockNumber, blockNumber, serverHost, serverPort, sendReceiveSocket);
@@ -468,6 +472,7 @@ public class Client { //the client class
 								+ "Found " + blockNumber);
 			}
 
+			PacketManager.ackPacketPrinter(receivePacket);
 			expectedBlockNumber++;
 
 			//read locally
@@ -568,9 +573,9 @@ public class Client { //the client class
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}*/
+		PacketManager.ackPacketPrinter(receivePacket);
 
 		System.out.println("Succesful write completed.");
-
 	}
 
 	public static void main( String args[] ) throws IOException
@@ -598,7 +603,7 @@ public class Client { //the client class
 				reader.close();
 				break; 
 			}
-			
+			reader.close();
 		}
 		
 		//prompt user to specify if the request they are making is either read or write

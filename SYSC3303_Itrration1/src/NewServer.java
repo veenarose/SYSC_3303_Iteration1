@@ -144,6 +144,7 @@ public class NewServer implements Runnable{
 				PacketManager.handleInvalidRequest
 				(requestData, clientHost, clientPort, sendReceiveSocket);
 			}
+			sendReceiveSocket.close();
 		}
 
 		public void handleReadRequest(String filename) throws 
@@ -342,8 +343,6 @@ public class NewServer implements Runnable{
 				blockNumber++;
 
 			}
-
-
 		}
 
 		public void handleWriteRequest(String filename) throws 
@@ -380,6 +379,7 @@ public class NewServer implements Runnable{
 
 			//send ACK 0
 			PacketManager.send(sendPacket, sendReceiveSocket);
+			PacketManager.ackPacketPrinter(sendPacket);
 			blockNumber++;
 
 			int tries = ProfileData.getRepeats(); //number of times to relisten
@@ -423,9 +423,7 @@ public class NewServer implements Runnable{
 								+ "Found " + PacketManager.getBlockNum(receivedData));
 			}
 
-			System.out.println("Packet Block Number: " + PacketManager.getBlockNum(receivedData));
-
-			if(!PacketManager.diskSpaceCheck(ServerDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
+			if(!PacketManager.diskSpaceCheck(ServerDirectory, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
 				//if we dont have enough space to write the next block
 				PacketManager.handleDiskFull(ServerDirectory, clientHost, clientPort, sendReceiveSocket);
 				//throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
@@ -501,9 +499,7 @@ public class NewServer implements Runnable{
 									+ "Found " + PacketManager.getBlockNum(receivedData));
 				}
 
-				System.out.println("Packet Block Number: " + PacketManager.getBlockNum(receivedData));
-
-				if(!PacketManager.diskSpaceCheck(ServerDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
+				if(!PacketManager.diskSpaceCheck(ServerDirectory, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
 					//if we dont have enough space to write the next block
 					PacketManager.handleDiskFull(ServerDirectory, clientHost, clientPort, sendReceiveSocket);
 					throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
