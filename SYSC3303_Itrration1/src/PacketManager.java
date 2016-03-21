@@ -747,7 +747,7 @@ public class PacketManager {
 		
 		if(b){ //if file exists
 			long x = f.getFreeSpace();
-			if(x > size){
+			if(x > (long)size){
 				//if we have enough space to write
 				return true;
 			} else {

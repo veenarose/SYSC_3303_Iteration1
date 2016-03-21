@@ -10,14 +10,14 @@ import java.util.Scanner;
 public class ErrorSimulator {
 	DatagramSocket receiveSocket;
 	static PacketManager packetManager = new PacketManager(); // The object that controls all the packets transferred
-	private int errorSelected = -1;				 			//to store in user choice for error code 4
-	private int errorSelected2 = -1;
-	private int modeSelected = -1;
-	private int errorHost = -1;					
-	private int errorBlkNum = -1;				 			//to store the user selected block number
-	private int delayedPack = -1;
+	private int errorSelected;				 			//to store in user choice for error code 4
+	private int errorSelected2;
+	private int modeSelected;
+	private int errorHost;					
+	private int errorBlkNum;				 			//to store the user selected block number
+	private int delayedPack;
 
-	public ErrorSimulator() {
+	public ErrorSimulator() {		
 		// Socket used for receiving packets from client
 		try {
 			receiveSocket = new DatagramSocket(ProfileData.getErrorPort());
@@ -146,6 +146,12 @@ public class ErrorSimulator {
 	 */
 	private void startErr() throws IOException
 	{
+		errorSelected = -1;
+		errorSelected2 = -1;
+		modeSelected = -1;
+		errorHost = -1;
+		errorBlkNum = -1;
+		delayedPack = -1;
 		Scanner keyboard = new Scanner(System.in);
 
 		boolean validInput;
@@ -569,7 +575,7 @@ public class ErrorSimulator {
 						if(errorSimulation && errorHost == 2)
 							createInvalidDataAckPacket(forwardedDataPacket);
 
-						if(modeSelected == 4 && errorHost == 2){
+						if(modeSelected == 4 && errorHost == 2 && errorBlkNum==PacketManager.getBlockNum(forwardedDataPacket.getData())){
 							createUnknownThread(forwardedDataPacket,clientAddressTID,clientPortTID);
 							System.out.println("\nPacket sent back to client");
 							sendReceiveClientSocket.send(forwardedDataPacket);
@@ -577,7 +583,7 @@ public class ErrorSimulator {
 							errorSimulation = false;
 						}
 						//packet delayed error on DATA packet
-						else if(modeSelected == 5 && delayedPack == 2 && errorHost == 2){ 
+						else if(modeSelected == 5 && delayedPack == 2 && errorHost == 2 && errorBlkNum==PacketManager.getBlockNum(forwardedDataPacket.getData())){ 
 							if(firstIteration){
 								System.out.println("\nClient resends RRQ packet...");
 								try {
@@ -665,7 +671,7 @@ public class ErrorSimulator {
 							}
 						}
 						//packet duplicate error on DATA packet
-						else if(modeSelected == 6 && delayedPack == 2 && errorHost == 2){
+						else if(modeSelected == 6 && delayedPack == 2 && errorHost == 2 && errorBlkNum==PacketManager.getBlockNum(forwardedDataPacket.getData())){
 							System.out.println("\nPacket sent back to client");
 							sendReceiveClientSocket.send(forwardedDataPacket);
 							System.out.println(Arrays.toString(forwardedDataPacket.getData()));
@@ -702,8 +708,8 @@ public class ErrorSimulator {
 							return;
 						}
 						//packet loss error on DATA packet
-						else if(modeSelected == 7 && delayedPack == 2 && errorHost == 2){
-							System.out.println("\nLosing a request from client..");
+						else if(modeSelected == 7 && delayedPack == 2 && errorHost == 2 && errorBlkNum==PacketManager.getBlockNum(forwardedDataPacket.getData())){
+							System.out.println("\nLosing a DATA packet from server..");
 							System.out.println("Server resends DATA packet...\n");
 							try {
 								Thread.sleep(1000);
@@ -760,7 +766,7 @@ public class ErrorSimulator {
 						if(errorSimulation && errorHost == 1)
 							createInvalidDataAckPacket(forwardedAckPacket);
 
-						if(modeSelected == 4 && errorHost == 1){
+						if(modeSelected == 4 && errorHost == 1 && errorBlkNum==PacketManager.getBlockNum(forwardedAckPacket.getData())){
 							createUnknownThread(forwardedAckPacket,serverAddressTID,serverPortTID);
 							System.out.println("\nPacket sent back to server");
 							sendReceiveServerSocket.send(forwardedAckPacket);
@@ -768,9 +774,8 @@ public class ErrorSimulator {
 							errorSimulation = false;
 						}
 						//Packet delayed error on ACK packet
-						else if(modeSelected == 5 && delayedPack == 2 && errorHost == 1){
-
-							System.out.println("Server Resends Data Packet ");
+						else if(modeSelected == 5 && delayedPack == 2 && errorHost == 1 && errorBlkNum==PacketManager.getBlockNum(forwardedAckPacket.getData())){
+							System.out.println("Server Resends ACK Packet ");
 							// Let the thread sleep
 							try{
 								Thread.sleep(1000);
@@ -818,7 +823,7 @@ public class ErrorSimulator {
 							return;
 						}
 						//Packet Duplicate error on ACK packet
-						else if(modeSelected == 6 && delayedPack == 2 && errorHost == 1){
+						else if(modeSelected == 6 && delayedPack == 2 && errorHost == 1 && errorBlkNum==PacketManager.getBlockNum(forwardedAckPacket.getData())){
 
 							System.out.println("\n Packet sent back to server");
 							sendReceiveServerSocket.send(forwardedAckPacket);
@@ -838,11 +843,10 @@ public class ErrorSimulator {
 							errorSimulation = false;	
 							return;					
 						}
-
 						//Lost packet error on ACK packet
-						else if(modeSelected == 7 && delayedPack == 2 && errorHost == 1){
-							System.out.println("\nLosing ACK packet from server...");
-							System.out.println("Server resends DATA packet...\n");
+						else if(modeSelected == 7 && delayedPack == 2 && errorHost == 1 && errorBlkNum==PacketManager.getBlockNum(forwardedAckPacket.getData())){
+							System.out.println("\nLosing ACK packet from client...");
+							System.out.println("Client resends ACK packet...\n");
 							try {
 								Thread.sleep(1000);
 							} catch (InterruptedException e) {
@@ -939,6 +943,7 @@ public class ErrorSimulator {
 			this.errorSimulation = errorSimulation;
 		}
 
+		@SuppressWarnings("resource")
 		public void run() {
 			try
 			{
@@ -1097,7 +1102,7 @@ public class ErrorSimulator {
 						if(errorSimulation && errorHost == 2)
 							createInvalidDataAckPacket(forwardedACKPacket);
 
-						if(modeSelected == 4 && errorHost == 2){
+						if(modeSelected == 4 && errorHost == 2 && errorBlkNum==PacketManager.getBlockNum(forwardedACKPacket.getData())){
 							createUnknownThread(forwardedACKPacket,clientAddressTID,clientPortTID);
 							System.out.println("\nPacket sent back to client");
 							sendReceiveClientSocket.send(forwardedACKPacket);
@@ -1105,7 +1110,7 @@ public class ErrorSimulator {
 							errorSimulation = false;
 						}
 						//packet delayed error on DATA packet
-						else if(modeSelected == 5 && delayedPack == 2 && errorHost == 2){ 
+						else if(modeSelected == 5 && delayedPack == 2 && errorHost == 2 && errorBlkNum==PacketManager.getBlockNum(forwardedACKPacket.getData())){ 
 							if(firstIteration){
 								System.out.println("\nClient resends WRQ packet...");
 								try {
@@ -1193,7 +1198,7 @@ public class ErrorSimulator {
 							}
 						}
 						//packet duplicate error on ACK packet
-						else if(modeSelected == 6 && delayedPack == 2 && errorHost == 2){
+						else if(modeSelected == 6 && delayedPack == 2 && errorHost == 2 && errorBlkNum==PacketManager.getBlockNum(forwardedACKPacket.getData())){
 							System.out.println("\nPacket sent back to client");
 							sendReceiveClientSocket.send(forwardedACKPacket);
 							System.out.println(Arrays.toString(forwardedACKPacket.getData()));
@@ -1230,9 +1235,9 @@ public class ErrorSimulator {
 							return;
 						}
 						//packet loss error on ACK packet
-						else if(modeSelected == 7 && delayedPack == 2 && errorHost == 2){
-							System.out.println("\nLosing a request from client..");
-							System.out.println("Server resends ACK packet...\n");
+						else if(modeSelected == 7 && delayedPack == 2 && errorHost == 2 && errorBlkNum==PacketManager.getBlockNum(forwardedACKPacket.getData())){
+							System.out.println("\nLosing an ACK from client..");
+							System.out.println("Client resends an ACK packet...\n");
 							try {
 								Thread.sleep(1000);
 							} catch (InterruptedException e) {
@@ -1288,7 +1293,7 @@ public class ErrorSimulator {
 						if(errorSimulation && errorHost == 1)
 							createInvalidDataAckPacket(forwardedDATAPacket);
 
-						if(modeSelected == 4 && errorHost == 1){
+						if(modeSelected == 4 && errorHost == 1 && errorBlkNum==PacketManager.getBlockNum(forwardedDATAPacket.getData())){
 							createUnknownThread(forwardedDATAPacket,serverAddressTID,serverPortTID);
 							System.out.println("\nPacket sent back to server");
 							sendReceiveServerSocket.send(forwardedDATAPacket);
@@ -1296,8 +1301,7 @@ public class ErrorSimulator {
 							errorSimulation = false;
 						}
 						//Packet delayed error on DATA packet
-						else if(modeSelected == 5 && delayedPack == 2 && errorHost == 1){
-
+						else if(modeSelected == 5 && delayedPack == 2 && errorHost == 1 && errorBlkNum==PacketManager.getBlockNum(forwardedDATAPacket.getData())){
 							System.out.println("Server Resends ACK Packet ");
 							// Let the thread sleep
 							try{
@@ -1346,8 +1350,7 @@ public class ErrorSimulator {
 							return;
 						}
 						//Packet Duplicate error on DATA packet
-						else if(modeSelected == 6 && delayedPack == 2 && errorHost == 1){
-
+						else if(modeSelected == 6 && delayedPack == 2 && errorHost == 1 && errorBlkNum==PacketManager.getBlockNum(forwardedDATAPacket.getData())){
 							System.out.println("\n Packet sent back to server");
 							sendReceiveServerSocket.send(forwardedDATAPacket);
 							System.out.println(Arrays.toString(forwardedDATAPacket.getData()));	
@@ -1366,11 +1369,10 @@ public class ErrorSimulator {
 							errorSimulation = false;	
 							return;					
 						}
-
 						//Lost packet error on DATA packet
-						else if(modeSelected == 7 && delayedPack == 2 && errorHost == 1){
+						else if(modeSelected == 7 && delayedPack == 2 && errorHost == 1 && errorBlkNum==PacketManager.getBlockNum(forwardedDATAPacket.getData())){
 							System.out.println("\nLosing DATA packet from server...");
-							System.out.println("Server resends ACK packet...\n");
+							System.out.println("Client resends an ACK packet...\n");
 							try {
 								Thread.sleep(1000);
 							} catch (InterruptedException e) {
@@ -1515,6 +1517,20 @@ public class ErrorSimulator {
 			finally
 			{
 				System.out.println("\nUnknownTIDTransferHandler thread terminated.");
+				System.out.println("Do you want to start simulating an error again (y/n)? ");
+				Scanner in = new Scanner(System.in);
+				String user;
+				user = in.nextLine();
+				try {
+					if(user.equals("y") || user.equals("yes")){
+						startErr();
+					}else if(user.equals("n") || user.equals("n")){
+						in.close();
+						System.exit(1);
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 		}
 	}

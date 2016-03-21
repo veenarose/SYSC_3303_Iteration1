@@ -159,7 +159,7 @@ public class Client { //the client class
 					+ "Found " + blockNumber);
 		}
 		
-		if(!PacketManager.diskSpaceCheck(ClientDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
+		if(!PacketManager.diskSpaceCheck(ClientDirectory , PacketManager.filesize(receivePacket.getData()))){
 			//if we dont have enough space to write the next block
 			PacketManager.handleDiskFull(ClientDirectory, serverHost, serverPort, sendReceiveSocket);
 			throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");

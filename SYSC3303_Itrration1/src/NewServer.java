@@ -389,7 +389,7 @@ public class NewServer implements Runnable{
 			
 			//System.out.println("Blocknum recieved data " + PacketManager.getBlockNum(receivedData));
 			
-			if(!PacketManager.diskSpaceCheck(ServerDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
+			if(!PacketManager.diskSpaceCheck(ServerDirectory, PacketManager.filesize(receivePacket.getData()))){
 				//if we dont have enough space to write the next block
 				PacketManager.handleDiskFull(ServerDirectory, clientHost, clientPort, sendReceiveSocket);
 				throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
