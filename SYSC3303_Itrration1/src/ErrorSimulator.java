@@ -40,7 +40,6 @@ public class ErrorSimulator {
 			packet.setData(newReq);
 			System.out.print("Containing: ");
 			PacketManager.printTFTPPacketData(packet.getData());
-			System.out.println();
 		}
 		else if (errorSelected == 2){							//setting an invalid opcode error
 			System.out.println("\nCreated an invalid opcode packet.");
@@ -49,7 +48,6 @@ public class ErrorSimulator {
 			packet.setData(inValid);
 			System.out.print("Containing: ");
 			PacketManager.printTFTPPacketData(packet.getData());
-			System.out.println();
 		}
 		else if(errorSelected == 3){			//setting an invalid mode error
 			System.out.println("\nCreated an invalid mode packet.");
@@ -57,7 +55,6 @@ public class ErrorSimulator {
 			packet.setData(data);
 			System.out.println("Containing: "+new String(packet.getData()));
 			PacketManager.printTFTPPacketData(packet.getData());
-			System.out.println();
 		}
 		else if (errorSelected == 4){			//setting a missing filename error
 			System.out.println("\nCreated a missing filename packet.");
@@ -65,7 +62,6 @@ public class ErrorSimulator {
 			packet.setData(data);
 			System.out.println("Containing: "+new String(packet.getData()));
 			PacketManager.printTFTPPacketData(packet.getData());
-			System.out.println();
 		}
 		else if (errorSelected == 5){			//setting a no termination error
 			System.out.println("\nCreated a no termination packet.");
@@ -75,7 +71,6 @@ public class ErrorSimulator {
 			packet.setData(newReq);
 			System.out.print("Containing: ");
 			PacketManager.printTFTPPacketData(packet.getData());
-			System.out.println();
 		}
 		else if (errorSelected == 6){			//setting a no termination error
 			System.out.println("\nCreated a no ending zero packet.");
@@ -85,7 +80,6 @@ public class ErrorSimulator {
 			packet.setData(newReq);
 			System.out.print("Containing: ");
 			PacketManager.printTFTPPacketData(packet.getData());
-			System.out.println();
 		}
 	}
 
@@ -543,7 +537,9 @@ public class ErrorSimulator {
 				boolean transferComplete = false;
 				// Flag indicating first loop iteration (for setting up TID)
 				boolean firstIteration = true;
-
+				
+				boolean lastPacketProcessed = false;
+				
 				try
 				{
 					while (!transferComplete)
@@ -737,10 +733,14 @@ public class ErrorSimulator {
 							return;
 						}
 						else{
+							if(PacketManager.lastPacket(PacketManager.getData(dataPacket.getData()))){
+								lastPacketProcessed = true;
+							}
 							System.out.println("\nPacket sent back to client");
 							sendReceiveClientSocket.send(forwardedDataPacket);
 							System.out.println(Arrays.toString(forwardedDataPacket.getData()));
 						}
+						
 						firstIteration = false;
 
 						//check if it is an error packet from server and break the loop
@@ -749,12 +749,9 @@ public class ErrorSimulator {
 							transferComplete = true;
 							break;
 						}
-
+						
 						DatagramPacket ackPacket = receivePacket(sendReceiveClientSocket);
-						if (ackPacket == null){
-							transferComplete = true;
-							return;
-						}
+						
 						System.out.println("\nPacket received from client");
 						System.out.println(new String(ackPacket.getData()));
 						System.out.println(Arrays.toString(ackPacket.getData()));
@@ -879,12 +876,15 @@ public class ErrorSimulator {
 							errorSimulation = false;	
 							return;	
 						}
-
 						else{
 							System.out.println("\nPacket sent to server");
 							sendReceiveServerSocket.send(forwardedAckPacket);
 							System.out.println(new String(forwardedAckPacket.getData()));
 							System.out.println(Arrays.toString(forwardedAckPacket.getData()));
+							if (lastPacketProcessed){
+								transferComplete = true;
+								return;
+							}
 						}
 						//check if it is an error packet from client and break the loop
 						int checkOp1 = PacketManager.getOpCode(forwardedAckPacket.getData());
@@ -892,6 +892,7 @@ public class ErrorSimulator {
 							transferComplete = true;
 							break;
 						}
+						
 					}
 
 				}finally
@@ -1067,7 +1068,9 @@ public class ErrorSimulator {
 				boolean transferComplete = false;
 				// Flag indicating first loop iteration (for setting up TID)
 				boolean firstIteration = true;
-
+				
+				boolean lastPacketProcessed = false;
+				
 				try
 				{
 					while (!transferComplete)
@@ -1264,6 +1267,10 @@ public class ErrorSimulator {
 							System.out.println("\nPacket sent back to client");
 							sendReceiveClientSocket.send(forwardedACKPacket);
 							System.out.println(Arrays.toString(forwardedACKPacket.getData()));
+							if (lastPacketProcessed){
+								transferComplete = true;
+								return;
+							}
 						}
 						firstIteration = false;
 
@@ -1404,8 +1411,10 @@ public class ErrorSimulator {
 							errorSimulation = false;	
 							return;	
 						}
-
 						else{
+							if(PacketManager.lastPacket(PacketManager.getData(dataPacket.getData()))){
+								lastPacketProcessed = true;
+							}
 							System.out.println("\nPacket sent to server");
 							sendReceiveServerSocket.send(forwardedDATAPacket);
 							System.out.println(new String(forwardedDATAPacket.getData()));
