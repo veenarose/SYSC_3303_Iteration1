@@ -617,11 +617,11 @@ public class PacketManager {
 		PacketManager.send(errorPacket, socket);
 	}
 
-	public static void handleTimeOut(InetAddress host, int destinationPort, DatagramSocket socket) {
+	public static void handleTimeOut(InetAddress host, int destinationPort, DatagramSocket socket, String source) {
 		
 		//create error packet
 		DatagramPacket errorPacket = 
-				PacketManager.createTimeOutErrorPacket("Client", host, destinationPort);
+				PacketManager.createTimeOutErrorPacket(source, host, destinationPort);
 		
 		//send error packet
 		PacketManager.send(errorPacket, socket);

@@ -171,9 +171,10 @@ public class NewServer implements Runnable{
 					PacketManager.receive(receivePacket, sendReceiveSocket);
 					received = true; //first data packet received
 				} catch(SocketTimeoutException e) { //
-					if(--tries == 0) 
-						PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-					throw e;
+					if(--tries == 0) {
+						PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket, "Server"); //send error packet to server
+						throw e;
+					}
 				}
 			}
 			
@@ -187,9 +188,10 @@ public class NewServer implements Runnable{
 						PacketManager.receive(receivePacket, sendReceiveSocket);
 						received = true; 
 					} catch(SocketTimeoutException e) { //
-						if(--tries == 0) 
-							PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-						throw e;
+						if(--tries == 0) { 
+							PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket, "Server"); //send error packet to server
+							throw e;
+						}
 					}
 				}
 			}
@@ -226,7 +228,10 @@ public class NewServer implements Runnable{
 
 			blockNumber++;
 			
-			while(!PacketManager.lastPacket(PacketManager.getData(readData))) { 
+			while(!PacketManager.lastPacket(PacketManager.getData(readData))) {
+				
+				System.out.println("Received:");
+				System.out.println(Arrays.toString(PacketManager.getData(receivedAck)));
 				
 				//byte buffer for write data packets
 				readData = new byte[bufferSize + ackSize];
@@ -253,9 +258,10 @@ public class NewServer implements Runnable{
 						PacketManager.receive(receivePacket, sendReceiveSocket);
 						received = true; //first data packet received
 					} catch(SocketTimeoutException e) { //
-						if(--tries == 0) 
-							PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-						throw e;
+						if(--tries == 0){
+							PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket, "Server"); //send error packet to server
+							throw e;
+						}
 					}
 				}
 
@@ -269,9 +275,10 @@ public class NewServer implements Runnable{
 							PacketManager.receive(receivePacket, sendReceiveSocket);
 							received = true; 
 						} catch(SocketTimeoutException e) { //
-							if(--tries == 0) 
-								PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-							throw e;
+							if(--tries == 0) {
+								PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket, "Server"); //send error packet to server
+								throw e;
+							}
 						}
 					}
 				}
@@ -354,9 +361,10 @@ public class NewServer implements Runnable{
 					PacketManager.receive(receivePacket, sendReceiveSocket);
 					received = true; //first data packet received
 				} catch(SocketTimeoutException e) { //
-					if(--tries == 0) 
-						PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-					throw e;
+					if(--tries == 0) {
+						PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket, "Server"); //send error packet to server
+						throw e;
+					}
 				}
 			}
 			
@@ -386,9 +394,7 @@ public class NewServer implements Runnable{
 								+ "Expected " + blockNumber + "." 
 								+ "Found " + PacketManager.getBlockNum(receivedData));
 			}
-			
-			//System.out.println("Blocknum recieved data " + PacketManager.getBlockNum(receivedData));
-			
+						
 			if(!PacketManager.diskSpaceCheck(ServerDirectory, PacketManager.filesize(receivePacket.getData()))){
 				//if we dont have enough space to write the next block
 				PacketManager.handleDiskFull(ServerDirectory, clientHost, clientPort, sendReceiveSocket);
@@ -405,6 +411,10 @@ public class NewServer implements Runnable{
 			}
 			
 			while(!PacketManager.lastPacket(PacketManager.getData(receivedData))) { 
+				
+				System.out.println("Received:");
+				System.out.println(Arrays.toString(PacketManager.getData(receivedData)));
+				
 				ackToBeSent = PacketManager.createAck(receivedData);
 				receivedData = new byte[ackSize + bufferSize];
 				
@@ -415,7 +425,6 @@ public class NewServer implements Runnable{
 				
 				PacketManager.send(sendPacket, sendReceiveSocket);
 				blockNumber++;
-				System.out.println("Blocknum loop: " + blockNumber);
 				
 				tries = ProfileData.getRepeats(); //number of times to relisten
 				received = false;
@@ -424,14 +433,13 @@ public class NewServer implements Runnable{
 						PacketManager.receive(receivePacket, sendReceiveSocket);
 						received = true; //first data packet received
 					} catch(SocketTimeoutException e) { //
-						if(--tries == 0) 
-							PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-						throw e;
+						if(--tries == 0) {
+							PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket, "Server"); //send error packet to server
+							throw e;
+						}
 					}
 				}
-				
-				System.out.println("Blocknum recieved packet: " + PacketManager.getBlockNum(receivedData));
-				
+								
 				//check for error packet
 				if(PacketManager.isErrorPacket(receivedData)) {
 					System.out.println("Received an error packet with code: " + receivedData[3]

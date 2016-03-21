@@ -120,9 +120,10 @@ public class Client { //the client class
 				PacketManager.receive(receivePacket, sendReceiveSocket);
 				received = true; //first data packet received
 			} catch(SocketTimeoutException e) { //
-				if(--tries == 0) 
-					PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-				throw e;
+				if(--tries == 0) { 
+					PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket, "Client"); //send error packet to server
+					throw e;
+				}
 			}
 		}
 		
@@ -176,7 +177,7 @@ public class Client { //the client class
 		
 		while(!PacketManager.lastPacket(PacketManager.getData(receivedData))) {
 			
-			System.out.println("Got here, not the last packet.");
+			System.out.println("Received:");
 			System.out.println(Arrays.toString(PacketManager.getData(receivedData)));
 
 			//send ack and receive next data
@@ -197,9 +198,10 @@ public class Client { //the client class
 					PacketManager.receive(receivePacket, sendReceiveSocket);
 					received = true;
 				} catch(SocketTimeoutException e) { //
-					if(--tries == 0) 
-						PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
+					if(--tries == 0) {
+						PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket, "Client"); //send error packet to server
 						throw e;
+					}
 				}
 			}
 			
@@ -213,9 +215,10 @@ public class Client { //the client class
 						PacketManager.receive(receivePacket, sendReceiveSocket);
 						received = true; 
 					} catch(SocketTimeoutException e) { //
-						if(--tries == 0) 
-							PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
+						if(--tries == 0) {
+							PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket, "Client"); //send error packet to server
 							throw e;
+						}
 					}
 				}
 			}
@@ -312,9 +315,10 @@ public class Client { //the client class
 				PacketManager.receive(receivePacket, sendReceiveSocket);
 				received = true; //first data packet received
 			} catch(SocketTimeoutException e) { //
-				if(--tries == 0) 
-					PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-				throw e;
+				if(--tries == 0) { 
+					PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket, "Client"); //send error packet to server
+					throw e;
+				}
 			}
 		}
 		
@@ -344,9 +348,7 @@ public class Client { //the client class
 		//the port through which the client will communicate with the server
 		//upon a successfully established connection
 		int blockNumber = PacketManager.getBlockNum(receivedAck); 
-		
-		System.out.println("recieved Block Num: " + blockNumber);
-		
+				
 		//check the block number
 		if(blockNumber != expectedBlockNumber) {
 			PacketManager.handleInvalidBlockNumber(expectedBlockNumber, blockNumber, serverHost, serverPort, sendReceiveSocket);
@@ -381,6 +383,9 @@ public class Client { //the client class
 		
 		while(!PacketManager.lastPacket(PacketManager.getData(writeData))) {
 			
+			System.out.println("Received:");
+			System.out.println(Arrays.toString(PacketManager.getData(receivedAck)));
+			
 			receivedAck = new byte[bufferSize + ackSize]; //4 bytes
 			receivePacket = new DatagramPacket(receivedAck, receivedAck.length);
 
@@ -397,9 +402,10 @@ public class Client { //the client class
 					PacketManager.receive(receivePacket, sendReceiveSocket);
 					received = true; //first data packet received
 				} catch(SocketTimeoutException e) { //
-					if(--tries == 0) 
-						PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-					throw e;
+					if(--tries == 0) { 
+						PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket, "Client"); //send error packet to server
+						throw e;
+					}
 				}
 			}
 			
@@ -413,9 +419,10 @@ public class Client { //the client class
 						PacketManager.receive(receivePacket, sendReceiveSocket);
 						received = true; 
 					} catch(SocketTimeoutException e) { //
-						if(--tries == 0) 
-							PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
+						if(--tries == 0) {
+							PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket, "Client"); //send error packet to server
 							throw e;
+						}
 					}
 				}
 			}
@@ -488,9 +495,10 @@ public class Client { //the client class
 				PacketManager.receive(receivePacket, sendReceiveSocket);
 				received = true; //first data packet received
 			} catch(SocketTimeoutException e) { //
-				if(--tries == 0) 
-					PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-				throw e;
+				if(--tries == 0) { 
+					PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket, "Client"); //send error packet to server
+					throw e;
+				}
 			}
 		}
 		
@@ -504,9 +512,10 @@ public class Client { //the client class
 					PacketManager.receive(receivePacket, sendReceiveSocket);
 					received = true; 
 				} catch(SocketTimeoutException e) { //
-					if(--tries == 0) 
-						PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
+					if(--tries == 0) {
+						PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket, "Client"); //send error packet to server
 						throw e;
+					}
 				}
 			}
 		}
