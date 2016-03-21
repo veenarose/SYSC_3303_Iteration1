@@ -474,7 +474,6 @@ public class PacketManager {
 	public static DatagramPacket createTimeOutErrorPacket
 		(String cs, InetAddress host, int destinationPort) {
 		String message = cs + " timed out upon listening for a response.";
-		System.out.println(message);
 		byte[] errBlock = NotDefined;
 		byte[] errData = createError(errBlock, message);
 		DatagramPacket err = new DatagramPacket(errData, errData.length, host, destinationPort);
@@ -484,8 +483,7 @@ public class PacketManager {
 	//error code 1
 	public static DatagramPacket createFileAlreadyExistsErrorPacket(String filename, InetAddress host, int destinationPort) {
 		String message = "File + " + filename + " already exists.";
-		System.out.println(message);
-		byte[] errBlock = FileNotFound;
+		byte[] errBlock = FileExists;
 		byte[] errData = createError(errBlock, message);
 		DatagramPacket err = new DatagramPacket(errData, errData.length, host, destinationPort);
 		return err;
@@ -562,7 +560,7 @@ public class PacketManager {
 	public static DatagramPacket createInvalidAckErrorPacket(byte[] ack, InetAddress host, int destinationPort){
 		byte[] expected = new byte[]{0,4,0,4};
 		byte[] errBlock = IllegalTFTPOp;
-		byte[] errData = createError(errBlock, "Invalid ACK received "+ack+"\nExample of an ACK packet"+expected);
+		byte[] errData = createError(errBlock, "Invalid ACK received "+ Arrays.toString(ack) + "\nExample of an ACK packet " + Arrays.toString(expected));
 		DatagramPacket err = new DatagramPacket(errData, errData.length, host, destinationPort);
 		return err;
 	}
@@ -576,8 +574,8 @@ public class PacketManager {
 		expected[2] = 0;
 		expected[3] = 3;
 		byte[] errBlock = IllegalTFTPOp;
-		byte[] errData = createError(errBlock, "Invalid DATA packet received: "+Arrays.toString(data)+"\n"
-				+ "Example of a DATA packet: "+Arrays.toString(expected));
+		byte[] errData = createError(errBlock, "Invalid DATA packet received: " + Arrays.toString(data) + "\n"
+				+ "Example of a DATA packet: " + Arrays.toString(expected));
 		DatagramPacket err = new DatagramPacket(errData, errData.length, host, destinationPort);
 		return err;
 	}
@@ -594,7 +592,12 @@ public class PacketManager {
 	
 	//ERROR HANDLING METHODS
 	public static void handleInvalidAckPacket(byte[] data, InetAddress host, int destinationPort, DatagramSocket socket) { //finish?
-
+		//create error packet
+		DatagramPacket errorPacket = 
+				PacketManager.createInvalidAckErrorPacket(data, host, destinationPort);
+				
+		//send error packet
+		PacketManager.send(errorPacket, socket);
 	}
 
 	public static void handleInvalidDataPacket(byte[] data, InetAddress host, int destinationPort, DatagramSocket socket) { //finish?
