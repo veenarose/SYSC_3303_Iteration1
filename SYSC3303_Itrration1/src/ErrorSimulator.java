@@ -572,7 +572,7 @@ public class ErrorSimulator {
 								dataPacket.getData().length,clientAddressTID,clientPortTID);
 
 						//if error caused by the server
-						if(errorSimulation && errorHost == 2)
+						if(errorSimulation && errorHost == 2 && errorBlkNum==PacketManager.getBlockNum(forwardedDataPacket.getData()))
 							createInvalidDataAckPacket(forwardedDataPacket);
 
 						if(modeSelected == 4 && errorHost == 2 && errorBlkNum==PacketManager.getBlockNum(forwardedDataPacket.getData())){
@@ -763,7 +763,7 @@ public class ErrorSimulator {
 								ackPacket.getData().length,serverAddressTID,serverPortTID);
 
 						//if error is caused by the client
-						if(errorSimulation && errorHost == 1)
+						if(errorSimulation && errorHost == 1 & errorBlkNum==PacketManager.getBlockNum(forwardedAckPacket.getData()))
 							createInvalidDataAckPacket(forwardedAckPacket);
 
 						if(modeSelected == 4 && errorHost == 1 && errorBlkNum==PacketManager.getBlockNum(forwardedAckPacket.getData())){
@@ -1099,7 +1099,7 @@ public class ErrorSimulator {
 								ackPacket.getData().length,clientAddressTID,clientPortTID);
 
 						//if error caused by the server
-						if(errorSimulation && errorHost == 2)
+						if(errorSimulation && errorHost == 2 && errorBlkNum==PacketManager.getBlockNum(forwardedACKPacket.getData()))
 							createInvalidDataAckPacket(forwardedACKPacket);
 
 						if(modeSelected == 4 && errorHost == 2 && errorBlkNum==PacketManager.getBlockNum(forwardedACKPacket.getData())){
@@ -1290,7 +1290,7 @@ public class ErrorSimulator {
 								dataPacket.getData().length,serverAddressTID,serverPortTID);
 
 						//if error is caused by the client
-						if(errorSimulation && errorHost == 1)
+						if(errorSimulation && errorHost == 1 && errorBlkNum==PacketManager.getBlockNum(forwardedDATAPacket.getData()))
 							createInvalidDataAckPacket(forwardedDATAPacket);
 
 						if(modeSelected == 4 && errorHost == 1 && errorBlkNum==PacketManager.getBlockNum(forwardedDATAPacket.getData())){
