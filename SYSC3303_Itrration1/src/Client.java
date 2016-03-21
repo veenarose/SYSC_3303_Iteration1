@@ -84,12 +84,12 @@ public class Client { //the client class
 
 	public void handleReadRequest(String filename, String mode) 
 			throws TFTPExceptions.FileAlreadyExistsException, 
-			SocketTimeoutException,
-			TFTPExceptions.InvalidBlockNumberException,
-			TFTPExceptions.InvalidTFTPDataException, 
-			TFTPExceptions.ErrorReceivedException,
-			TFTPExceptions.DiskFullException
-	{
+				   SocketTimeoutException,
+				   TFTPExceptions.InvalidBlockNumberException,
+				   TFTPExceptions.InvalidTFTPDataException, 
+				   TFTPExceptions.ErrorReceivedException,
+				   TFTPExceptions.DiskFullException
+				{
 
 		//check if the file already exists locally on the client
 		TFTPExceptions.FileAlreadyExistsException fileExists = 
@@ -120,9 +120,10 @@ public class Client { //the client class
 				PacketManager.receive(receivePacket, sendReceiveSocket);
 				received = true; //first data packet received
 			} catch(SocketTimeoutException e) { //
-				if(--tries == 0) 
-					PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-				throw e;
+				if(--tries == 0) { 
+					PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket, "Client"); //send error packet to server
+					throw e;
+				}
 			}
 		}
 
@@ -164,10 +165,10 @@ public class Client { //the client class
 			PacketManager.handleDiskFull(ClientDirectory, serverHost, serverPort, sendReceiveSocket);
 			throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
 		}
-
 		File writeTo = new File(ClientDirectory + filename); //file to write to locally
 		byte writeToFileData[];
 		writeToFileData = PacketManager.getData(receivedData);
+		
 		try {
 			IOManager.write(writeTo, writeToFileData);
 		} catch (IOException e1) {
@@ -175,8 +176,8 @@ public class Client { //the client class
 		}
 
 		while(!PacketManager.lastPacket(PacketManager.getData(receivedData))) {
-
-			System.out.println("Got here, not the last packet.");
+			
+			System.out.println("Received:");
 			System.out.println(Arrays.toString(PacketManager.getData(receivedData)));
 
 			//send ack and receive next data
@@ -196,10 +197,11 @@ public class Client { //the client class
 					//PacketManager.send(sendPacket, sendReceiveSocket);
 					PacketManager.receive(receivePacket, sendReceiveSocket);
 					received = true;
-				} catch(SocketTimeoutException e) { //
-					if(--tries == 0) 
-						PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-					throw e;
+				} catch(SocketTimeoutException e) {
+					if(--tries == 0) {
+						PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket, "Client"); //send error packet to server
+						throw e;
+					}
 				}
 			}
 
@@ -213,9 +215,10 @@ public class Client { //the client class
 						PacketManager.receive(receivePacket, sendReceiveSocket);
 						received = true; 
 					} catch(SocketTimeoutException e) { //
-						if(--tries == 0) 
-							PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-						throw e;
+						if(--tries == 0) {
+							PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket, "Client"); //send error packet to server
+							throw e;
+						}
 					}
 				}
 			}
@@ -250,13 +253,12 @@ public class Client { //the client class
 								+ "Expected " + expectedBlockNumber + "." 
 								+ "Found " + blockNumber);
 			}
-
 			if(!PacketManager.diskSpaceCheck(ClientDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
 				//if we dont have enough space to write the next block
 				PacketManager.handleDiskFull(ClientDirectory, serverHost, serverPort, sendReceiveSocket);
 				throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
 			}
-
+		
 			//write the block
 			writeToFileData = PacketManager.getData(receivedData);
 			try {
@@ -312,9 +314,10 @@ public class Client { //the client class
 				PacketManager.receive(receivePacket, sendReceiveSocket);
 				received = true; //first data packet received
 			} catch(SocketTimeoutException e) { //
-				if(--tries == 0) 
-					PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-				throw e;
+				if(--tries == 0) { 
+					PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket, "Client"); //send error packet to server
+					throw e;
+				}
 			}
 		}
 
@@ -343,7 +346,7 @@ public class Client { //the client class
 
 		//the port through which the client will communicate with the server
 		//upon a successfully established connection
-		int blockNumber = PacketManager.getBlockNum(receivedAck); 
+		int blockNumber = PacketManager.getBlockNum(receivedAck);
 
 		System.out.println("recieved Block Num: " + blockNumber);
 
@@ -380,7 +383,9 @@ public class Client { //the client class
 		PacketManager.send(sendPacket, sendReceiveSocket);
 
 		while(!PacketManager.lastPacket(PacketManager.getData(writeData))) {
-
+			System.out.println("Received:");
+			System.out.println(Arrays.toString(PacketManager.getData(receivedAck)));
+			
 			receivedAck = new byte[bufferSize + ackSize]; //4 bytes
 			receivePacket = new DatagramPacket(receivedAck, receivedAck.length);
 
@@ -397,9 +402,10 @@ public class Client { //the client class
 					PacketManager.receive(receivePacket, sendReceiveSocket);
 					received = true; //first data packet received
 				} catch(SocketTimeoutException e) { //
-					if(--tries == 0) 
-						PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-					throw e;
+					if(--tries == 0) { 
+						PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket, "Client"); //send error packet to server
+						throw e;
+					}
 				}
 			}
 
@@ -413,9 +419,10 @@ public class Client { //the client class
 						PacketManager.receive(receivePacket, sendReceiveSocket);
 						received = true; 
 					} catch(SocketTimeoutException e) { //
-						if(--tries == 0) 
-							PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-						throw e;
+						if(--tries == 0) {
+							PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket, "Client"); //send error packet to server
+							throw e;
+						}
 					}
 				}
 			}
@@ -488,9 +495,10 @@ public class Client { //the client class
 				PacketManager.receive(receivePacket, sendReceiveSocket);
 				received = true; //first data packet received
 			} catch(SocketTimeoutException e) { //
-				if(--tries == 0) 
-					PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-				throw e;
+				if(--tries == 0) { 
+					PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket, "Client"); //send error packet to server
+					throw e;
+				}
 			}
 		}
 
@@ -504,9 +512,10 @@ public class Client { //the client class
 					PacketManager.receive(receivePacket, sendReceiveSocket);
 					received = true; 
 				} catch(SocketTimeoutException e) { //
-					if(--tries == 0) 
-						PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket); //send error packet to server
-					throw e;
+					if(--tries == 0) {
+						PacketManager.handleTimeOut(serverHost, sendPacket.getPort(), sendReceiveSocket, "Client"); //send error packet to server
+						throw e;
+					}
 				}
 			}
 		}
