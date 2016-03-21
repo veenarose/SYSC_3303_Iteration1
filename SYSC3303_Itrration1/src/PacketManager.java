@@ -813,8 +813,8 @@ public class PacketManager {
 		}
 		
 		System.out.println("##### ACK Packet Contents #####");
-		System.out.println("OptCode: " + opt);
-		System.out.println("Block Num: " + bl);
+		System.out.println("OptCode: " + Arrays.toString(opt));
+		System.out.println("Block Num: " + Arrays.toString(bl));
 		System.out.println("");
 	}
 	
@@ -834,8 +834,8 @@ public class PacketManager {
 		
 
 		System.out.println("##### Error Packet Contents #####");
-		System.out.println("OptCode: " + opt);
-		System.out.println("Error Code: " + errc);
+		System.out.println("OptCode: " + Arrays.toString(opt));
+		System.out.println("Error Code: " + Arrays.toString(errc));
 		System.out.println("Message: " + Arrays.toString(msg));
 		System.out.println("");
 	}

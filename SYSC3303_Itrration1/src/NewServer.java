@@ -202,7 +202,7 @@ public class NewServer implements Runnable{
 					}
 				}
 			}
-
+			
 			//check for PID
 			while(receivePacket.getPort() != clientPort) {
 				PacketManager.handleInvalidPort(clientPort, receivePacket.getPort(), clientHost, sendReceiveSocket);
@@ -223,11 +223,10 @@ public class NewServer implements Runnable{
 
 			//check for error packet
 			if(PacketManager.isErrorPacket(receivedAck)) {
-				System.out.println("Received an error packet with code: " + receivedAck[3]
-						+ " Exiting connection and terminating file transfer.");
+				PacketManager.errorPacketPrinter(receivePacket);
 				byte[] errorMsg = new byte[receivedAck.length - 4];
 				System.arraycopy(receivedAck, 4, errorMsg, 0, errorMsg.length);
-				System.out.println("Error message: " + new String(errorMsg));
+				//System.out.println("Error message: " + new String(errorMsg));
 				throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
 			}
 
@@ -250,7 +249,9 @@ public class NewServer implements Runnable{
 								+ "Expected " + blockNumber + "." 
 								+ "Found " + PacketManager.getBlockNum(receivedAck));
 			}
-
+			
+			//print ACK
+			PacketManager.ackPacketPrinter(receivePacket);
 			blockNumber++;
 			
 			while(!PacketManager.lastPacket(PacketManager.getData(readData))) { 
@@ -258,11 +259,7 @@ public class NewServer implements Runnable{
 				if(isRunning == false){
 					System.out.println("Server Shut Down");
 					return;
-				}
-
-				System.out.println("Received:");
-				System.out.println(Arrays.toString(PacketManager.getData(receivedAck)));
-				
+				}				
 				//byte buffer for write data packets
 				readData = new byte[bufferSize + ackSize];
 				receivedAck = new byte[ackSize + bufferSize]; //4 bytes
@@ -315,11 +312,10 @@ public class NewServer implements Runnable{
 
 				//check for error packet
 				if(PacketManager.isErrorPacket(receivedAck)) {
-					System.out.println("Received an error packet with code: " + receivedAck[3]
-							+ " Exiting connection and terminating file transfer.");
+					PacketManager.errorPacketPrinter(receivePacket);
 					byte[] errorMsg = new byte[receivedAck.length - 4];
 					System.arraycopy(receivedAck, 4, errorMsg, 0, errorMsg.length);
-					System.out.println("Error message: " + new String(errorMsg));
+					//System.out.println("Error message: " + new String(errorMsg));
 					throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
 				}
 
@@ -342,7 +338,7 @@ public class NewServer implements Runnable{
 									+ "Expected " + blockNumber + "." 
 									+ "Found " + PacketManager.getBlockNum(receivedAck));
 				}
-
+				PacketManager.ackPacketPrinter(receivePacket);
 				blockNumber++;
 
 			}
@@ -452,9 +448,6 @@ public class NewServer implements Runnable{
 					System.out.println("Server Shut Down");
 					return;
 				}
-				
-				System.out.println("Received:");
-				System.out.println(Arrays.toString(PacketManager.getData(receivedData)));
 				
 				ackToBeSent = PacketManager.createAck(receivedData);
 				receivedData = new byte[ackSize + bufferSize];

@@ -143,11 +143,11 @@ public class Client { //the client class
 
 		//check for error packet
 		if(PacketManager.isErrorPacket(receivedData)) {
-			System.out.println("Received an error packet with code: " + receivedData[3]
-					+ " Exiting connection and terminating file transfer.");
+			PacketManager.errorPacketPrinter(receivePacket);
+			//System.out.println("Received an error packet with code: " + receivedData[3] + " Exiting connection and terminating file transfer.");
 			byte[] errorMsg = new byte[receivedData.length - 4];
 			System.arraycopy(receivedData, 4, errorMsg, 0, errorMsg.length);
-			System.out.println("Error message: " + new String(errorMsg));
+			//System.out.println("Error message: " + new String(errorMsg));
 			throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
 		}
 
@@ -161,6 +161,7 @@ public class Client { //the client class
 
 		//the port through which the client will communicate with the server
 		//upon a successfully established connection
+		PacketManager.DataPacketPrinter(receivePacket);
 		int blockNumber = PacketManager.getBlockNum(receivedData); 
 
 		//check the block number
@@ -172,7 +173,7 @@ public class Client { //the client class
 							+ "Found " + blockNumber);
 		}
 
-		if(!PacketManager.diskSpaceCheck(ClientDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
+		if(!PacketManager.diskSpaceCheck(ClientDirectory, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
 			//if we dont have enough space to write the next block
 			PacketManager.handleDiskFull(ClientDirectory, serverHost, serverPort, sendReceiveSocket);
 			throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
@@ -188,9 +189,6 @@ public class Client { //the client class
 		}
 
 		while(!PacketManager.lastPacket(PacketManager.getData(receivedData))) {
-			
-			System.out.println("Received:");
-			System.out.println(Arrays.toString(PacketManager.getData(receivedData)));
 
 			//send ack and receive next data
 			byte[] sendingAck = PacketManager.createAck(receivedData);
@@ -237,11 +235,11 @@ public class Client { //the client class
 
 			//check for error packet
 			if(PacketManager.isErrorPacket(receivedData)) {
-				System.out.println("Received an error packet with code: " + receivedData[3]
-						+ " Exiting connection and terminating file transfer.");
+				PacketManager.errorPacketPrinter(receivePacket);
+				//System.out.println("Received an error packet with code: " + receivedData[3]+ " Exiting connection and terminating file transfer.");
 				byte[] errorMsg = new byte[receivedData.length - 4];
 				System.arraycopy(receivedData, 4, errorMsg, 0, errorMsg.length);
-				System.out.println("Error message: " + new String(errorMsg));
+				//System.out.println("Error message: " + new String(errorMsg));
 				throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
 			}
 
@@ -265,12 +263,13 @@ public class Client { //the client class
 								+ "Expected " + expectedBlockNumber + "." 
 								+ "Found " + blockNumber);
 			}
-			if(!PacketManager.diskSpaceCheck(ClientDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
+			if(!PacketManager.diskSpaceCheck(ClientDirectory, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
 				//if we dont have enough space to write the next block
 				PacketManager.handleDiskFull(ClientDirectory, serverHost, serverPort, sendReceiveSocket);
 				throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
 			}
-		
+			PacketManager.DataPacketPrinter(receivePacket);
+			
 			//write the block
 			writeToFileData = PacketManager.getData(receivedData);
 			try {
@@ -394,10 +393,7 @@ public class Client { //the client class
 				serverHost, serverPort); 
 		PacketManager.send(sendPacket, sendReceiveSocket);
 
-		while(!PacketManager.lastPacket(PacketManager.getData(writeData))) {
-			System.out.println("Received:");
-			System.out.println(Arrays.toString(PacketManager.getData(receivedAck)));
-			
+		while(!PacketManager.lastPacket(PacketManager.getData(writeData))) {			
 			receivedAck = new byte[bufferSize + ackSize]; //4 bytes
 			receivePacket = new DatagramPacket(receivedAck, receivedAck.length);
 
