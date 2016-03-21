@@ -1,5 +1,7 @@
 import java.util.Set;
 
+import org.omg.CORBA.Request;
+
 import java.io.*;
 import java.net.*;
 import java.nio.file.FileSystems;
@@ -7,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Scanner;
 
 /**
  * Client.java
@@ -25,6 +28,8 @@ public class Client { //the client class
 
 	private Set<String> fileNames; //java set to store file names
 
+	private static int request = -1;
+	
 	private final static int timeout = ProfileData.getTimeOut(); //milliseconds
 	private final static int bufferSize = IOManager.getBufferSize();
 	private final static int ackSize = PacketManager.getAckSize();
@@ -105,8 +110,15 @@ public class Client { //the client class
 		byte[] readPacketData = PacketManager.createReadPacketData(filename, mode);
 		byte[] receivedData = new byte[PacketManager.getDataSize()]; //516 bytes
 
+		int p = -1;
+		if(request == 1){
+			p = ProfileData.getServerPort();
+		} else if(request == 2){
+			p = ProfileData.getErrorPort();
+		}
+		
 		sendPacket = new DatagramPacket(readPacketData, readPacketData.length, 
-				serverHost, ProfileData.getErrorPort());
+				serverHost, p);
 		receivePacket = new DatagramPacket(receivedData, receivedData.length);
 
 		//initially expecting the first block of data to be read from the file on the server
@@ -568,7 +580,31 @@ public class Client { //the client class
 	public static void main( String args[] ) throws IOException
 	{
 		System.out.println("Hello and welcome!");
-
+		int req = -1;
+		while(req != 1 || req != 2){
+			Scanner reader = new Scanner(System.in);
+			System.out.println("Connect to Error Simulator or Server?");
+			System.out.println("1: Server, 2: Error Simulator");
+			req = reader.nextInt();
+			if(req == 1 || req == 2){
+				request = req;
+				break; 
+			}
+			while(true){
+				System.out.println("Enter 1 to connect to server or 2 to connect to Error Sim");
+				req = reader.nextInt();
+				if(req == 1 || req == 2){ 
+					request = req;
+					break; 
+				}
+			}
+			if(req == 1 || req == 2){
+				reader.close();
+				break; 
+			}
+			
+		}
+		
 		//prompt user to specify if the request they are making is either read or write
 		while(true){
 

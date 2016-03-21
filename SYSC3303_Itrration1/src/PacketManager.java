@@ -763,4 +763,9 @@ public class PacketManager {
 		int x = Collections.frequency(byteList,0);
 		return (file.length - x);
 	}
+	
+	public static void prettyPacketPrinter(DatagramPacket packet){
+		
+	}
+	
 }
