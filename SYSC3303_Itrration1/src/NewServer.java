@@ -18,19 +18,21 @@ import java.util.Set;
 
 
 public class NewServer implements Runnable{
-	
+
 	private DatagramSocket receiveSocket;
 	private DatagramPacket receivePacket;
-	
+
 	private final static String ServerDirectory =  
 			(System.getProperty("user.dir") + "/src/ServerData/");
 
 	private Set<String> fileNames; //java set to store file names
-	
+
 	private final static int timeout = ProfileData.getTimeOut(); //milliseconds
 	private static final int bufferSize = IOManager.getBufferSize();
 	private static final int ackSize = 4;
 	private static final int dataSize = bufferSize + ackSize;
+
+	public static boolean isRunning = true;
 	
 	public NewServer(int lp) {
 		try {
@@ -64,20 +66,40 @@ public class NewServer implements Runnable{
 			}
 			clientAddr = receivePacket.getAddress();
 			clientPort = receivePacket.getPort();
-			
+
 			Thread response = new Thread(new ResponseHandler(requestData, clientAddr, clientPort));
 			response.start();
 		}
 	}
-	
+
+	public static void main(String args[]) throws IOException {
+
+		Thread server = new Thread(new NewServer(ProfileData.getServerPort()));
+		server.start();
+		System.out.println("Server running...accepting incoming read or write requests.");
+		String userInput;
+		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+		while(true) {
+			System.out.println("Enter 'quit' to shutdown the server.");
+			userInput = reader.readLine();
+			if(userInput.equals("quit"))  {
+				server.interrupt();
+				System.out.println("Server has been shut down. No longer accepting incoming requests.");
+				isRunning = false;
+				break;
+			}
+		}
+		System.exit(0);
+	}
+
 	private class ResponseHandler implements Runnable {
-		
+
 		private byte[] requestData;
 		private InetAddress clientHost;
 		private int clientPort;
 		private DatagramSocket sendReceiveSocket;
 		private DatagramPacket receivePacket, sendPacket;
-		
+
 		public ResponseHandler(byte[] rp, InetAddress h, int p) {
 			requestData = rp;
 			clientHost = h;
@@ -89,7 +111,7 @@ public class NewServer implements Runnable{
 				e.printStackTrace();
 			}
 		}
-		
+
 		public void run() {
 			//check for valid request
 			try {
@@ -120,32 +142,37 @@ public class NewServer implements Runnable{
 				}
 			} catch (TFTPExceptions.InvalidTFTPRequestException e) {
 				PacketManager.handleInvalidRequest
-					(requestData, clientHost, clientPort, sendReceiveSocket);
+				(requestData, clientHost, clientPort, sendReceiveSocket);
 			}
 		}
-		
+
 		public void handleReadRequest(String filename) throws 
-			SocketTimeoutException, 
-			TFTPExceptions.InvalidTFTPAckException, 
-			TFTPExceptions.InvalidBlockNumberException, 
-			FileNotFoundException, 
-			TFTPExceptions.InvalidTFTPDataException, 
-			TFTPExceptions.ErrorReceivedException, 
-			TFTPExceptions.AccessViolationException {
+		SocketTimeoutException, 
+		TFTPExceptions.InvalidTFTPAckException, 
+		TFTPExceptions.InvalidBlockNumberException, 
+		FileNotFoundException, 
+		TFTPExceptions.InvalidTFTPDataException, 
+		TFTPExceptions.ErrorReceivedException, 
+		TFTPExceptions.AccessViolationException {
+
+			if(isRunning == false){
+				System.out.println("Server Shut Down");
+				return;
+			}
 			
 			Path path = FileSystems.getDefault().getPath(ServerDirectory, filename);
 			if(!Files.isReadable(path)){
 				PacketManager.createAccessViolationErrorPacket(filename, "Access Violation", clientHost, clientPort);
 				throw new TFTPExceptions().new AccessViolationException("Cannot Read from this file");
 			}
-			
+
 			//reader used for local 512 byte block reads
 			BufferedInputStream reader = IOManager.getReader(ServerDirectory + filename);
 			int blockNumber = 1;
-			
+
 			//byte buffer to be filled with 512 bytes of data from local file
 			byte readFromFileData[] = new byte[bufferSize]; 
-			
+
 			//byte buffer for write data packets
 			byte readData[] = new byte[bufferSize + ackSize];
 			byte receivedAck[] = new byte[ackSize + bufferSize]; 
@@ -154,13 +181,11 @@ public class NewServer implements Runnable{
 				readFromFileData = IOManager.read(reader, bufferSize, readFromFileData);
 				readData = PacketManager.createData(readFromFileData, blockNumber);
 				readFromFileData = new byte[readFromFileData.length];
-				//PacketManager.printTFTPPacketData(writeData);
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-			
-			sendPacket = new DatagramPacket(readData, readData.length, 
-					clientHost, clientPort);
+
+			sendPacket = new DatagramPacket(readData, readData.length,clientHost, clientPort);
 			receivePacket = new DatagramPacket(receivedAck, receivedAck.length);
 
 			int tries = ProfileData.getRepeats(); //number of times to re-listen
@@ -177,7 +202,7 @@ public class NewServer implements Runnable{
 					}
 				}
 			}
-			
+
 			//check for PID
 			while(receivePacket.getPort() != clientPort) {
 				PacketManager.handleInvalidPort(clientPort, receivePacket.getPort(), clientHost, sendReceiveSocket);
@@ -216,7 +241,7 @@ public class NewServer implements Runnable{
 				PacketManager.handleInvalidAckPacket(receivedAck, clientHost, clientPort, sendReceiveSocket);
 				throw e;
 			}
-			
+
 			//check block number
 			if(blockNumber != PacketManager.getBlockNum(receivedAck)) {
 				PacketManager.handleInvalidBlockNumber(blockNumber, PacketManager.getBlockNum(receivedAck), clientHost, clientPort, sendReceiveSocket);
@@ -228,8 +253,13 @@ public class NewServer implements Runnable{
 
 			blockNumber++;
 			
-			while(!PacketManager.lastPacket(PacketManager.getData(readData))) {
+			while(!PacketManager.lastPacket(PacketManager.getData(readData))) { 
 				
+				if(isRunning == false){
+					System.out.println("Server Shut Down");
+					return;
+				}
+
 				System.out.println("Received:");
 				System.out.println(Arrays.toString(PacketManager.getData(receivedAck)));
 				
@@ -316,44 +346,46 @@ public class NewServer implements Runnable{
 				blockNumber++;
 
 			}
-			
-			
+
+
 		}
-			
+
 		public void handleWriteRequest(String filename) throws 
-			TFTPExceptions.FileAlreadyExistsException, 
-			SocketTimeoutException,
-			TFTPExceptions.InvalidBlockNumberException,
-			TFTPExceptions.InvalidTFTPDataException, 
-			TFTPExceptions.ErrorReceivedException,
-			TFTPExceptions.DiskFullException {
+		TFTPExceptions.FileAlreadyExistsException, 
+		SocketTimeoutException,
+		TFTPExceptions.InvalidBlockNumberException,
+		TFTPExceptions.InvalidTFTPDataException, 
+		TFTPExceptions.ErrorReceivedException,
+		TFTPExceptions.DiskFullException {
+
+			if(isRunning == false){
+				System.out.println("Server Shut Down");
+				return;
+			}
 			
 			//check if the file already exists locally on the client
 			TFTPExceptions.FileAlreadyExistsException fileExists = 
 					new TFTPExceptions().new FileAlreadyExistsException
-						("File " + filename + " already exists locally. "
-								+ "To avoid overwriting data the read request has been denied.");
+					("File " + filename + " already exists locally. "
+							+ "To avoid overwriting data the read request has been denied.");
 			if(fileNames.contains(filename)) { 
 				//TODO handleFileExists
 				throw fileExists; 
 			}
-			
+
 			byte receivedData[] = new byte[ackSize + bufferSize]; 
 			int blockNumber = 0;
 			byte ackToBeSent[] = new byte[4];
-			
+
 			ackToBeSent = PacketManager.createAck(receivedData);
-			
-			sendPacket = new DatagramPacket(ackToBeSent, ackToBeSent.length, 
-					clientHost, clientPort);
+
+			sendPacket = new DatagramPacket(ackToBeSent, ackToBeSent.length,clientHost, clientPort);
 			receivePacket = new DatagramPacket(receivedData, receivedData.length);
-			
+
 			//send ACK 0
 			PacketManager.send(sendPacket, sendReceiveSocket);
 			blockNumber++;
-			
-			//System.out.println("Blocknum print 1: " + blockNumber);
-			
+
 			int tries = ProfileData.getRepeats(); //number of times to relisten
 			boolean received = false;
 			while(!received) { //repeat until a successful receive
@@ -367,7 +399,7 @@ public class NewServer implements Runnable{
 					}
 				}
 			}
-			
+
 			//check for error packet
 			if(PacketManager.isErrorPacket(receivedData)) {
 				System.out.println("Received an error packet with code: " + receivedData[3]
@@ -377,7 +409,7 @@ public class NewServer implements Runnable{
 				System.out.println("Error message: " + new String(errorMsg));
 				throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
 			}
-			
+
 			//check for valid data
 			try {
 				PacketManager.validateDataPacket(receivedData);
@@ -385,7 +417,7 @@ public class NewServer implements Runnable{
 				PacketManager.handleInvalidDataPacket(receivedData, clientHost, clientPort, sendReceiveSocket);
 				throw e;
 			}
-			
+
 			//check block number
 			if(blockNumber != PacketManager.getBlockNum(receivedData)) {
 				PacketManager.handleInvalidBlockNumber(blockNumber, PacketManager.getBlockNum(receivedData), clientHost, clientPort, sendReceiveSocket);
@@ -394,13 +426,16 @@ public class NewServer implements Runnable{
 								+ "Expected " + blockNumber + "." 
 								+ "Found " + PacketManager.getBlockNum(receivedData));
 			}
-						
-			if(!PacketManager.diskSpaceCheck(ServerDirectory, PacketManager.filesize(receivePacket.getData()))){
+
+			System.out.println("Packet Block Number: " + PacketManager.getBlockNum(receivedData));
+
+			if(!PacketManager.diskSpaceCheck(ServerDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
 				//if we dont have enough space to write the next block
 				PacketManager.handleDiskFull(ServerDirectory, clientHost, clientPort, sendReceiveSocket);
+				//throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
 				throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
 			}
-			
+
 			File writeTo = new File(ServerDirectory + filename); //file to write to locally
 			byte writeToFileData[];
 			writeToFileData = PacketManager.getData(receivedData);
@@ -409,20 +444,26 @@ public class NewServer implements Runnable{
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-			
-			while(!PacketManager.lastPacket(PacketManager.getData(receivedData))) { 
+
+
+			while(!PacketManager.lastPacket(PacketManager.getData(receivedData))) {
+				
+				if(isRunning == false){
+					System.out.println("Server Shut Down");
+					return;
+				}
 				
 				System.out.println("Received:");
 				System.out.println(Arrays.toString(PacketManager.getData(receivedData)));
 				
 				ackToBeSent = PacketManager.createAck(receivedData);
 				receivedData = new byte[ackSize + bufferSize];
-				
+
 				//send ACK
 				sendPacket = new DatagramPacket(ackToBeSent, ackToBeSent.length, 
 						clientHost, clientPort);
 				receivePacket = new DatagramPacket(receivedData, receivedData.length);
-				
+
 				PacketManager.send(sendPacket, sendReceiveSocket);
 				blockNumber++;
 				
@@ -439,7 +480,7 @@ public class NewServer implements Runnable{
 						}
 					}
 				}
-								
+
 				//check for error packet
 				if(PacketManager.isErrorPacket(receivedData)) {
 					System.out.println("Received an error packet with code: " + receivedData[3]
@@ -449,7 +490,7 @@ public class NewServer implements Runnable{
 					System.out.println("Error message: " + new String(errorMsg));
 					throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
 				}
-				
+
 				//check for valid data
 				try {
 					PacketManager.validateDataPacket(receivedData);
@@ -457,7 +498,7 @@ public class NewServer implements Runnable{
 					PacketManager.handleInvalidDataPacket(receivedData, clientHost, clientPort, sendReceiveSocket);
 					throw e;
 				}
-				
+
 				//check block number
 				if(blockNumber != PacketManager.getBlockNum(receivedData)) {
 					PacketManager.handleInvalidBlockNumber(blockNumber, PacketManager.getBlockNum(receivedData), clientHost, clientPort, sendReceiveSocket);
@@ -466,50 +507,30 @@ public class NewServer implements Runnable{
 									+ "Expected " + blockNumber + "." 
 									+ "Found " + PacketManager.getBlockNum(receivedData));
 				}
-				
+
+				System.out.println("Packet Block Number: " + PacketManager.getBlockNum(receivedData));
+
 				if(!PacketManager.diskSpaceCheck(ServerDirectory + filename, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
 					//if we dont have enough space to write the next block
 					PacketManager.handleDiskFull(ServerDirectory, clientHost, clientPort, sendReceiveSocket);
 					throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
+
 				}
-				
+
 				writeToFileData = PacketManager.getData(receivedData);
 				try {
 					IOManager.write(writeTo, writeToFileData);
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
-				
+
 			}
-			
+
 			ackToBeSent = PacketManager.createAck(receivedData);
-			sendPacket = new DatagramPacket(ackToBeSent, ackToBeSent.length, 
-					clientHost, clientPort);
+			sendPacket = new DatagramPacket(ackToBeSent, ackToBeSent.length,clientHost, clientPort);
 			PacketManager.send(sendPacket, sendReceiveSocket);
-			
+
 			System.out.println("Write complete.");
-			
-			
 		}
-		
-	}
-	
-	public static void main(String args[]) throws IOException {
-		
-		Thread server = new Thread(new NewServer(ProfileData.getServerPort()));
-		server.start();
-		System.out.println("Server running...accepting incoming read or write requests.");
-		String userInput;
-		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-		while(true) {
-			System.out.println("Enter 'quit' to shutdown the server.");
-			userInput = reader.readLine();
-			if(userInput.equals("quit"))  {
-				server.interrupt();
-				System.out.println("Server has been shut down. No longer accepting incoming requests.");
-				break;
-			}
-		}
-		
 	}
 }
