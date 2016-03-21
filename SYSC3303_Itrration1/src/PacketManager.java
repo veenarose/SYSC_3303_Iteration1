@@ -764,8 +764,79 @@ public class PacketManager {
 		return (file.length - x);
 	}
 	
-	public static void prettyPacketPrinter(DatagramPacket packet){
+	public static void DataPacketPrinter(DatagramPacket p){
+		byte[] reqt = new byte[2];
+		byte[] opt = new byte[2];
+		byte[] msg = new byte[512];
 		
+		for(int i = 0; i < 2; i++){
+			reqt[i] = p.getData()[i];
+			opt[i] = p.getData()[i+2];
+		}
+		for(int i = 0; i < 512; i++){
+			msg[i] = p.getData()[i+4];
+		}
+		
+		System.out.println("##### DATA PACKET CONTENTS #####");
+		System.out.println("Request: " + Arrays.toString(reqt));
+		System.out.println("OptCode: " + Arrays.toString(opt));
+		System.out.println("Message: " + Arrays.toString(msg));
+		System.out.println("");
 	}
 	
+	public static void requestPacketPrinter(DatagramPacket p){
+		byte[] reqt = new byte[2];
+		String fn;
+		String mode;
+		
+		for(int i = 0; i < 2; i++){
+			reqt[i] = p.getData()[i];
+		}
+		
+		fn = getFilename(p.getData());
+		mode = getMode(p.getData());
+		
+		System.out.println("##### Request Packet Contents #####");
+		System.out.println("Request Type: " + Arrays.toString(reqt));
+		System.out.println("Filename: " + fn);
+		System.out.println("Mode: " + mode);
+		System.out.println("");
+	}
+	
+	public static void ackPacketPrinter(DatagramPacket p){
+		byte[] opt = new byte[2];
+		byte[] bl = new byte[2];
+		
+		for(int i = 0; i < 2; i++){
+			opt[i]= p.getData()[i];
+			bl[i] = p.getData()[i+2];
+		}
+		
+		System.out.println("##### ACK Packet Contents #####");
+		System.out.println("OptCode: " + opt);
+		System.out.println("Block Num: " + bl);
+		System.out.println("");
+	}
+	
+	public static void errorPacketPrinter(DatagramPacket p){
+		byte[] opt = new byte[2];
+		byte[] errc = new byte[2];
+		byte[] msg = new byte[p.getData().length];
+		
+		for(int i = 0; i < 2; i++){
+			opt[i]= p.getData()[i];
+			errc[i] = p.getData()[i+2];
+		}
+		
+		for(int i = 0; i < p.getData().length-4; i++){
+			msg[i] = p.getData()[i+4];
+		}
+		
+
+		System.out.println("##### Error Packet Contents #####");
+		System.out.println("OptCode: " + opt);
+		System.out.println("Error Code: " + errc);
+		System.out.println("Message: " + Arrays.toString(msg));
+		System.out.println("");
+	}
 }
