@@ -733,7 +733,7 @@ public class ErrorSimulator {
 							return;
 						}
 						else{
-							if(PacketManager.lastPacket(PacketManager.getData(dataPacket.getData()))){
+							if(PacketManager.lastPacket(PacketManager.getData(dataPacket))){
 								lastPacketProcessed = true;
 							}
 							System.out.println("\nPacket sent back to client");
@@ -1412,7 +1412,7 @@ public class ErrorSimulator {
 							return;	
 						}
 						else{
-							if(PacketManager.lastPacket(PacketManager.getData(dataPacket.getData()))){
+							if(PacketManager.lastPacket(PacketManager.getData(dataPacket))){
 								lastPacketProcessed = true;
 							}
 							System.out.println("\nPacket sent to server");

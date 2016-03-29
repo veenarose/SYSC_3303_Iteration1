@@ -170,14 +170,14 @@ public class Client { //the client class
 							+ "Found " + blockNumber);
 		}
 
-		if(!PacketManager.diskSpaceCheck(ClientDirectory, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
+		if(!PacketManager.diskSpaceCheck(ClientDirectory, PacketManager.filesize(PacketManager.getData(receivePacket)))){
 			//if we dont have enough space to write the next block
 			PacketManager.handleDiskFull(ClientDirectory, serverHost, serverPort, sendReceiveSocket);
 			throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
 		}
 		File writeTo = new File(ClientDirectory + filename); //file to write to locally
-		byte writeToFileData[];
-		writeToFileData = PacketManager.getData(receivedData);
+		byte[] writeToFileData = new byte[0];
+		writeToFileData = PacketManager.getData(receivePacket);
 		
 		try {
 			IOManager.write(writeTo, writeToFileData);
@@ -185,7 +185,7 @@ public class Client { //the client class
 			e1.printStackTrace();
 		}
 
-		while(!PacketManager.lastPacket(PacketManager.getData(receivedData))) {
+		while(!PacketManager.lastPacket(PacketManager.getData(receivePacket))) {
 
 			//send ack and receive next data
 			byte[] sendingAck = PacketManager.createAck(receivedData);
@@ -260,7 +260,7 @@ public class Client { //the client class
 								+ "Expected " + expectedBlockNumber + "." 
 								+ "Found " + blockNumber);
 			}
-			if(!PacketManager.diskSpaceCheck(ClientDirectory, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
+			if(!PacketManager.diskSpaceCheck(ClientDirectory, PacketManager.filesize(PacketManager.getData(receivePacket)))){
 				//if we dont have enough space to write the next block
 				PacketManager.handleDiskFull(ClientDirectory, serverHost, serverPort, sendReceiveSocket);
 				throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
@@ -268,7 +268,7 @@ public class Client { //the client class
 			PacketManager.DataPacketPrinter(receivePacket);
 			
 			//write the block
-			writeToFileData = PacketManager.getData(receivedData);
+			writeToFileData = PacketManager.getData(receivePacket);
 			try {
 				IOManager.write(writeTo, writeToFileData);
 			} catch (IOException e1) {
@@ -397,7 +397,7 @@ public class Client { //the client class
 				serverHost, serverPort); 
 		PacketManager.send(sendPacket, sendReceiveSocket);
 
-		while(!PacketManager.lastPacket(PacketManager.getData(writeData))) {			
+		while(!PacketManager.lastPacket(PacketManager.getData(sendPacket))) {			
 			receivedAck = new byte[bufferSize + ackSize]; //4 bytes
 			receivePacket = new DatagramPacket(receivedAck, receivedAck.length);
 

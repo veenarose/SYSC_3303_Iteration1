@@ -32,11 +32,10 @@ public class IOManager {
 	 * @throws IOException
 	 */
 	public static void write(File file, byte[] data) throws IOException{
-		String s = new String(data);
 		
-		BufferedWriter w = new BufferedWriter(new FileWriter(file,true));
+		BufferedOutputStream w = new BufferedOutputStream(new FileOutputStream(file,true));
 		
-		w.write(s);
+		w.write(data);
 		w.close();
 	}
 	

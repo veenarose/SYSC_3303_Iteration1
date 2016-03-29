@@ -175,8 +175,8 @@ public class NewServer implements Runnable{
 			byte readFromFileData[] = new byte[bufferSize]; 
 
 			//byte buffer for write data packets
-			byte readData[] = new byte[bufferSize + ackSize];
-			byte receivedAck[] = new byte[ackSize + bufferSize]; 
+			byte readData[] = new byte[dataSize];
+			byte receivedAck[] = new byte[dataSize]; 
 
 			try {
 				readFromFileData = IOManager.read(reader, bufferSize, readFromFileData);
@@ -255,15 +255,15 @@ public class NewServer implements Runnable{
 			PacketManager.ackPacketPrinter(receivePacket);
 			blockNumber++;
 			
-			while(!PacketManager.lastPacket(PacketManager.getData(readData))) { 
+			while(!PacketManager.lastPacket(PacketManager.getData(sendPacket))) { 
 				
 				if(isRunning == false){
 					System.out.println("Server Shut Down");
 					return;
 				}				
 				//byte buffer for write data packets
-				readData = new byte[bufferSize + ackSize];
-				receivedAck = new byte[ackSize + bufferSize]; //4 bytes
+				readData = new byte[dataSize];
+				receivedAck = new byte[dataSize]; //4 bytes
 
 				try {
 					readFromFileData = IOManager.read(reader, bufferSize, readFromFileData);
@@ -423,7 +423,7 @@ public class NewServer implements Runnable{
 								+ "Found " + PacketManager.getBlockNum(receivedData));
 			}
 
-			if(!PacketManager.diskSpaceCheck(ServerDirectory, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
+			if(!PacketManager.diskSpaceCheck(ServerDirectory, PacketManager.filesize(PacketManager.getData(receivePacket)))){
 				//if we dont have enough space to write the next block
 				PacketManager.handleDiskFull(ServerDirectory, clientHost, clientPort, sendReceiveSocket);
 				//throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
@@ -431,8 +431,8 @@ public class NewServer implements Runnable{
 			}
 
 			File writeTo = new File(ServerDirectory + filename); //file to write to locally
-			byte writeToFileData[];
-			writeToFileData = PacketManager.getData(receivedData);
+			byte writeToFileData[] = new byte[0];
+			writeToFileData = PacketManager.getData(receivePacket);
 			try {
 				IOManager.write(writeTo, writeToFileData);
 			} catch (IOException e1) {
@@ -440,7 +440,7 @@ public class NewServer implements Runnable{
 			}
 
 
-			while(!PacketManager.lastPacket(PacketManager.getData(receivedData))) {
+			while(!PacketManager.lastPacket(PacketManager.getData(receivePacket))) {
 				
 				if(isRunning == false){
 					System.out.println("Server Shut Down");
@@ -499,14 +499,14 @@ public class NewServer implements Runnable{
 									+ "Found " + PacketManager.getBlockNum(receivedData));
 				}
 
-				if(!PacketManager.diskSpaceCheck(ServerDirectory, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
+				if(!PacketManager.diskSpaceCheck(ServerDirectory, PacketManager.filesize(PacketManager.getData(receivePacket)))){
 					//if we dont have enough space to write the next block
 					PacketManager.handleDiskFull(ServerDirectory, clientHost, clientPort, sendReceiveSocket);
 					throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
 
 				}
 
-				writeToFileData = PacketManager.getData(receivedData);
+				writeToFileData = PacketManager.getData(receivePacket);
 				try {
 					IOManager.write(writeTo, writeToFileData);
 				} catch (IOException e1) {
