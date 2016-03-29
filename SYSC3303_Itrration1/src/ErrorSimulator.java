@@ -4,6 +4,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Scanner;
 
@@ -16,6 +17,8 @@ public class ErrorSimulator {
 	private int errorHost;					
 	private int errorBlkNum;				 			//to store the user selected block number
 	private int delayedPack;
+
+	private InetAddress address;
 
 	public ErrorSimulator() {		
 		// Socket used for receiving packets from client
@@ -134,7 +137,7 @@ public class ErrorSimulator {
 		// Start unknown TID handler thread
 		unknownTIDThread.start();
 	}
-
+	
 	/*
 	 * Error Simulation
 	 */
@@ -149,6 +152,24 @@ public class ErrorSimulator {
 		Scanner keyboard = new Scanner(System.in);
 
 		boolean validInput;
+		boolean validIP = false;
+		do{
+			System.out.println("\nPlease enter the IP address of the server:");
+			String host = keyboard.next();
+			try {
+				address = InetAddress.getByName(host);
+			} catch(UnknownHostException e) {
+				System.out.println("Invalid host name or IP address. Please try again.\n");
+				continue;
+			}
+			if(PacketManager.validateIP(host)){ 
+				validIP = true;
+			}else{
+				validIP = false;
+				System.out.println("Enter a valid IP address. Please try again.");
+			}
+		}while(!validIP);
+
 		String inputMenu, inputReq, inputData, inputHost, inputNum, typeDelay;
 		//get user to select an error code to which an error to be simulated on 
 		do
@@ -434,7 +455,7 @@ public class ErrorSimulator {
 				int clientPortTID = clientRequestPacket.getPort();
 
 				DatagramPacket serverRequestPacket = new DatagramPacket(clientRequestPacket.getData()
-						, clientRequestPacket.getData().length, clientRequestPacket.getAddress(),ProfileData.getServerPort());
+						, clientRequestPacket.getData().length, address,ProfileData.getServerPort());
 
 				if(errorSimulation)
 					createInvalidRequestPacket(serverRequestPacket);
@@ -537,9 +558,9 @@ public class ErrorSimulator {
 				boolean transferComplete = false;
 				// Flag indicating first loop iteration (for setting up TID)
 				boolean firstIteration = true;
-				
+
 				boolean lastPacketProcessed = false;
-				
+
 				try
 				{
 					while (!transferComplete)
@@ -733,14 +754,14 @@ public class ErrorSimulator {
 							return;
 						}
 						else{
-							if(PacketManager.lastPacket(PacketManager.getData(dataPacket))){
+							if(PacketManager.lastPacket(dataPacket)){
 								lastPacketProcessed = true;
 							}
 							System.out.println("\nPacket sent back to client");
 							sendReceiveClientSocket.send(forwardedDataPacket);
 							System.out.println(Arrays.toString(forwardedDataPacket.getData()));
 						}
-						
+
 						firstIteration = false;
 
 						//check if it is an error packet from server and break the loop
@@ -749,9 +770,9 @@ public class ErrorSimulator {
 							transferComplete = true;
 							break;
 						}
-						
+
 						DatagramPacket ackPacket = receivePacket(sendReceiveClientSocket);
-						
+
 						System.out.println("\nPacket received from client");
 						System.out.println(new String(ackPacket.getData()));
 						System.out.println(Arrays.toString(ackPacket.getData()));
@@ -892,7 +913,7 @@ public class ErrorSimulator {
 							transferComplete = true;
 							break;
 						}
-						
+
 					}
 
 				}finally
@@ -965,7 +986,7 @@ public class ErrorSimulator {
 				int clientPortTID = clientRequestPacket.getPort();
 
 				DatagramPacket serverRequestPacket = new DatagramPacket(clientRequestPacket.getData()
-						, clientRequestPacket.getData().length, clientRequestPacket.getAddress(),ProfileData.getServerPort());
+						, clientRequestPacket.getData().length, address,ProfileData.getServerPort());
 
 				if(errorSimulation)
 					createInvalidRequestPacket(serverRequestPacket);
@@ -1068,9 +1089,9 @@ public class ErrorSimulator {
 				boolean transferComplete = false;
 				// Flag indicating first loop iteration (for setting up TID)
 				boolean firstIteration = true;
-				
+
 				boolean lastPacketProcessed = false;
-				
+
 				try
 				{
 					while (!transferComplete)
@@ -1389,14 +1410,14 @@ public class ErrorSimulator {
 
 							DatagramPacket ackPacks = new DatagramPacket(respACK.getData(),
 									respACK.getData().length, clientAddressTID, clientPortTID);
-							
+
 							System.out.println("\nSending the ACK to the client");
 							sendReceiveClientSocket.send(ackPacks);
 							System.out.println(Arrays.toString(ackPacks.getData()));
 
 							DatagramPacket receiveDATA = receivePacket(sendReceiveClientSocket);
 							if(receiveDATA == null) return;	
-							
+
 							System.out.println("\nReceiving the DATA from the client");
 							System.out.println(new String (receiveDATA.getData()));
 							System.out.println(Arrays.toString(receiveDATA.getData()));
@@ -1412,7 +1433,7 @@ public class ErrorSimulator {
 							return;	
 						}
 						else{
-							if(PacketManager.lastPacket(PacketManager.getData(dataPacket))){
+							if(PacketManager.lastPacket(dataPacket)){
 								lastPacketProcessed = true;
 							}
 							System.out.println("\nPacket sent to server");

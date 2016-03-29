@@ -184,8 +184,8 @@ public class Client { //the client class
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-
-		while(!PacketManager.lastPacket(PacketManager.getData(receivePacket))) {
+		boolean transferComplete = false;
+		do{
 
 			//send ack and receive next data
 			byte[] sendingAck = PacketManager.createAck(receivedData);
@@ -243,6 +243,10 @@ public class Client { //the client class
 			//check for valid data
 			try {
 				PacketManager.validateDataPacket(receivedData);
+				if(receivedData.length < 516){
+					transferComplete = true;
+					return;
+				}
 			} catch (TFTPExceptions.InvalidTFTPDataException e) {
 				PacketManager.handleInvalidDataPacket(receivedData, serverHost, serverPort, sendReceiveSocket);
 				throw e;
@@ -274,15 +278,14 @@ public class Client { //the client class
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-
-		}
+		}while(!transferComplete);
 
 		//send last ack confirming succesful local write of last read data
 		byte[] sendingAck = PacketManager.createAck(receivedData);
 		sendPacket = new DatagramPacket(sendingAck, sendingAck.length, 
 				serverHost, serverPort);
 		PacketManager.send(sendPacket, sendReceiveSocket);
-
+		
 		//print out success
 		System.out.println("Read was succesful.");
 	}
@@ -298,7 +301,7 @@ public class Client { //the client class
 
 		Path path = FileSystems.getDefault().getPath(ClientDirectory, filename);
 		//reader used for local 512 byte block reads
-		BufferedInputStream reader = IOManager.getReader(ClientDirectory + filename);
+		FileInputStream reader = IOManager.getReader(ClientDirectory + filename);
 
 		//readPacketData stores the TFTP WRQ packet data to be inserted 
 		//into the sendPacket DatagramPacket
@@ -384,7 +387,7 @@ public class Client { //the client class
 		byte writeData[] = new byte[bufferSize + ackSize];
 
 		try {
-			readFromFileData = IOManager.read(reader, bufferSize, readFromFileData);
+			readFromFileData = IOManager.reads(reader, bufferSize, readFromFileData);
 			writeData = PacketManager.createData(readFromFileData, expectedBlockNumber);
 			readFromFileData = new byte[readFromFileData.length];
 			//PacketManager.printTFTPPacketData(writeData);
@@ -397,7 +400,7 @@ public class Client { //the client class
 				serverHost, serverPort); 
 		PacketManager.send(sendPacket, sendReceiveSocket);
 
-		while(!PacketManager.lastPacket(PacketManager.getData(sendPacket))) {			
+		while(!PacketManager.lastPacket(sendPacket)) {			
 			receivedAck = new byte[bufferSize + ackSize]; //4 bytes
 			receivePacket = new DatagramPacket(receivedAck, receivedAck.length);
 
@@ -483,7 +486,7 @@ public class Client { //the client class
 			writeData = new byte[bufferSize + ackSize];
 
 			try {
-				readFromFileData = IOManager.read(reader, bufferSize, readFromFileData);
+				readFromFileData = IOManager.reads(reader, bufferSize, readFromFileData);
 				writeData = PacketManager.createData(readFromFileData, expectedBlockNumber);
 				readFromFileData = new byte[readFromFileData.length];
 				//PacketManager.printTFTPPacketData(writeData);

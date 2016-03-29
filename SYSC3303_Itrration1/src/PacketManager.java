@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Class is used to handle the read / write packets between the clients and server
@@ -323,15 +324,15 @@ public class PacketManager {
 	 * @param data byte[]: The data that is received
 	 * @return true if it is the last block of data to be sent false otherwise
 	 */
-	public static boolean lastPacket(byte [] data){
-		boolean result = false;
-		for(int i = 0 ; i <data.length; i++){
-			if(data[i] == 0){
-				result = true;
-				break;
-			}
+	public static boolean lastPacket(DatagramPacket data){
+		byte by[] = data.getData();
+		int dataLength = by.length;
+
+		if(dataLength < 516){
+			return true;
+		}else{
+			return false;
 		}
-		return result;
 	}
 
 	/**
@@ -343,10 +344,10 @@ public class PacketManager {
 		// Check that packet is DATA
 		int opCode = getOpCode(myData.getData());
 		boolean isDATA = opCode == 3;
-		
+
 		// If packet isn't DATA, throw exception
 		if (!isDATA) throw new IllegalArgumentException();
-		
+
 		int dataLen = myData.getLength() - 4;
 		int dataStart = 4;
 		byte[] data = new byte[dataLen];
@@ -354,7 +355,7 @@ public class PacketManager {
 
 		return data;		
 	}
-	
+
 	/**
 	 * Returns the filename from a READ or WRITE request
 	 * @param data Data portion of the packet
@@ -845,5 +846,15 @@ public class PacketManager {
 		System.out.println("Error Code: " + Arrays.toString(errc));
 		System.out.println("Message: " + Arrays.toString(msg));
 		System.out.println("");
+	}
+
+	/*
+	 * Checks for user input of IP addresses
+	 */
+	private static final Pattern PATTERN = Pattern.compile(
+			"^(([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.){3}([01]?\\d\\d?|2[0-4]\\d|25[0-5])$");
+
+	public static boolean validateIP(final String ip) {
+		return PATTERN.matcher(ip).matches();
 	}
 }

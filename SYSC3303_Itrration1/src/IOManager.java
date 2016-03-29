@@ -13,17 +13,17 @@ public class IOManager {
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 */
-	public synchronized byte[] read(String filename, int offset) throws FileNotFoundException, IOException{
-		byte[] data = new byte[bufferSize];
-		BufferedInputStream reader = new BufferedInputStream(new FileInputStream(filename));
-
-		/* Read 512 bytes from file starting at the offset*/
-		reader.read(data, offset, bufferSize); //throws IOException
-		
-		/* Close reader and return */
-		reader.close();
-		return data;
-	}
+//	public synchronized byte[] read(String filename, int offset) throws FileNotFoundException, IOException{
+//		byte[] data = new byte[bufferSize];
+//		BufferedInputStream reader = new BufferedInputStream(new FileInputStream(filename));
+//
+//		/* Read 512 bytes from file starting at the offset*/
+//		reader.read(data, offset, bufferSize); //throws IOException
+//		
+//		/* Close reader and return */
+//		reader.close();
+//		return data;
+//	}
 	
 	/**
 	 * Writes the given data to the file with the given filename
@@ -43,15 +43,14 @@ public class IOManager {
 		return bufferSize;
 	}
 	
-	public static byte[] read(BufferedInputStream reader, int buffSize, byte[] data) 
+	public static byte[] reads(FileInputStream reader, int buffSize, byte[] data) 
 			throws IOException {
-		reader.read(data, 0, buffSize);
+		reader.read(data);
 		return data;
 	}
 	
-	public static BufferedInputStream getReader(String pathToFileName) throws FileNotFoundException {
-		BufferedInputStream reader = new BufferedInputStream
-				(new FileInputStream(pathToFileName));
+	public static FileInputStream getReader(String pathToFileName) throws FileNotFoundException {
+		FileInputStream reader = new FileInputStream(pathToFileName);
 		return reader;
 	}
 }

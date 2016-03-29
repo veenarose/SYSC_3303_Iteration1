@@ -1,6 +1,6 @@
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -168,7 +168,7 @@ public class NewServer implements Runnable{
 			}
 
 			//reader used for local 512 byte block reads
-			BufferedInputStream reader = IOManager.getReader(ServerDirectory + filename);
+			FileInputStream reader = IOManager.getReader(ServerDirectory + filename);
 			int blockNumber = 1;
 
 			//byte buffer to be filled with 512 bytes of data from local file
@@ -179,7 +179,7 @@ public class NewServer implements Runnable{
 			byte receivedAck[] = new byte[dataSize]; 
 
 			try {
-				readFromFileData = IOManager.read(reader, bufferSize, readFromFileData);
+				readFromFileData = IOManager.reads(reader, bufferSize, readFromFileData);
 				readData = PacketManager.createData(readFromFileData, blockNumber);
 				readFromFileData = new byte[readFromFileData.length];
 			} catch (IOException e1) {
@@ -254,94 +254,101 @@ public class NewServer implements Runnable{
 			//print ACK
 			PacketManager.ackPacketPrinter(receivePacket);
 			blockNumber++;
-			
-			while(!PacketManager.lastPacket(PacketManager.getData(sendPacket))) { 
-				
-				if(isRunning == false){
-					System.out.println("Server Shut Down");
-					return;
-				}				
-				//byte buffer for write data packets
-				readData = new byte[dataSize];
-				receivedAck = new byte[dataSize]; //4 bytes
+			boolean transferComplete = false;
+			try {
+				do{
+					
+					if(isRunning == false){
+						System.out.println("Server Shut Down");
+						return;
+					}				
+					//byte buffer for write data packets
+					readData = new byte[dataSize];
+					receivedAck = new byte[dataSize]; //4 bytes
 
-				try {
-					readFromFileData = IOManager.read(reader, bufferSize, readFromFileData);
-					readData = PacketManager.createData(readFromFileData, blockNumber);
-					readFromFileData = new byte[readFromFileData.length];
-					//PacketManager.printTFTPPacketData(writeData);
-				} catch (IOException e1) {
-					e1.printStackTrace();
-				}
-
-				sendPacket = new DatagramPacket(readData, readData.length, 
-						clientHost, clientPort);
-				receivePacket = new DatagramPacket(receivedAck, receivedAck.length);
-
-				tries = ProfileData.getRepeats(); //number of times to re-listen
-				received = false;
-				while(!received) { //repeat until a successful receive
 					try {
-						PacketManager.send(sendPacket, sendReceiveSocket);
-						PacketManager.receive(receivePacket, sendReceiveSocket);
-						received = true; //first data packet received
-					} catch(SocketTimeoutException e) { //
-						if(--tries == 0){
-							PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket, "Server"); //send error packet to server
-							throw e;
-						}
+						readFromFileData = IOManager.reads(reader, bufferSize, readFromFileData);
+						readData = PacketManager.createData(readFromFileData, blockNumber);
+						readFromFileData = new byte[readFromFileData.length];
+						//PacketManager.printTFTPPacketData(writeData);
+					} catch (IOException e1) {
+						e1.printStackTrace();
 					}
-				}
 
-				//check for PID
-				while(receivePacket.getPort() != clientPort) {
-					PacketManager.handleInvalidPort(clientPort, receivePacket.getPort(), clientHost, sendReceiveSocket);
+					sendPacket = new DatagramPacket(readData, readData.length, 
+							clientHost, clientPort);
+					receivePacket = new DatagramPacket(receivedAck, receivedAck.length);
+
 					tries = ProfileData.getRepeats(); //number of times to re-listen
 					received = false;
 					while(!received) { //repeat until a successful receive
 						try {
+							PacketManager.send(sendPacket, sendReceiveSocket);
 							PacketManager.receive(receivePacket, sendReceiveSocket);
-							received = true; 
+							received = true; //first data packet received
 						} catch(SocketTimeoutException e) { //
-							if(--tries == 0) {
+							if(--tries == 0){
 								PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket, "Server"); //send error packet to server
 								throw e;
 							}
 						}
 					}
-				}
 
-				//check for error packet
-				if(PacketManager.isErrorPacket(receivedAck)) {
-					PacketManager.errorPacketPrinter(receivePacket);
-					byte[] errorMsg = new byte[receivedAck.length - 4];
-					System.arraycopy(receivedAck, 4, errorMsg, 0, errorMsg.length);
-					//System.out.println("Error message: " + new String(errorMsg));
-					throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
-				}
+					//check for PID
+					while(receivePacket.getPort() != clientPort) {
+						PacketManager.handleInvalidPort(clientPort, receivePacket.getPort(), clientHost, sendReceiveSocket);
+						tries = ProfileData.getRepeats(); //number of times to re-listen
+						received = false;
+						while(!received) { //repeat until a successful receive
+							try {
+								PacketManager.receive(receivePacket, sendReceiveSocket);
+								received = true; 
+							} catch(SocketTimeoutException e) { //
+								if(--tries == 0) {
+									PacketManager.handleTimeOut(clientHost, sendPacket.getPort(), sendReceiveSocket, "Server"); //send error packet to server
+									throw e;
+								}
+							}
+						}
+					}
 
-				//known not to be an error packet so the receivedAck buffer is now truncated
-				receivedAck = PacketManager.createAck(receivedAck);
+					//check for error packet
+					if(PacketManager.isErrorPacket(receivedAck)) {
+						PacketManager.errorPacketPrinter(receivePacket);
+						byte[] errorMsg = new byte[receivedAck.length - 4];
+						System.arraycopy(receivedAck, 4, errorMsg, 0, errorMsg.length);
+						//System.out.println("Error message: " + new String(errorMsg));
+						throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
+					}
 
-				//check for valid ack
-				try {
-					PacketManager.validateAckPacket(receivedAck);
-				} catch (TFTPExceptions.InvalidTFTPAckException e) {
-					PacketManager.handleInvalidAckPacket(receivedAck, clientHost, clientPort, sendReceiveSocket);
-					throw e;
-				}
+					//known not to be an error packet so the receivedAck buffer is now truncated
+					receivedAck = PacketManager.createAck(receivedAck);
 
-				//check block number
-				if(blockNumber != PacketManager.getBlockNum(receivedAck)) {
-					PacketManager.handleInvalidBlockNumber(blockNumber, PacketManager.getBlockNum(receivedAck), clientHost, clientPort, sendReceiveSocket);
-					throw new TFTPExceptions().new InvalidBlockNumberException(
-							"Invalid block number detected. "
-									+ "Expected " + blockNumber + "." 
-									+ "Found " + PacketManager.getBlockNum(receivedAck));
-				}
-				PacketManager.ackPacketPrinter(receivePacket);
-				blockNumber++;
+					//check for valid ack
+					try {
+						PacketManager.validateAckPacket(receivedAck);
+					} catch (TFTPExceptions.InvalidTFTPAckException e) {
+						PacketManager.handleInvalidAckPacket(receivedAck, clientHost, clientPort, sendReceiveSocket);
+						throw e;
+					}
 
+					//check block number
+					if(blockNumber != PacketManager.getBlockNum(receivedAck)) {
+						PacketManager.handleInvalidBlockNumber(blockNumber, PacketManager.getBlockNum(receivedAck), clientHost, clientPort, sendReceiveSocket);
+						throw new TFTPExceptions().new InvalidBlockNumberException(
+								"Invalid block number detected. "
+										+ "Expected " + blockNumber + "." 
+										+ "Found " + PacketManager.getBlockNum(receivedAck));
+					}
+					PacketManager.ackPacketPrinter(receivePacket);
+					blockNumber++;
+//					if(filename.length() < 65535 ){
+//						transferComplete = true;
+//						return;
+//					}
+				}while(!transferComplete);
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
 
@@ -440,7 +447,7 @@ public class NewServer implements Runnable{
 			}
 
 
-			while(!PacketManager.lastPacket(PacketManager.getData(receivePacket))) {
+			while(!PacketManager.lastPacket(receivePacket)) {
 				
 				if(isRunning == false){
 					System.out.println("Server Shut Down");
