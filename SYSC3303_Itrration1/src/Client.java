@@ -303,8 +303,10 @@ public class Client { //the client class
 			TFTPExceptions.InvalidTFTPDataException, 
 			TFTPExceptions.ErrorReceivedException,
 			TFTPExceptions.AccessViolationException {
-
+		
 		Path path = FileSystems.getDefault().getPath(ClientDirectory, filename);
+		synchronized (path) {
+			
 		//reader used for local 512 byte block reads
 		BufferedInputStream reader = IOManager.getReader(ClientDirectory + filename);
 
@@ -528,8 +530,9 @@ public class Client { //the client class
 		PacketManager.send(sendPacket, sendReceiveSocket);
 
 		System.out.println("Succesful write completed.");
+		notifyAll();
+		}
 	}
-
 	public static void main( String args[] ) throws IOException
 	{
 		System.out.println("Hello and welcome!");
