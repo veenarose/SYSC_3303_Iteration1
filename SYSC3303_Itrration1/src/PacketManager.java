@@ -801,7 +801,7 @@ public class PacketManager {
 		System.out.println("##### DATA PACKET CONTENTS #####");
 		System.out.println("Request: " + Arrays.toString(reqt));
 		System.out.println("OptCode: " + Arrays.toString(opt));
-		System.out.println("Message: " + Arrays.toString(msg));
+		System.out.println("Message: " + new String(msg));
 		System.out.println("");
 	}
 
@@ -857,7 +857,7 @@ public class PacketManager {
 		System.out.println("##### Error Packet Contents #####");
 		System.out.println("OptCode: " + Arrays.toString(opt));
 		System.out.println("Error Code: " + Arrays.toString(errc));
-		System.out.println("Message: " + Arrays.toString(msg));
+		System.out.println("Message: " + new String(msg));
 		System.out.println("");
 	}
 
