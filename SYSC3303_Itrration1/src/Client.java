@@ -330,7 +330,8 @@ public class Client { //the client class
 		
 		
 
-		int tries = ProfileData.getRepeats(); //number of times to re-listen
+		int tries = new Integer(0); 
+		tries = ProfileData.getRepeats(); //number of times to re-listen
 		boolean received = false;
 		while(!received) { //repeat until a successful receive
 			try {
