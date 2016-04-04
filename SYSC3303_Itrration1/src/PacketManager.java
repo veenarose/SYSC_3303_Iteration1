@@ -786,21 +786,21 @@ public class PacketManager {
 	}
 
 	public static void DataPacketPrinter(DatagramPacket p){
-		byte[] reqt = new byte[2];
-		byte[] opt = new byte[2];
+		byte[] optcode = new byte[2];
+		byte[] blocknu = new byte[2];
 		byte[] msg = new byte[512];
 
 		for(int i = 0; i < 2; i++){
-			reqt[i] = p.getData()[i];
-			opt[i] = p.getData()[i+2];
+			optcode[i] = p.getData()[i];
+			blocknu[i] = p.getData()[i+2];
 		}
 		for(int i = 0; i < 512; i++){
 			msg[i] = p.getData()[i+4];
 		}
 
 		System.out.println("##### DATA PACKET CONTENTS #####");
-		System.out.println("Request: " + Arrays.toString(reqt));
-		System.out.println("OptCode: " + Arrays.toString(opt));
+		System.out.println("Optcode: " + Arrays.toString(optcode));
+		System.out.println("Block num: " + Arrays.toString(blocknu));
 		System.out.println("Message: " + new String(msg));
 		System.out.println("");
 	}
