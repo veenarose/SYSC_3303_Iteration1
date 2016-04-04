@@ -853,7 +853,6 @@ public class PacketManager {
 			msg[i] = p.getData()[i+4];
 		}
 
-
 		System.out.println("##### Error Packet Contents #####");
 		System.out.println("OptCode: " + Arrays.toString(opt));
 		System.out.println("Error Code: " + Arrays.toString(errc));
