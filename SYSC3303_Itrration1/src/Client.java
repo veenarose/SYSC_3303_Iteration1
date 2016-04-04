@@ -24,7 +24,7 @@ public class Client { //the client class
 			(System.getProperty("user.dir") + "/src/ClientData/");
 
 	private Set<String> fileNames; //java set to store file names
-
+	private static int serverPort = 0;
 	private static int request = -1;
 	
 	private final static int timeout = ProfileData.getTimeOut(); //milliseconds
@@ -107,16 +107,14 @@ public class Client { //the client class
 		byte[] readPacketData = PacketManager.createReadPacketData(filename, mode);
 		byte[] receivedData = new byte[PacketManager.getDataSize()]; //516 bytes
 
-
-		int p = -1;
 		if(request == 1){
-			p = ProfileData.getServerPort();
+			serverPort = ProfileData.getServerPort();
 		} else if(request == 2){
-			p = ProfileData.getErrorPort();
+			serverPort = ProfileData.getErrorPort();
 		}
 
 		sendPacket = new DatagramPacket(readPacketData, readPacketData.length, 
-				serverHost, p);
+				serverHost, serverPort);
 		receivePacket = new DatagramPacket(receivedData, receivedData.length);
 
 		//initially expecting the first block of data to be read from the file on the server
@@ -535,6 +533,8 @@ public class Client { //the client class
 	}
 	public static void main( String args[] ) throws IOException
 	{
+		boolean validIP = false;
+		
 		System.out.println("Hello and welcome!");
 		int req = -1;
 		Scanner keyboard = new Scanner(System.in);
@@ -562,36 +562,63 @@ public class Client { //the client class
 			keyboard.close();
 		}
 		
-		boolean validInput;
-		boolean validIP = false;
+
+		
 		do{
+			//Get an IP addr
 			System.out.println("\nPlease enter the IP address of the server:");
 			String host = keyboard.next();
 			try {
 				serverHost = InetAddress.getByName(host);
+				validIP = true;
 			} catch(UnknownHostException e) {
 				System.out.println("Invalid host name or IP address. Please try again.\n");
 				continue;
 			}
-			if(PacketManager.validateIP(host)){ 
-				validIP = true;
-			}else{
-				validIP = false;
-				System.out.println("Enter a valid IP address. Please try again.");
-			}
-		}while(!validIP);
+			
+			//Get a Port
+			System.out.println("\nPlease enter the Port of the server:");
+			serverPort = keyboard.nextInt();
+			
+		} while(!validIP);
+		
+		validIP = false;
 		
 		//prompt user to specify if the request they are making is either read or write
 		while(true){
 
 			System.out.println("Enter 'read' to read from the server.\n"
 					+ "Enter 'write' to write to a file on the server.\n" 
-					+ "Enter 'quit' at anytime to exit the program.");
+					+ "Enter 'quit' at anytime to exit the program.\n"
+					+ "Enter 'server' at any time to change server\n");
 			BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 			String request = reader.readLine(); //read user input by line
 			if(request.equals("quit")) { 
 				System.out.println("System quit");
 				return;
+			} else if (request.equals("server")){
+				do{
+					//Get an IP addr
+					System.out.println("\nPlease enter the IP address of the server:");
+					String host = keyboard.next();
+					try {
+						serverHost = InetAddress.getByName(host);
+						validIP = true;
+					} catch(UnknownHostException e) {
+						System.out.println("Invalid host name or IP address. Please try again.\n");
+						continue;
+					}
+					
+					//Get a Port
+					System.out.println("\nPlease enter the Port of the server:");
+					serverPort = keyboard.nextInt();
+					
+				} while(!validIP);
+			}
+			
+			if (validIP == true){
+				validIP = false;
+				continue;
 			}
 
 			while(Client.validateReqInput(request) == 0) { //while input is not 'read' or 'write'
