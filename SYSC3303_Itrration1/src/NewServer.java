@@ -1,6 +1,7 @@
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -33,7 +34,7 @@ public class NewServer implements Runnable{
 	private static final int dataSize = bufferSize + ackSize;
 
 	public static boolean isRunning = true;
-	
+
 	public NewServer(int lp) {
 		try {
 			receiveSocket = new DatagramSocket(lp);
@@ -42,7 +43,7 @@ public class NewServer implements Runnable{
 			e.printStackTrace();
 		}
 	}
-	
+
 	public void populateFileNames() {
 		//populate fileNames list
 		File dir = new File(ServerDirectory);
@@ -101,23 +102,23 @@ public class NewServer implements Runnable{
 		}
 		System.exit(0);
 	}
-	
+
 	private class fileUpdater implements Runnable{
-		
+
 		private NewServer server;
 		private int updateCount = 0;
-		
+
 		public fileUpdater(NewServer ns) {
 			server = ns;
-			
+
 		}
 
 		public void run() {
 			while(true) {
 				try {
-				    Thread.sleep(3000);                 //1000 milliseconds is one second.
+					Thread.sleep(3000);                 //1000 milliseconds is one second.
 				} catch(InterruptedException ex) {
-				    Thread.currentThread().interrupt();
+					Thread.currentThread().interrupt();
 				}
 				server.populateFileNames();
 			}
@@ -176,6 +177,7 @@ public class NewServer implements Runnable{
 				PacketManager.handleInvalidRequest
 				(requestData, clientHost, clientPort, sendReceiveSocket);
 			}
+			sendReceiveSocket.close();
 		}
 
 		public void handleReadRequest(String filename) throws 
@@ -191,7 +193,7 @@ public class NewServer implements Runnable{
 				System.out.print("Server Shut Down\n");
 				return;
 			}
-			
+
 			Path path = FileSystems.getDefault().getPath(ServerDirectory, filename);
 			if(!Files.isReadable(path)){
 				PacketManager.createAccessViolationErrorPacket(filename, "Access Violation", clientHost, clientPort);
@@ -255,6 +257,7 @@ public class NewServer implements Runnable{
 
 			//check for error packet
 			if(PacketManager.isErrorPacket(receivedAck)) {
+				PacketManager.errorPacketPrinter(receivePacket);
 				System.out.print("Received an error packet with code: " + receivedAck[3]
 						+ " Exiting connection and terminating file transfer.\n");
 				byte[] errorMsg = new byte[receivedAck.length - 4];
@@ -284,10 +287,10 @@ public class NewServer implements Runnable{
 			}
 
 			blockNumber++;
-			
+
 			//while(!PacketManager.lastPacket(PacketManager.getData(readData))) { 
 			while(true) {
-				
+
 				if(isRunning == false){
 					System.out.print("Server Shut Down\n");
 					return;
@@ -295,7 +298,7 @@ public class NewServer implements Runnable{
 
 				System.out.print("Received:\n");
 				System.out.print(Arrays.toString(receivedAck) + "\n");
-				
+
 				//byte buffer for write data packets
 				readData = new byte[bufferSize + ackSize];
 				receivedAck = new byte[ackSize + bufferSize]; //4 bytes
@@ -349,6 +352,7 @@ public class NewServer implements Runnable{
 
 				//check for error packet
 				if(PacketManager.isErrorPacket(receivedAck)) {
+					PacketManager.errorPacketPrinter(receivePacket);
 					System.out.print("Received an error packet with code: " + receivedAck[3]
 							+ " Exiting connection and terminating file transfer.\n");
 					byte[] errorMsg = new byte[receivedAck.length - 4];
@@ -376,25 +380,29 @@ public class NewServer implements Runnable{
 									+ "Expected " + blockNumber + "." 
 									+ "Found " + PacketManager.getBlockNum(receivedAck));
 				}
-
+				
+				PacketManager.ackPacketPrinter(receivePacket);
 				blockNumber++;
 
 			}
-			
+
 			//send lastPacket packet
-			
-			blockNumber++; //maybe?
+
+			//blockNumber++; 
 			readData = null;
 			readData = PacketManager.createLast();
 			sendPacket = new DatagramPacket(readData, readData.length, 
 					clientHost, clientPort);
-			
-			
+
+
 			PacketManager.send(sendPacket, sendReceiveSocket);
-			
+
 			System.out.print("Read completed succesfully.\n");
 
 		}
+
+
+
 
 		public void handleWriteRequest(String filename) throws 
 		TFTPExceptions.FileAlreadyExistsException, 
@@ -408,7 +416,7 @@ public class NewServer implements Runnable{
 				System.out.print("Server Shut Down\n");
 				return;
 			}
-			
+
 			//check if the file already exists locally on the client
 			TFTPExceptions.FileAlreadyExistsException fileExists = 
 					new TFTPExceptions().new FileAlreadyExistsException
@@ -430,6 +438,7 @@ public class NewServer implements Runnable{
 
 			//send ACK 0
 			PacketManager.send(sendPacket, sendReceiveSocket);
+			PacketManager.ackPacketPrinter(sendPacket);
 			blockNumber++;
 
 			int tries = ProfileData.getRepeats(); //number of times to relisten
@@ -445,7 +454,7 @@ public class NewServer implements Runnable{
 					}
 				}
 			}
-			
+
 			//check if last packet
 			if(PacketManager.isLast(receivedData)) {
 				System.out.print("The file from which the write data comes from is empty, write request considered complete.");
@@ -490,7 +499,7 @@ public class NewServer implements Runnable{
 			}
 
 			File writeTo = new File(ServerDirectory + filename); //file to write to locally
-			byte writeToFileData[];
+			byte writeToFileData[] = new byte[0];
 			writeToFileData = PacketManager.getData(receivedData);
 			try {
 				IOManager.write(writeTo, writeToFileData);
@@ -500,15 +509,15 @@ public class NewServer implements Runnable{
 
 
 			while(true) {
-				
+
 				if(isRunning == false){
 					System.out.print("Server Shut Down\n");
 					return;
 				}
-				
+
 				System.out.print("Received:\n");
 				System.out.print(Arrays.toString(PacketManager.getData(receivedData))  + "\n");
-				
+
 				ackToBeSent = PacketManager.createAck(receivedData);
 				receivedData = new byte[ackSize + bufferSize];
 
@@ -519,7 +528,7 @@ public class NewServer implements Runnable{
 
 				PacketManager.send(sendPacket, sendReceiveSocket);
 				blockNumber++;
-				
+
 				tries = ProfileData.getRepeats(); //number of times to relisten
 				received = false;
 				while(!received) { //repeat until a successful receive
@@ -533,9 +542,9 @@ public class NewServer implements Runnable{
 						}
 					}
 				}
-				
+
 				if(PacketManager.isLast(receivedData)) { break; }
-				
+
 				//check for error packet
 				if(PacketManager.isErrorPacket(receivedData)) {
 					System.out.print("Received an error packet with code: " + receivedData[3]

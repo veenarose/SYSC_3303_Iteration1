@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Class is used to handle the read / write packets between the clients and server
@@ -26,31 +27,31 @@ public class PacketManager {
 	private static final byte[] IllegalTFTPOp = {0,4};
 	private static final byte[] UnknownTID = {0,5};
 	private static final byte[] FileExists = {0,6};
-	
+
 	private static final String[] modes = {"netascii", "octet"};// The modes
 	private static final String[] requests = {"read","write"};//
-	
+
 	private static final int bufferSize = IOManager.getBufferSize();
 	private static final int ackSize = 4;
 	private static final int dataSize = bufferSize + ackSize;
-	
-	
+
+
 	public static int getAckSize() {
 		return ackSize;
 	}
-	
+
 	public static int getDataSize() {
 		return dataSize;
 	}
-	
+
 	public static int getBufferSize() {
 		return bufferSize;
 	}
-	
+
 	public static String[] modes() {
 		return modes;
 	}
-	
+
 	public static String[] requests() {
 		return requests;
 	}
@@ -196,7 +197,7 @@ public class PacketManager {
 		if(data.length > 516){
 			throw invalid;
 		}
-		
+
 		//makes sure there is a 0 byte between the filename and mode bytes 
 		//checks if bytes are valid ascii values between -127 and 128 inclusive, and that it does not equal 0
 		for(int i=2; i< data.length-1; i++) { 
@@ -214,7 +215,7 @@ public class PacketManager {
 		if (sfn.length > 3){
 			throw invalid;
 		}
-		
+
 		String filename, mode;
 		filename = getFilename(data);
 		mode = getMode(data);
@@ -225,22 +226,22 @@ public class PacketManager {
 		//returns a value which is either a 1 for a read request or a 2 for a write request 
 		return data[1]; 
 	}
-	
+
 	public static void validateDataPacket(byte[] data) throws TFTPExceptions.InvalidTFTPDataException {
-		
+
 		TFTPExceptions.InvalidTFTPDataException invalid = 
 				new TFTPExceptions().new InvalidTFTPDataException("invalid");
-		
+
 		//check the size of the packet
 		int size = data.length;
 		if(size != dataSize) { 
 			throw invalid;
 		}
-		
+
 		byte[] opcode = new byte[2];
 		opcode[0] = data[0];
 		opcode[1] = data[1];
-		
+
 		//check if the opcode is correct 
 		if(opcode[0] != DRQ[0] || opcode[1] != DRQ[1]) {
 			throw invalid;
@@ -260,7 +261,7 @@ public class PacketManager {
 		if(opcode[0] != ARQ[0] || opcode[1] != ARQ[1]) {
 			throw invalid;
 		}
-		
+
 		for(int i = 4; i < ack.length; i++){
 			if(ack[i] != 0){
 				throw invalid;
@@ -333,15 +334,15 @@ public class PacketManager {
 	 * @param data byte[]: The data that is received
 	 * @return true if it is the last block of data to be sent false otherwise
 	 */
-	public static boolean lastPacket(byte [] data){
-		boolean result = false;
-		for(int i = 0 ; i <data.length; i++){
-			if(data[i] == 0){
-				result = true;
-				break;
-			}
+	public static boolean lastPacket(DatagramPacket data){
+		byte by[] = data.getData();
+		int dataLength = by.length;
+
+		if(dataLength < 516){
+			return true;
+		}else{
+			return false;
 		}
-		return result;
 	}
 
 	/**
@@ -479,10 +480,10 @@ public class PacketManager {
 			}
 		}
 	}
-	
+
 	//error code 0
 	public static DatagramPacket createTimeOutErrorPacket
-		(String cs, InetAddress host, int destinationPort) {
+	(String cs, InetAddress host, int destinationPort) {
 		String message = cs + " timed out upon listening for a response.";
 		byte[] errBlock = NotDefined;
 		byte[] errData = createError(errBlock, message);
@@ -518,16 +519,16 @@ public class PacketManager {
 		System.out.println("Invalid request detected.");
 		byte[] errData = createError(errBlock,
 				"The following are two examples of valid TFTP request operations.\n"
-				+ "The first is a write and the second is a read. They both have seperate and all"
-				+ "possible values for the mode type.\n"
-				+ "Read request example: " + Arrays.toString(goodRRQ) + "\n"
-				+ "Write request example:" + Arrays.toString(goodWRQ) + "\n"
-				+ "The following is the request packet detected. Notice the difference(s):\n"
-				+ "Found request: " + Arrays.toString(request));
+						+ "The first is a write and the second is a read. They both have seperate and all"
+						+ "possible values for the mode type.\n"
+						+ "Read request example: " + Arrays.toString(goodRRQ) + "\n"
+						+ "Write request example:" + Arrays.toString(goodWRQ) + "\n"
+						+ "The following is the request packet detected. Notice the difference(s):\n"
+						+ "Found request: " + Arrays.toString(request));
 		DatagramPacket err = new DatagramPacket(errData, errData.length, host, destinationPort);
 		return err;
 	}
-	
+
 	//error code 5
 	public static DatagramPacket createInvalidTIDErrorPacket(int expected, int found, InetAddress host) {
 		System.out.println("Incoming packet deteced to have an unidentifiable TID");
@@ -537,7 +538,7 @@ public class PacketManager {
 		DatagramPacket err = new DatagramPacket(errData, errData.length, host, found);
 		return err;
 	}
-	
+
 	//error code 6
 	public static DatagramPacket createFileNotFoundErrorPacket(String filename, InetAddress host, int destinationPort) {
 		String message = "File + " + filename + " not found.";
@@ -599,7 +600,7 @@ public class PacketManager {
 	public static boolean isErrorPacket(byte[] p) {
 		return p[1] == 5;
 	}
-	
+
 	//ERROR HANDLING METHODS
 	public static void handleFileExists(String filename, InetAddress host, int destinationPort, DatagramSocket socket) {
 		
@@ -615,47 +616,47 @@ public class PacketManager {
 	}
 
 	public static void handleInvalidDataPacket(byte[] data, InetAddress host, int destinationPort, DatagramSocket socket) { //finish?
-		
+
 		//create error packet
 		DatagramPacket errorPacket = 
 				PacketManager.createInvalidDataErrorPacket(data, host, destinationPort);
-		
+
 		//send error packet
 		PacketManager.send(errorPacket, socket);
 	}
-	
+
 	public static void handleInvalidPort(int expected, int found, InetAddress host, DatagramSocket socket) {
-		
+
 		//create error packet
 		DatagramPacket errorPacket = 
 				PacketManager.createInvalidTIDErrorPacket(expected, found, host);
-		
+
 		//send error packet
 		PacketManager.send(errorPacket, socket);
 	}
 
 	public static void handleTimeOut(InetAddress host, int destinationPort, DatagramSocket socket, String source) {
-		
+
 		//create error packet
 		DatagramPacket errorPacket = 
 				PacketManager.createTimeOutErrorPacket(source, host, destinationPort);
-		
+
 		//send error packet
 		PacketManager.send(errorPacket, socket);
-		
+
 	}
-	
+
 	public static void handleInvalidBlockNumber(int expectedBlockNum, int foundBlockNum, InetAddress host, int destinationPort, DatagramSocket socket) {
-		
+
 		//create error packet
 		DatagramPacket errorPacket = 
 				PacketManager.createInvalidBlockErrorPacket(expectedBlockNum, foundBlockNum, host, destinationPort);
-		
+
 		//send error packet
 		PacketManager.send(errorPacket, socket);
-		
+
 	}
-	
+
 	public static void handleInvalidRequest(byte[] data, InetAddress host, int destinationPort, DatagramSocket socket) { //finish?
 
 		//create error packet
@@ -664,9 +665,9 @@ public class PacketManager {
 
 		//send error packet
 		PacketManager.send(errorPacket, socket);
-	
+
 	}
-	
+
 	public static void handleDiskFull(String dir, InetAddress host, int destinationPort, DatagramSocket socket) { //finish?
 
 		//create error packet
@@ -675,9 +676,9 @@ public class PacketManager {
 
 		//send error packet
 		PacketManager.send(errorPacket, socket);
-	
+
 	}
-	
+
 	public static void handleAccessViolation(String fn, String msg, InetAddress host, int destinationPort, DatagramSocket socket) { //finish?
 
 		//create error packet
@@ -686,9 +687,9 @@ public class PacketManager {
 
 		//send error packet
 		PacketManager.send(errorPacket, socket);
-	
+
 	}
-	
+
 	//SENDING AND RECEIVING METHODS
 	public static void send(DatagramPacket sendPacket, DatagramSocket socket){ 
 		try {
@@ -698,7 +699,7 @@ public class PacketManager {
 			System.exit(1);
 		}
 	}
-	
+
 	public static void receive(DatagramPacket receivePacket, DatagramSocket socket) throws SocketTimeoutException{
 		try {
 			//block until a datagram is received via sendReceiveSocket  
@@ -752,7 +753,7 @@ public class PacketManager {
 		}
 		return data;
 	}
-	
+
 	/**
 	 * Checks the path to see if their is enough space to write to disk 
 	 * @param path filepath
@@ -761,7 +762,7 @@ public class PacketManager {
 	public static boolean diskSpaceCheck(String path, int size){
 		File f = new File(path);
 		boolean b = f.exists();
-		
+
 		if(b){ //if file exists
 			long x = f.getFreeSpace();
 			if(x > (long)size){
@@ -773,16 +774,97 @@ public class PacketManager {
 		}
 		return false;
 	}
-	
+
 	public static int filesize(byte[] file){
-		List byteList = Arrays.asList(file);
-		
+		List<byte[]> byteList = Arrays.asList(file);
+
 		int x = Collections.frequency(byteList,0);
 		return (file.length - x);
 	}
-	
-	public static void prettyPacketPrinter(DatagramPacket packet){
-		
+
+	public static void DataPacketPrinter(DatagramPacket p){
+		byte[] reqt = new byte[2];
+		byte[] opt = new byte[2];
+		byte[] msg = new byte[512];
+
+		for(int i = 0; i < 2; i++){
+			reqt[i] = p.getData()[i];
+			opt[i] = p.getData()[i+2];
+		}
+		for(int i = 0; i < 512; i++){
+			msg[i] = p.getData()[i+4];
+		}
+
+		System.out.println("##### DATA PACKET CONTENTS #####");
+		System.out.println("Request: " + Arrays.toString(reqt));
+		System.out.println("OptCode: " + Arrays.toString(opt));
+		System.out.println("Message: " + Arrays.toString(msg));
+		System.out.println("");
 	}
-	
+
+	public static void requestPacketPrinter(DatagramPacket p){
+		byte[] reqt = new byte[2];
+		String fn;
+		String mode;
+
+		for(int i = 0; i < 2; i++){
+			reqt[i] = p.getData()[i];
+		}
+
+		fn = getFilename(p.getData());
+		mode = getMode(p.getData());
+
+		System.out.println("##### Request Packet Contents #####");
+		System.out.println("Request Type: " + Arrays.toString(reqt));
+		System.out.println("Filename: " + fn);
+		System.out.println("Mode: " + mode);
+		System.out.println("");
+	}
+
+	public static void ackPacketPrinter(DatagramPacket p){
+		byte[] opt = new byte[2];
+		byte[] bl = new byte[2];
+
+		for(int i = 0; i < 2; i++){
+			opt[i]= p.getData()[i];
+			bl[i] = p.getData()[i+2];
+		}
+
+		System.out.println("##### ACK Packet Contents #####");
+		System.out.println("OptCode: " + Arrays.toString(opt));
+		System.out.println("Block Num: " + Arrays.toString(bl));
+		System.out.println("");
+	}
+
+	public static void errorPacketPrinter(DatagramPacket p){
+		byte[] opt = new byte[2];
+		byte[] errc = new byte[2];
+		byte[] msg = new byte[p.getData().length];
+
+		for(int i = 0; i < 2; i++){
+			opt[i]= p.getData()[i];
+			errc[i] = p.getData()[i+2];
+		}
+
+		for(int i = 0; i < p.getData().length-4; i++){
+			msg[i] = p.getData()[i+4];
+		}
+
+
+		System.out.println("##### Error Packet Contents #####");
+		System.out.println("OptCode: " + Arrays.toString(opt));
+		System.out.println("Error Code: " + Arrays.toString(errc));
+		System.out.println("Message: " + Arrays.toString(msg));
+		System.out.println("");
+	}
+
+	/*
+	 * Checks for user input of IP addresses
+	 */
+	private static final Pattern PATTERN = Pattern.compile(
+			"^(([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.){3}([01]?\\d\\d?|2[0-4]\\d|25[0-5])$");
+
+	public static boolean validateIP(final String ip) {
+		return PATTERN.matcher(ip).matches();
+	}
 }

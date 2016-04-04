@@ -1,7 +1,4 @@
 import java.util.Set;
-
-import org.omg.CORBA.Request;
-
 import java.io.*;
 import java.net.*;
 import java.nio.file.FileSystems;
@@ -89,12 +86,12 @@ public class Client { //the client class
 
 	public void handleReadRequest(String filename, String mode) 
 			throws TFTPExceptions.FileAlreadyExistsException, 
-				   SocketTimeoutException,
-				   TFTPExceptions.InvalidBlockNumberException,
-				   TFTPExceptions.InvalidTFTPDataException, 
-				   TFTPExceptions.ErrorReceivedException,
-				   TFTPExceptions.DiskFullException
-				{
+			SocketTimeoutException,
+			TFTPExceptions.InvalidBlockNumberException,
+			TFTPExceptions.InvalidTFTPDataException, 
+			TFTPExceptions.ErrorReceivedException,
+			TFTPExceptions.DiskFullException
+	{
 
 		//check if the file already exists locally on the client
 		TFTPExceptions.FileAlreadyExistsException fileExists = 
@@ -109,7 +106,7 @@ public class Client { //the client class
 		//into the receivePacket DatagramPacket
 		byte[] readPacketData = PacketManager.createReadPacketData(filename, mode);
 		byte[] receivedData = new byte[PacketManager.getDataSize()]; //516 bytes
-		
+
 
 		int p = -1;
 		if(request == 1){
@@ -117,7 +114,7 @@ public class Client { //the client class
 		} else if(request == 2){
 			p = ProfileData.getErrorPort();
 		}
-		
+
 		sendPacket = new DatagramPacket(readPacketData, readPacketData.length, 
 				serverHost, p);
 		receivePacket = new DatagramPacket(receivedData, receivedData.length);
@@ -141,15 +138,16 @@ public class Client { //the client class
 		}
 
 		int serverPort = receivePacket.getPort();
-		
+
 		//check for last packet
 		if(PacketManager.isLast(receivedData)) {
 			System.out.println("The file to be read from is empty, read request considered complete.");
 			return;
 		}
-		
+
 		//check for error packet
 		if(PacketManager.isErrorPacket(receivedData)) {
+			PacketManager.errorPacketPrinter(receivePacket);
 			System.out.println("Received an error packet with code: " + receivedData[3]
 					+ " Exiting connection and terminating file transfer.");
 			byte[] errorMsg = new byte[receivedData.length - 4];
@@ -165,7 +163,8 @@ public class Client { //the client class
 			PacketManager.handleInvalidDataPacket(receivedData, serverHost, serverPort, sendReceiveSocket);
 			throw e;
 		}
-
+		
+		PacketManager.DataPacketPrinter(receivePacket);
 		//the port through which the client will communicate with the server
 		//upon a successfully established connection
 		int blockNumber = PacketManager.getBlockNum(receivedData); 
@@ -187,16 +186,15 @@ public class Client { //the client class
 		File writeTo = new File(ClientDirectory + filename); //file to write to locally
 		byte writeToFileData[];
 		writeToFileData = PacketManager.getData(receivedData);
-		
+
 		try {
 			IOManager.write(writeTo, writeToFileData);
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-
-		//while(!PacketManager.lastPacket(PacketManager.getData(receivedData))) {
-		while(true)	{
 		
+		while(true)	{
+
 			System.out.println("Received:");
 			System.out.println(Arrays.toString(receivedData));
 
@@ -225,7 +223,7 @@ public class Client { //the client class
 				}
 			}
 			if (PacketManager.isLast(receivedData)) break;
-			
+
 			//check for PID
 			while(receivePacket.getPort() != serverPort) {
 				PacketManager.handleInvalidPort(serverPort, receivePacket.getPort(), serverHost, sendReceiveSocket);
@@ -246,6 +244,7 @@ public class Client { //the client class
 
 			//check for error packet
 			if(PacketManager.isErrorPacket(receivedData)) {
+				PacketManager.errorPacketPrinter(receivePacket);
 				System.out.println("Received an error packet with code: " + receivedData[3]
 						+ " Exiting connection and terminating file transfer.");
 				byte[] errorMsg = new byte[receivedData.length - 4];
@@ -261,7 +260,7 @@ public class Client { //the client class
 				PacketManager.handleInvalidDataPacket(receivedData, serverHost, serverPort, sendReceiveSocket);
 				throw e;
 			}
-
+			
 			//increase expected block number and get the block number from the received packet
 			expectedBlockNumber++;
 			blockNumber = PacketManager.getBlockNum(receivedData); 
@@ -279,7 +278,8 @@ public class Client { //the client class
 				PacketManager.handleDiskFull(ClientDirectory, serverHost, serverPort, sendReceiveSocket);
 				throw new TFTPExceptions().new DiskFullException("Not enough space to write to disk");
 			}
-		
+
+			PacketManager.DataPacketPrinter(receivePacket);
 			if (!PacketManager.isLast(receivedData)) {
 				//write the block
 				writeToFileData = PacketManager.getData(receivedData);
@@ -373,9 +373,9 @@ public class Client { //the client class
 		//the port through which the client will communicate with the server
 		//upon a successfully established connection
 		int blockNumber = PacketManager.getBlockNum(receivedAck);
-
-		System.out.println("recieved Block Num: " + blockNumber);
-
+		
+		PacketManager.ackPacketPrinter(receivePacket);
+		
 		//check the block number
 		if(blockNumber != expectedBlockNumber) {
 			PacketManager.handleInvalidBlockNumber(expectedBlockNumber, blockNumber, serverHost, serverPort, sendReceiveSocket);
@@ -464,11 +464,11 @@ public class Client { //the client class
 
 			//check for error packet
 			if(PacketManager.isErrorPacket(receivedAck)) {
-				System.out.println("Received an error packet with code: " + receivedAck[3]
-						+ " Exiting connection and terminating file transfer.");
+				PacketManager.errorPacketPrinter(receivePacket);
+				//System.out.println("Received an error packet with code: " + receivedAck[3]+ " Exiting connection and terminating file transfer.");
 				byte[] errorMsg = new byte[receivedAck.length - 4];
 				System.arraycopy(receivedAck, 4, errorMsg, 0, errorMsg.length);
-				System.out.println("Error message: " + new String(errorMsg));
+				//System.out.println("Error message: " + new String(errorMsg));
 				throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
 			}
 
@@ -485,7 +485,7 @@ public class Client { //the client class
 
 			//increase expected block number and get the block number from the received packet
 			blockNumber = PacketManager.getBlockNum(receivedAck); 
-
+			
 			//check block number
 			if(blockNumber != expectedBlockNumber) {
 				PacketManager.handleInvalidBlockNumber(expectedBlockNumber, blockNumber, serverHost, serverPort, sendReceiveSocket);
@@ -495,6 +495,7 @@ public class Client { //the client class
 								+ "Found " + blockNumber);
 			}
 
+			PacketManager.ackPacketPrinter(receivePacket);
 			expectedBlockNumber++;
 
 			//read locally
@@ -505,8 +506,10 @@ public class Client { //the client class
 			writeData = new byte[bufferSize + ackSize];
 
 			try {
+
 				readFromFileData = IOManager.read(reader, bufferSize, readFromFileData);
 				if(readFromFileData == null) break;
+
 				writeData = PacketManager.createData(readFromFileData, expectedBlockNumber);
 				readFromFileData = new byte[readFromFileData.length];
 				//PacketManager.printTFTPPacketData(writeData);
@@ -520,6 +523,7 @@ public class Client { //the client class
 			PacketManager.send(sendPacket, sendReceiveSocket);
 		}
 
+
 		writeData = null;
 		writeData = PacketManager.createLast();
 		sendPacket = new DatagramPacket(writeData, writeData.length, 
@@ -527,7 +531,6 @@ public class Client { //the client class
 		PacketManager.send(sendPacket, sendReceiveSocket);
 
 		System.out.println("Succesful write completed.");
-
 	}
 
 	public static void main( String args[] ) throws IOException
@@ -555,7 +558,7 @@ public class Client { //the client class
 				reader.close();
 				break; 
 			}
-			
+			reader.close();
 		}
 		
 		//prompt user to specify if the request they are making is either read or write
