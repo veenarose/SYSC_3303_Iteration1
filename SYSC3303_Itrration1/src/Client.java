@@ -18,7 +18,7 @@ public class Client { //the client class
 	private DatagramSocket sendReceiveSocket; //socket which sends and receives UDP packets
 	private DatagramPacket sendPacket, receivePacket; //UDP send (request) and receive (acknowledgement) packets
 
-	private InetAddress serverHost;
+	private static InetAddress serverHost;
 
 	private final static String ClientDirectory =  
 			(System.getProperty("user.dir") + "/src/ClientData/");
@@ -42,7 +42,7 @@ public class Client { //the client class
 			sendReceiveSocket = new DatagramSocket();
 			sendReceiveSocket.setSoTimeout(timeout);
 			//set server host
-			serverHost = InetAddress.getLocalHost();
+			//serverHost = InetAddress.getLocalHost();
 			//populate fileNames list
 			File dir = new File(ClientDirectory);
 			fileNames = new HashSet<String>(Arrays.asList(dir.list()));
@@ -54,10 +54,10 @@ public class Client { //the client class
 		} catch (SocketException se) {   //unable to create socket
 			se.printStackTrace();
 			System.exit(1);
-		} catch (UnknownHostException e) {
+		} /*(catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		}*/
 	}
 
 	/**
@@ -140,7 +140,7 @@ public class Client { //the client class
 		int serverPort = receivePacket.getPort();
 
 		//check for last packet
-		if(PacketManager.isLast(receivedData)) {
+		if(PacketManager.isLast(receivePacket.getData())) {
 			System.out.println("The file to be read from is empty, read request considered complete.");
 			return;
 		}
@@ -195,9 +195,6 @@ public class Client { //the client class
 		
 		while(true)	{
 
-			System.out.println("Received:");
-			System.out.println(Arrays.toString(receivedData));
-
 			//send ack and receive next data
 			byte[] sendingAck = PacketManager.createAck(receivedData);
 			receivedData = new byte[PacketManager.getDataSize()];
@@ -222,7 +219,7 @@ public class Client { //the client class
 					}
 				}
 			}
-			if (PacketManager.isLast(receivedData)) break;
+			
 
 			//check for PID
 			while(receivePacket.getPort() != serverPort) {
@@ -280,6 +277,8 @@ public class Client { //the client class
 			}
 
 			PacketManager.DataPacketPrinter(receivePacket);
+			if (PacketManager.isLast(receivePacket.getData())) { break; }
+			
 			if (!PacketManager.isLast(receivedData)) {
 				//write the block
 				writeToFileData = PacketManager.getData(receivedData);
@@ -398,7 +397,7 @@ public class Client { //the client class
 			readFromFileData = IOManager.read(reader, bufferSize, readFromFileData);
 			if(readFromFileData == null) { 
 				writeData = null;
-				writeData = PacketManager.createLast();
+				writeData = PacketManager.createLast(expectedBlockNumber);
 				sendPacket = new DatagramPacket(writeData, writeData.length, 
 						serverHost, serverPort);
 				PacketManager.send(sendPacket, sendReceiveSocket);
@@ -418,8 +417,6 @@ public class Client { //the client class
 		PacketManager.send(sendPacket, sendReceiveSocket);
 
 		while(true) {
-			System.out.println("Received:");
-			System.out.println(Arrays.toString(PacketManager.getData(receivedAck)));
 			
 			receivedAck = new byte[bufferSize + ackSize]; //4 bytes
 			receivePacket = new DatagramPacket(receivedAck, receivedAck.length);
@@ -525,7 +522,7 @@ public class Client { //the client class
 
 
 		writeData = null;
-		writeData = PacketManager.createLast();
+		writeData = PacketManager.createLast(expectedBlockNumber);
 		sendPacket = new DatagramPacket(writeData, writeData.length, 
 				serverHost, serverPort);
 		PacketManager.send(sendPacket, sendReceiveSocket);
@@ -537,29 +534,49 @@ public class Client { //the client class
 	{
 		System.out.println("Hello and welcome!");
 		int req = -1;
+		Scanner keyboard = new Scanner(System.in);
 		while(req != 1 || req != 2){
-			Scanner reader = new Scanner(System.in);
+			keyboard = new Scanner(System.in);
 			System.out.println("Connect to Error Simulator or Server?");
 			System.out.println("1: Server, 2: Error Simulator");
-			req = reader.nextInt();
+			req = keyboard.nextInt();
 			if(req == 1 || req == 2){
 				request = req;
 				break; 
 			}
 			while(true){
 				System.out.println("Enter 1 to connect to server or 2 to connect to Error Sim");
-				req = reader.nextInt();
+				req = keyboard.nextInt();
 				if(req == 1 || req == 2){ 
 					request = req;
 					break; 
 				}
 			}
 			if(req == 1 || req == 2){
-				reader.close();
+				keyboard.close();
 				break; 
 			}
-			reader.close();
+			keyboard.close();
 		}
+		
+		boolean validInput;
+		boolean validIP = false;
+		do{
+			System.out.println("\nPlease enter the IP address of the server:");
+			String host = keyboard.next();
+			try {
+				serverHost = InetAddress.getByName(host);
+			} catch(UnknownHostException e) {
+				System.out.println("Invalid host name or IP address. Please try again.\n");
+				continue;
+			}
+			if(PacketManager.validateIP(host)){ 
+				validIP = true;
+			}else{
+				validIP = false;
+				System.out.println("Enter a valid IP address. Please try again.");
+			}
+		}while(!validIP);
 		
 		//prompt user to specify if the request they are making is either read or write
 		while(true){

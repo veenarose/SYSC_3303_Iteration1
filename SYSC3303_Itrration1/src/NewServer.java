@@ -38,6 +38,7 @@ public class NewServer implements Runnable{
 	public NewServer(int lp) {
 		try {
 			receiveSocket = new DatagramSocket(lp);
+			System.out.println(receiveSocket.getInetAddress());
 			populateFileNames();
 		} catch (SocketException e) {
 			e.printStackTrace();
@@ -53,6 +54,10 @@ public class NewServer implements Runnable{
 			System.out.print(s + "\n");
 		}
 		System.out.print("\n\n");
+	}
+	
+	public InetAddress getIP() {
+		return receiveSocket.getInetAddress();
 	}
 
 	//server's run method
@@ -82,6 +87,7 @@ public class NewServer implements Runnable{
 	public static void main(String args[]) throws IOException {
 
 		NewServer s = new NewServer(ProfileData.getServerPort());
+		System.out.println(s.getIP());
 		Thread server = new Thread(s);
 		server.start();
 		System.out.print("Server running...accepting incoming read or write requests.\n");
@@ -390,7 +396,7 @@ public class NewServer implements Runnable{
 
 			//blockNumber++; 
 			readData = null;
-			readData = PacketManager.createLast();
+			readData = PacketManager.createLast(blockNumber++);
 			sendPacket = new DatagramPacket(readData, readData.length, 
 					clientHost, clientPort);
 
@@ -400,9 +406,6 @@ public class NewServer implements Runnable{
 			System.out.print("Read completed succesfully.\n");
 
 		}
-
-
-
 
 		public void handleWriteRequest(String filename) throws 
 		TFTPExceptions.FileAlreadyExistsException, 
@@ -455,11 +458,11 @@ public class NewServer implements Runnable{
 				}
 			}
 
+			PacketManager.DataPacketPrinter(receivePacket);
 			//check if last packet
-			if(PacketManager.isLast(receivedData)) {
+			if(PacketManager.isLast(receivePacket.getData())) {
 				System.out.print("The file from which the write data comes from is empty, write request considered complete.");
 				return;
-
 			}
 
 			//check for error packet
@@ -507,7 +510,6 @@ public class NewServer implements Runnable{
 				e1.printStackTrace();
 			}
 
-
 			while(true) {
 
 				if(isRunning == false){
@@ -543,7 +545,6 @@ public class NewServer implements Runnable{
 					}
 				}
 
-				if(PacketManager.isLast(receivedData)) { break; }
 
 				//check for error packet
 				if(PacketManager.isErrorPacket(receivedData)) {
@@ -572,8 +573,9 @@ public class NewServer implements Runnable{
 									+ "Found " + PacketManager.getBlockNum(receivedData));
 				}
 
-				System.out.print("Packet Block Number: " + PacketManager.getBlockNum(receivedData) + "\n");
-
+				PacketManager.DataPacketPrinter(receivePacket);
+				if(PacketManager.isLast(receivePacket.getData())) { break; }
+				
 				if(!PacketManager.diskSpaceCheck(ServerDirectory, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
 					//if we dont have enough space to write the next block
 					PacketManager.handleDiskFull(ServerDirectory, clientHost, clientPort, sendReceiveSocket);

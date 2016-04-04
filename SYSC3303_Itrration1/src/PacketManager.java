@@ -119,14 +119,17 @@ public class PacketManager {
 		return dataPack;
 	}
 
-	public static byte[] createLast() {
-		byte[] b = new byte[ackSize]; //512 bytes
-		b[1] = 9;
-		return b;
+	public static byte[] createLast(int blockNum) {
+		return createData(new byte[bufferSize], blockNum);
 	}
 	
 	public static boolean isLast(byte[] data) {
-		return data[1] == 9;
+		for(int i = 4; i < data.length; i++) {
+			if (data[i] != 0) {
+				return false;
+			}
+		}
+		return true;
 	}
 	
 	/**
