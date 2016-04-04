@@ -303,7 +303,6 @@ public class Client { //the client class
 			TFTPExceptions.AccessViolationException {
 		
 		Path path = FileSystems.getDefault().getPath(ClientDirectory, filename);
-		synchronized (path) {
 			
 		//reader used for local 512 byte block reads
 		BufferedInputStream reader = IOManager.getReader(ClientDirectory + filename);
@@ -528,9 +527,8 @@ public class Client { //the client class
 		PacketManager.send(sendPacket, sendReceiveSocket);
 
 		System.out.println("Succesful write completed.");
-		notifyAll();
-		}
 	}
+	
 	public static void main( String args[] ) throws IOException
 	{
 		boolean validIP = false;
@@ -566,7 +564,7 @@ public class Client { //the client class
 		
 		do{
 			//Get an IP addr
-			System.out.println("\nPlease enter the IP address of the server:");
+			System.out.println("\nPlease enter an IP address:");
 			String host = keyboard.next();
 			try {
 				serverHost = InetAddress.getByName(host);
@@ -577,7 +575,7 @@ public class Client { //the client class
 			}
 			
 			//Get a Port
-			System.out.println("\nPlease enter the Port of the server:");
+			System.out.println("\nPlease enter a Port:");
 			serverPort = keyboard.nextInt();
 			
 		} while(!validIP);
@@ -599,7 +597,7 @@ public class Client { //the client class
 			} else if (request.equals("server")){
 				do{
 					//Get an IP addr
-					System.out.println("\nPlease enter the IP address of the server:");
+					System.out.println("\nPlease enter an IP address:");
 					String host = keyboard.next();
 					try {
 						serverHost = InetAddress.getByName(host);
