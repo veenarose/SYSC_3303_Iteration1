@@ -118,6 +118,16 @@ public class PacketManager {
 		return dataPack;
 	}
 
+	public static byte[] createLast() {
+		byte[] b = new byte[ackSize]; //512 bytes
+		b[1] = 9;
+		return b;
+	}
+	
+	public static boolean isLast(byte[] data) {
+		return data[1] == 9;
+	}
+	
 	/**
 	 * This method is used to extract the Ack code from the data received
 	 * @param data byte[]: The data that is received
@@ -591,6 +601,10 @@ public class PacketManager {
 	}
 	
 	//ERROR HANDLING METHODS
+	public static void handleFileExists(String filename, InetAddress host, int destinationPort, DatagramSocket socket) {
+		
+	}
+	
 	public static void handleInvalidAckPacket(byte[] data, InetAddress host, int destinationPort, DatagramSocket socket) { //finish?
 		//create error packet
 		DatagramPacket errorPacket = 
