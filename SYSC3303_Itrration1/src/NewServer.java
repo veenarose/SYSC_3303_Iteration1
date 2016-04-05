@@ -98,7 +98,7 @@ public class NewServer implements Runnable{
 			System.out.print("\nEnter 'files' to list the files stored in on the server.");
 			userInput = reader.readLine();
 			if(userInput.equals("quit"))  {
-				server.interrupt();
+				//server.interrupt();
 				System.out.print("Server has been shut down. No longer accepting incoming requests.\n");
 				isRunning = false;
 				break;
