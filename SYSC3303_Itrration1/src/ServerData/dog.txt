@@ -1,8 +1,8 @@
 
-Հայերեն Shqip ‫العربية‫العربية   Български Català Hrvatski Česky Dansk Nederlands English 
-Eesti Suomi Français ქართული Deutsch Ελληνικά ‫עברית‫עברית   Magyar Indonesia Italiano 
-Latviski Lietuviškai македонски Melayu Norsk Polski Português Româna Pyccкий 
-Српски Slovenčina Slovenščina Español Svenska ไทย Türkçe Українська Tiếng Việt
+Հայերեն Shqip ‫العربية‫العربية   Българ�?ки Català Hrvatski Česky Dansk Nederlands English 
+Eesti Suomi Français ქ�?რთული Deutsch Ελληνικά ‫עברית‫עברית   Magyar Indonesia Italiano 
+Latviski Lietuviškai македон�?ки Melayu Norsk Polski Português Româna Pyccкий 
+Срп�?ки Sloven�?ina Slovenš�?ina Español Svenska ไทย Türkçe Україн�?ька Tiếng Việt
 "Neque porro quisquam est qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit..."
 "There is no one who loves pain itself, who seeks after it and wants to have it, simply because it is pain..."
 

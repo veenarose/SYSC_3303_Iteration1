@@ -505,8 +505,7 @@ public class Client { //the client class
 			try {
 
 				readFromFileData = IOManager.read(reader, bufferSize, readFromFileData);
-				if(readFromFileData == null) break;
-
+				if(readFromFileData == null) { break; }
 				writeData = PacketManager.createData(readFromFileData, expectedBlockNumber);
 				readFromFileData = new byte[readFromFileData.length];
 				//PacketManager.printTFTPPacketData(writeData);
@@ -519,7 +518,6 @@ public class Client { //the client class
 					serverHost, serverPort); 
 			PacketManager.send(sendPacket, sendReceiveSocket);
 		}
-
 
 		writeData = null;
 		writeData = PacketManager.createLast(expectedBlockNumber);

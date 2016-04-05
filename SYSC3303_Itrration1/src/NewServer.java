@@ -185,6 +185,7 @@ public class NewServer implements Runnable{
 			} catch (TFTPExceptions.InvalidTFTPRequestException e) {
 				PacketManager.handleInvalidRequest
 				(requestData, clientHost, clientPort, sendReceiveSocket);
+				e.printStackTrace();
 			}
 			sendReceiveSocket.close();
 		}
@@ -294,9 +295,11 @@ public class NewServer implements Runnable{
 
 			//while(!PacketManager.lastPacket(PacketManager.getData(readData))) { 
 			while(true) {
-				
-				System.out.print("Received:\n");
-				System.out.print(Arrays.toString(receivedAck) + "\n");
+
+				if(isRunning == false){
+					System.out.print("Server Shut Down\n");
+					return;
+				}
 
 				//byte buffer for write data packets
 				readData = new byte[bufferSize + ackSize];
@@ -501,8 +504,10 @@ public class NewServer implements Runnable{
 
 			while(true) {
 
-				System.out.print("Received:\n");
-				System.out.print(Arrays.toString(PacketManager.getData(receivedData))  + "\n");
+				if(isRunning == false){
+					System.out.print("Server Shut Down\n");
+					return;
+				}
 
 				ackToBeSent = PacketManager.createAck(receivedData);
 				receivedData = new byte[ackSize + bufferSize];
