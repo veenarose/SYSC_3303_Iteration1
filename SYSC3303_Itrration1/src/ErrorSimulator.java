@@ -22,11 +22,11 @@ public class ErrorSimulator {
 
 	public ErrorSimulator() {		
 		// Socket used for receiving packets from client
-		try {
-			receiveSocket = new DatagramSocket(ProfileData.getErrorPort());
-		} catch (SocketException e) {
-			e.printStackTrace();
-		}
+				try {
+					receiveSocket = new DatagramSocket(ProfileData.getErrorPort());
+				} catch (SocketException e) {
+					e.printStackTrace();
+				}
 	}
 
 	/*
@@ -137,7 +137,7 @@ public class ErrorSimulator {
 		// Start unknown TID handler thread
 		unknownTIDThread.start();
 	}
-	
+
 	/*
 	 * Error Simulation
 	 */
@@ -158,15 +158,10 @@ public class ErrorSimulator {
 			String host = keyboard.next();
 			try {
 				address = InetAddress.getByName(host);
+				validIP = true;
 			} catch(UnknownHostException e) {
 				System.out.println("Invalid host name or IP address. Please try again.\n");
 				continue;
-			}
-			if(PacketManager.validateIP(host)){ 
-				validIP = true;
-			}else{
-				validIP = false;
-				System.out.println("Enter a valid IP address. Please try again.");
 			}
 		}while(!validIP);
 
@@ -315,6 +310,8 @@ public class ErrorSimulator {
 		}
 
 		System.out.println("\nError simulator ready..");
+//		System.out.println("address : "+receiveSocket.getInetAddress());
+//		System.out.println("port : "+ receiveSocket.getLocalPort());
 		boolean errorSimulation = true;
 		try
 		{
@@ -754,14 +751,17 @@ public class ErrorSimulator {
 							return;
 						}
 						else{
-							if(PacketManager.lastPacket(dataPacket)){
+							if (PacketManager.isLast(PacketManager.getData(dataPacket.getData()))){
 								lastPacketProcessed = true;
 							}
 							System.out.println("\nPacket sent back to client");
 							sendReceiveClientSocket.send(forwardedDataPacket);
 							System.out.println(Arrays.toString(forwardedDataPacket.getData()));
 						}
-
+						if (lastPacketProcessed){
+							transferComplete = true;
+							return;
+						}
 						firstIteration = false;
 
 						//check if it is an error packet from server and break the loop
@@ -1433,13 +1433,17 @@ public class ErrorSimulator {
 							return;	
 						}
 						else{
-							if(PacketManager.lastPacket(dataPacket)){
+							if(PacketManager.isLast(dataPacket.getData())){
 								lastPacketProcessed = true;
 							}
 							System.out.println("\nPacket sent to server");
 							sendReceiveServerSocket.send(forwardedDATAPacket);
 							System.out.println(new String(forwardedDATAPacket.getData()));
 							System.out.println(Arrays.toString(forwardedDATAPacket.getData()));
+						}
+						if (lastPacketProcessed){
+							transferComplete = true;
+							return;
 						}
 						//check if it is an error packet from client and break the loop
 						int checkOp1 = PacketManager.getOpCode(forwardedDATAPacket.getData());
