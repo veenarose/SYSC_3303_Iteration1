@@ -307,15 +307,14 @@ public class Client { //the client class
 		writePacketData = PacketManager.createWritePacketData(filename, mode);
 		byte[] receivedAck = new byte[ackSize + bufferSize]; //4 bytes
 
-		int p = -1;
 		if(request == 1){
-			p = ProfileData.getServerPort();
+			serverPort = ProfileData.getServerPort();
 		} else if(request == 2){
-			p = ProfileData.getErrorPort();
+			serverPort = ProfileData.getErrorPort();
 		}
 
 		sendPacket = new DatagramPacket(writePacketData, writePacketData.length, 
-				serverHost, p);
+				serverHost, serverPort);
 		receivePacket = new DatagramPacket(receivedAck, receivedAck.length);
 
 		//initially expecting the first block of data to be read from the file on the server
@@ -532,51 +531,51 @@ public class Client { //the client class
 		System.out.println("Hello and welcome!");
 		int req = -1;
 		Scanner keyboard = new Scanner(System.in);
-		while(req != 1 || req != 2){
+		while(req != 1 || req != 2 || req == 3){
 			keyboard = new Scanner(System.in);
 			System.out.println("Connect to Error Simulator or Server?");
-			System.out.println("1: Server, 2: Error Simulator");
+			System.out.println("1: Server, 2: Error Simulator, 3: Specify IP and port");
 			req = keyboard.nextInt();
-			if(req == 1 || req == 2){
+			if(req == 1 || req == 2 || req == 3){
 				request = req;
 				break; 
 			}
 			while(true){
-				System.out.println("Enter 1 to connect to server or 2 to connect to Error Sim");
+				System.out.println("Enter 1 to connect to server or 2 to connect to Error Sim or 3 to specify IP and port");
 				req = keyboard.nextInt();
-				if(req == 1 || req == 2){ 
+				if(req == 1 || req == 2 || req == 3){ 
 					request = req;
 					break; 
 				}
 			}
-			if(req == 1 || req == 2){
+			if(req == 1 || req == 2 || req == 3){
 				keyboard.close();
 				break; 
 			}
 			keyboard.close();
 		}
 
+		if(request == 3){
+			do{
+				//Get an IP addr
+				System.out.println("\nPlease enter an IP address:");
+				String host = keyboard.next();
+				try {
+					serverHost = InetAddress.getByName(host);
+					validIP = true;
+				} catch(UnknownHostException e) {
+					System.out.println("Invalid host name or IP address. Please try again.\n");
+					continue;
+				}
 
+				//Get a Port
+				System.out.println("\nPlease enter a Port:");
+				serverPort = keyboard.nextInt();
 
-		do{
-			//Get an IP addr
-			System.out.println("\nPlease enter an IP address:");
-			String host = keyboard.next();
-			try {
-				serverHost = InetAddress.getByName(host);
-				validIP = true;
-			} catch(UnknownHostException e) {
-				System.out.println("Invalid host name or IP address. Please try again.\n");
-				continue;
-			}
+			} while(!validIP);
 
-			//Get a Port
-			System.out.println("\nPlease enter a Port:");
-			serverPort = keyboard.nextInt();
-
-		} while(!validIP);
-
-		validIP = false;
+			validIP = false;
+		}
 
 		//prompt user to specify if the request they are making is either read or write
 		while(true){
