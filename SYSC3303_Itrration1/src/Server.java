@@ -548,6 +548,7 @@ public class Server implements Runnable{
 			
 			System.out.print("\n\nWrite complete.\n\n");
 			populateFileNames();
+	
 		}
 	}
 }
