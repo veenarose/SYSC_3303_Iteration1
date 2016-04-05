@@ -69,7 +69,7 @@ public class NewServer implements Runnable{
 		InetAddress clientAddr;
 		Thread fileHandl = new Thread(new fileUpdater(this));
 		//fileHandl.start();
-		while(true) {
+		while(isRunning) {
 			//receive incoming request and pass it onto a new thread
 			try {
 				receiveSocket.receive(receivePacket);
@@ -195,11 +195,6 @@ public class NewServer implements Runnable{
 		TFTPExceptions.ErrorReceivedException, 
 		TFTPExceptions.AccessViolationException {
 
-			if(isRunning == false){
-				System.out.print("Server Shut Down\n");
-				return;
-			}
-
 			Path path = FileSystems.getDefault().getPath(ServerDirectory, filename);
 			if(!Files.isReadable(path)){
 				PacketManager.createAccessViolationErrorPacket(filename, "Access Violation", clientHost, clientPort);
@@ -296,12 +291,7 @@ public class NewServer implements Runnable{
 
 			//while(!PacketManager.lastPacket(PacketManager.getData(readData))) { 
 			while(true) {
-
-				if(isRunning == false){
-					System.out.print("Server Shut Down\n");
-					return;
-				}
-
+				
 				System.out.print("Received:\n");
 				System.out.print(Arrays.toString(receivedAck) + "\n");
 
@@ -415,11 +405,6 @@ public class NewServer implements Runnable{
 		TFTPExceptions.ErrorReceivedException,
 		TFTPExceptions.DiskFullException {
 
-			if(isRunning == false){
-				System.out.print("Server Shut Down\n");
-				return;
-			}
-
 			//check if the file already exists locally on the client
 			TFTPExceptions.FileAlreadyExistsException fileExists = 
 					new TFTPExceptions().new FileAlreadyExistsException
@@ -511,11 +496,6 @@ public class NewServer implements Runnable{
 			}
 
 			while(true) {
-
-				if(isRunning == false){
-					System.out.print("Server Shut Down\n");
-					return;
-				}
 
 				System.out.print("Received:\n");
 				System.out.print(Arrays.toString(PacketManager.getData(receivedData))  + "\n");
