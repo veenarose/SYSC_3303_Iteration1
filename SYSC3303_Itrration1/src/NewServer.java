@@ -106,7 +106,7 @@ public class NewServer implements Runnable{
 				s.populateFileNames();
 			}
 		}
-		System.exit(0);
+		//System.exit(0);
 	}
 
 	private class fileUpdater implements Runnable{
