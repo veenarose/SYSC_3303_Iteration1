@@ -69,7 +69,7 @@ public class NewServer implements Runnable{
 		InetAddress clientAddr;
 		Thread fileHandl = new Thread(new fileUpdater(this));
 		//fileHandl.start();
-		while(true) {
+		while(isRunning) {
 			//receive incoming request and pass it onto a new thread
 			try {
 				receiveSocket.receive(receivePacket);
@@ -98,7 +98,7 @@ public class NewServer implements Runnable{
 			System.out.print("\nEnter 'files' to list the files stored in on the server.");
 			userInput = reader.readLine();
 			if(userInput.equals("quit"))  {
-				server.interrupt();
+				//server.interrupt();
 				System.out.print("Server has been shut down. No longer accepting incoming requests.\n");
 				isRunning = false;
 				break;
@@ -106,7 +106,7 @@ public class NewServer implements Runnable{
 				s.populateFileNames();
 			}
 		}
-		System.exit(0);
+		//System.exit(0);
 	}
 
 	private class fileUpdater implements Runnable{
@@ -195,11 +195,6 @@ public class NewServer implements Runnable{
 		TFTPExceptions.InvalidTFTPDataException, 
 		TFTPExceptions.ErrorReceivedException, 
 		TFTPExceptions.AccessViolationException {
-
-			if(isRunning == false){
-				System.out.print("Server Shut Down\n");
-				return;
-			}
 
 			Path path = FileSystems.getDefault().getPath(ServerDirectory, filename);
 			if(!Files.isReadable(path)){
@@ -412,11 +407,6 @@ public class NewServer implements Runnable{
 		TFTPExceptions.InvalidTFTPDataException, 
 		TFTPExceptions.ErrorReceivedException,
 		TFTPExceptions.DiskFullException {
-
-			if(isRunning == false){
-				System.out.print("Server Shut Down\n");
-				return;
-			}
 
 			//check if the file already exists locally on the client
 			TFTPExceptions.FileAlreadyExistsException fileExists = 
