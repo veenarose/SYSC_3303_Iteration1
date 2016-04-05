@@ -22,11 +22,11 @@ public class ErrorSimulator {
 
 	public ErrorSimulator() {		
 		// Socket used for receiving packets from client
-				try {
-					receiveSocket = new DatagramSocket(ProfileData.getErrorPort());
-				} catch (SocketException e) {
-					e.printStackTrace();
-				}
+		try {
+			receiveSocket = new DatagramSocket(ProfileData.getErrorPort());
+		} catch (SocketException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/*
@@ -310,8 +310,8 @@ public class ErrorSimulator {
 		}
 
 		System.out.println("\nError simulator ready..");
-//		System.out.println("address : "+receiveSocket.getInetAddress());
-//		System.out.println("port : "+ receiveSocket.getLocalPort());
+		//		System.out.println("address : "+receiveSocket.getInetAddress());
+		//		System.out.println("port : "+ receiveSocket.getLocalPort());
 		boolean errorSimulation = true;
 		try
 		{
@@ -460,7 +460,7 @@ public class ErrorSimulator {
 				if(modeSelected == 5 && delayedPack == 1){
 					System.out.println("\nClient resends RRQ packet...");
 					try {
-						Thread.sleep(2000);
+						Thread.sleep(2010);
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
@@ -557,7 +557,7 @@ public class ErrorSimulator {
 				boolean firstIteration = true;
 
 				boolean lastPacketProcessed = false;
-
+				boolean errorPacketReceived = false;
 				try
 				{
 					while (!transferComplete)
@@ -566,6 +566,11 @@ public class ErrorSimulator {
 						// Receives data packet from server
 						DatagramPacket dataPacket = receivePacket(sendReceiveServerSocket);
 						if (dataPacket == null) return;
+
+						//check if it is an error packet from server and break the loop
+						if(PacketManager.getOpCode(dataPacket.getData()) == 5) {
+							errorPacketReceived = true;
+						}
 
 						//end the transfer if received data packet is less than 512
 						if (dataPacket.getData().length < 512){
@@ -760,13 +765,11 @@ public class ErrorSimulator {
 						}
 						if (lastPacketProcessed){
 							transferComplete = true;
-							return;
+							break;
 						}
 						firstIteration = false;
 
-						//check if it is an error packet from server and break the loop
-						int checkOp = PacketManager.getOpCode(forwardedDataPacket.getData());
-						if(checkOp == 5) {
+						if (errorPacketReceived) {
 							transferComplete = true;
 							break;
 						}
@@ -904,16 +907,30 @@ public class ErrorSimulator {
 							System.out.println(Arrays.toString(forwardedAckPacket.getData()));
 							if (lastPacketProcessed){
 								transferComplete = true;
-								return;
+								break;
 							}
 						}
 						//check if it is an error packet from client and break the loop
-						int checkOp1 = PacketManager.getOpCode(forwardedAckPacket.getData());
-						if(checkOp1 == 5) {
+						if(PacketManager.getOpCode(ackPacket.getData()) == 5) {
+							errorPacketReceived = true;
 							transferComplete = true;
 							break;
 						}
-
+					}
+					System.out.println("\nConnection terminated!.");
+					System.out.println("Do you want to start simulating an error again (y/n)? ");
+					Scanner in = new Scanner(System.in);
+					String user;
+					user = in.nextLine();
+					try {
+						if(user.equals("y") || user.equals("yes")){
+							startErr();
+						}else if(user.equals("n") || user.equals("n")){
+							in.close();
+							System.exit(1);
+						}
+					} catch (IOException e) {
+						e.printStackTrace();
 					}
 
 				}finally
@@ -927,25 +944,11 @@ public class ErrorSimulator {
 			{
 				e.printStackTrace();
 			}
-
 			finally
 			{
 				System.out.println("\nRead Transfer Handler thread terminated.\n");
-				System.out.println("Do you want to start simulating an error again (y/n)? ");
-				Scanner in = new Scanner(System.in);
-				String user;
-				user = in.nextLine();
-				try {
-					if(user.equals("y") || user.equals("yes")){
-						startErr();
-					}else if(user.equals("n") || user.equals("n")){
-						in.close();
-						System.exit(1);
-					}
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
 			}
+
 		}
 	}
 
@@ -1452,7 +1455,21 @@ public class ErrorSimulator {
 							break;
 						}
 					}
-
+					System.out.println("\nConnection terminated!.");
+					System.out.println("Do you want to start simulating an error again (y/n)? ");
+					Scanner in = new Scanner(System.in);
+					String user;
+					user = in.nextLine();
+					try {
+						if(user.equals("y") || user.equals("yes")){
+							startErr();
+						}else if(user.equals("n") || user.equals("n")){
+							in.close();
+							System.exit(1);
+						}
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
 				}finally
 
 				{
@@ -1465,24 +1482,9 @@ public class ErrorSimulator {
 			{
 				e.printStackTrace();
 			}
-
 			finally
 			{
 				System.out.println("\nWrite Thread Handler thread terminated.\n");
-				System.out.println("Do you want to start simulating an error again (y/n)? ");
-				Scanner in = new Scanner(System.in);
-				String user;
-				user = in.nextLine();
-				try {
-					if(user.equals("y") || user.equals("yes")){
-						startErr();
-					}else if(user.equals("n") || user.equals("n")){
-						in.close();
-						System.exit(1);
-					}
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
 			}
 		}
 
