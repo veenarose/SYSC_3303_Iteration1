@@ -1,7 +1,6 @@
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -18,7 +17,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 
-public class NewServer implements Runnable{
+public class Server implements Runnable{
 
 	private DatagramSocket receiveSocket;
 	private DatagramPacket receivePacket;
@@ -35,7 +34,7 @@ public class NewServer implements Runnable{
 
 	public static boolean isRunning = true;
 
-	public NewServer(int lp) {
+	public Server(int lp) {
 		try {
 			receiveSocket = new DatagramSocket(lp);
 			System.out.println(receiveSocket.getInetAddress());
@@ -67,8 +66,6 @@ public class NewServer implements Runnable{
 		receivePacket = new DatagramPacket(requestData, requestData.length);
 		int clientPort;
 		InetAddress clientAddr;
-		Thread fileHandl = new Thread(new fileUpdater(this));
-		//fileHandl.start();
 		while(isRunning) {
 			//receive incoming request and pass it onto a new thread
 			try {
@@ -89,7 +86,7 @@ public class NewServer implements Runnable{
 
 	public static void main(String args[]) throws IOException {
 
-		NewServer s = new NewServer(ProfileData.getServerPort());
+		Server s = new Server(ProfileData.getServerPort());
 		System.out.println(s.getIP());
 		Thread server = new Thread(s);
 		server.start();
@@ -112,27 +109,26 @@ public class NewServer implements Runnable{
 		//System.exit(0);
 	}
 
-	private class fileUpdater implements Runnable{
-
-		private NewServer server;
-		private int updateCount = 0;
-
-		public fileUpdater(NewServer ns) {
-			server = ns;
-
-		}
-
-		public void run() {
-			while(isRunning) {
-				try {
-					Thread.sleep(3000);                 //1000 milliseconds is one second.
-				} catch(InterruptedException ex) {
-					Thread.currentThread().interrupt();
-				}
-				server.populateFileNames();
-			}
-		}
-	}
+//	private class fileUpdater implements Runnable{
+//
+//		private Server server;
+//		
+//		public fileUpdater(Server ns) {
+//			server = ns;
+//
+//		}
+//
+//		public void run() {
+//			while(isRunning) {
+//				try {
+//					Thread.sleep(3000);                 //1000 milliseconds is one second.
+//				} catch(InterruptedException ex) {
+//					Thread.currentThread().interrupt();
+//				}
+//				server.populateFileNames();
+//			}
+//		}
+//	}
 
 	private class ResponseHandler implements Runnable {
 
