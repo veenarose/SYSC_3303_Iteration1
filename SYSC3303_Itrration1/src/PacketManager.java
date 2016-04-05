@@ -714,6 +714,7 @@ public class PacketManager {
 			System.exit(1);
 		}
 	}
+	
 	/*
 	 * this is used to create invalid mode and filename errors
 	 */

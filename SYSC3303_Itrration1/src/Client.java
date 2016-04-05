@@ -505,7 +505,17 @@ public class Client { //the client class
 			try {
 
 				readFromFileData = IOManager.read(reader, bufferSize, readFromFileData);
-				if(readFromFileData == null) { break; }
+				if(readFromFileData == null) { 
+					writeData = null;
+					writeData = PacketManager.createLast(expectedBlockNumber);
+					sendPacket = new DatagramPacket(writeData, writeData.length, 
+							serverHost, serverPort);
+					PacketManager.send(sendPacket, sendReceiveSocket);
+
+					System.out.println("Succesful write completed.");
+					sendReceiveSocket.close();
+					return; 
+				}
 				writeData = PacketManager.createData(readFromFileData, expectedBlockNumber);
 				readFromFileData = new byte[readFromFileData.length];
 				//PacketManager.printTFTPPacketData(writeData);
@@ -518,14 +528,8 @@ public class Client { //the client class
 					serverHost, serverPort); 
 			PacketManager.send(sendPacket, sendReceiveSocket);
 		}
-
-		writeData = null;
-		writeData = PacketManager.createLast(expectedBlockNumber);
-		sendPacket = new DatagramPacket(writeData, writeData.length, 
-				serverHost, serverPort);
-		PacketManager.send(sendPacket, sendReceiveSocket);
-
-		System.out.println("Succesful write completed.");
+		
+		
 	}
 	
 	public static void main( String args[] ) throws IOException
@@ -700,6 +704,8 @@ public class Client { //the client class
 						| TFTPExceptions.AccessViolationException e) {
 					System.out.println(e.getMessage() + "\n");
 				} catch (SocketTimeoutException e) {
+					e.printStackTrace();
+					
 					System.out.println(e.getMessage() + "\n");
 				}
 				continue;
