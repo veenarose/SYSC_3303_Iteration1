@@ -496,7 +496,7 @@ public class PacketManager {
 
 	//error code 1
 	public static DatagramPacket createFileAlreadyExistsErrorPacket(String filename, InetAddress host, int destinationPort) {
-		String message = "File + " + filename + " already exists.";
+		String message = "File " + filename + " already exists.";
 		byte[] errBlock = FileExists;
 		byte[] errData = createError(errBlock, message);
 		DatagramPacket err = new DatagramPacket(errData, errData.length, host, destinationPort);
@@ -544,7 +544,7 @@ public class PacketManager {
 
 	//error code 6
 	public static DatagramPacket createFileNotFoundErrorPacket(String filename, InetAddress host, int destinationPort) {
-		String message = "File + " + filename + " not found.";
+		String message = "File " + filename + " not found.";
 		System.out.println(message);
 		byte[] errBlock = FileNotFound;
 		byte[] errData = createError(errBlock, message);
@@ -606,7 +606,12 @@ public class PacketManager {
 
 	//ERROR HANDLING METHODS
 	public static void handleFileExists(String filename, InetAddress host, int destinationPort, DatagramSocket socket) {
-		
+		//create error packet
+				DatagramPacket errorPacket = 
+						PacketManager.createFileAlreadyExistsErrorPacket(filename, host, destinationPort);
+						
+				//send error packet
+				PacketManager.send(errorPacket, socket);
 	}
 	
 	public static void handleInvalidAckPacket(byte[] data, InetAddress host, int destinationPort, DatagramSocket socket) { //finish?
@@ -714,6 +719,7 @@ public class PacketManager {
 			System.exit(1);
 		}
 	}
+	
 	/*
 	 * this is used to create invalid mode and filename errors
 	 */
@@ -768,6 +774,8 @@ public class PacketManager {
 
 		if(b){ //if file exists
 			long x = f.getFreeSpace();
+			System.out.println("Free space available in bytes:" + x);
+			System.out.println("Attempting to write " + size + " bytes.");
 			if(x > (long)size){
 				//if we have enough space to write
 				return true;
@@ -802,6 +810,7 @@ public class PacketManager {
 		System.out.println("Optcode: " + Arrays.toString(optcode));
 		System.out.println("Block num: " + Arrays.toString(blocknu));
 		System.out.println("Message: " + new String(msg));
+		System.out.println("Message as raw bytes: " + Arrays.toString(msg));
 		System.out.println("");
 	}
 

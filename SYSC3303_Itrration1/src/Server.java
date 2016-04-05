@@ -22,7 +22,7 @@ public class Server implements Runnable{
 	private DatagramSocket receiveSocket;
 	private DatagramPacket receivePacket;
 
-	private final static String ServerDirectory =  
+	private final static String ServerDirectory =  //"/Volumes/KINGSTON/"; 
 			(System.getProperty("user.dir") + "/src/ServerData/");
 
 	private Set<String> fileNames; //java set to store file names
@@ -37,7 +37,6 @@ public class Server implements Runnable{
 	public Server(int lp) {
 		try {
 			receiveSocket = new DatagramSocket(lp);
-			System.out.println(receiveSocket.getInetAddress());
 			populateFileNames();
 		} catch (SocketException e) {
 			e.printStackTrace();
@@ -48,11 +47,11 @@ public class Server implements Runnable{
 		//populate fileNames list
 		File dir = new File(ServerDirectory);
 		fileNames = new HashSet<String>(Arrays.asList(dir.list()));
-		System.out.print("Local files:\n");
+		System.out.print("\n\nLocal files:\n\n");
 		for(String s: fileNames) {
 			System.out.print(s + "\n");
 		}
-		System.out.print("\n\n");
+		System.out.print("\n");
 	}
 	
 	public InetAddress getIP() {
@@ -62,24 +61,24 @@ public class Server implements Runnable{
 	//server's run method
 	public void run() {
 		//Thread response;
-		byte[] requestData = new byte[dataSize];
-		receivePacket = new DatagramPacket(requestData, requestData.length);
+		byte[] requestData, passedData;
 		int clientPort;
 		InetAddress clientAddr;
 		while(isRunning) {
 			//receive incoming request and pass it onto a new thread
+			requestData = new byte[dataSize];
+			receivePacket = new DatagramPacket(requestData, requestData.length);
 			try {
-				receiveSocket.setSoTimeout(3000);
 				receiveSocket.receive(receivePacket);
-			} catch (SocketTimeoutException se){
-				continue;
 			} catch (IOException e) {
-				continue;
+				e.printStackTrace();
 			}
 			clientAddr = receivePacket.getAddress();
 			clientPort = receivePacket.getPort();
-
-			Thread response = new Thread(new ResponseHandler(requestData, clientAddr, clientPort));
+			
+			passedData = requestData;
+			
+			Thread response = new Thread(new ResponseHandler(passedData, clientAddr, clientPort));
 			response.start();
 		}
 	}
@@ -90,45 +89,23 @@ public class Server implements Runnable{
 		System.out.println(s.getIP());
 		Thread server = new Thread(s);
 		server.start();
-		System.out.print("Server running...accepting incoming read or write requests.\n");
+		System.out.print("\nServer running...accepting incoming read or write requests.\n\n");
 		String userInput;
 		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-		while(isRunning) {
-			System.out.print("\nEnter 'quit' to shutdown the server.");
-			System.out.print("\nEnter 'files' to list the files stored in on the server.");
+		while(true) {
+			System.out.print("\n\nEnter 'quit' to shutdown the server.");
+			System.out.print("\n\nEnter 'files' to list the files stored in on the server.");
 			userInput = reader.readLine();
 			if(userInput.equals("quit"))  {
 				//server.interrupt();
-				System.out.print("Server has been shut down. No longer accepting incoming requests.\n");
+				System.out.print("\n\nServer has been shut down. No longer accepting incoming requests.\n");
 				isRunning = false;
 				break;
 			} else if(userInput.equals("files")) {
 				s.populateFileNames();
 			}
 		}
-		//System.exit(0);
 	}
-
-//	private class fileUpdater implements Runnable{
-//
-//		private Server server;
-//		
-//		public fileUpdater(Server ns) {
-//			server = ns;
-//
-//		}
-//
-//		public void run() {
-//			while(isRunning) {
-//				try {
-//					Thread.sleep(3000);                 //1000 milliseconds is one second.
-//				} catch(InterruptedException ex) {
-//					Thread.currentThread().interrupt();
-//				}
-//				server.populateFileNames();
-//			}
-//		}
-//	}
 
 	private class ResponseHandler implements Runnable {
 
@@ -164,7 +141,7 @@ public class Server implements Runnable{
 							| TFTPExceptions.InvalidTFTPDataException 
 							| TFTPExceptions.ErrorReceivedException 
 							| TFTPExceptions.AccessViolationException e) {
-						System.out.print(e + "\n");
+						System.out.print("\n" + e + "\n");
 					}
 				} else if (request == 2) {
 					try {
@@ -175,13 +152,13 @@ public class Server implements Runnable{
 							| TFTPExceptions.InvalidTFTPDataException 
 							| TFTPExceptions.ErrorReceivedException
 							| TFTPExceptions.DiskFullException e) {
-						System.out.print(e + "\n");
+						System.out.print("\n" + e + "\n");
 					}
 				}
 			} catch (TFTPExceptions.InvalidTFTPRequestException e) {
 				PacketManager.handleInvalidRequest
 				(requestData, clientHost, clientPort, sendReceiveSocket);
-				e.printStackTrace();
+				System.out.print("\n" + e + "\n");
 			}
 			sendReceiveSocket.close();
 		}
@@ -259,11 +236,10 @@ public class Server implements Runnable{
 			//check for error packet
 			if(PacketManager.isErrorPacket(receivedAck)) {
 				PacketManager.errorPacketPrinter(receivePacket);
-				System.out.print("Received an error packet with code: " + receivedAck[3]
+				System.out.print("\n\nReceived an error packet with code: " + receivedAck[3]
 						+ " Exiting connection and terminating file transfer.\n");
 				byte[] errorMsg = new byte[receivedAck.length - 4];
 				System.arraycopy(receivedAck, 4, errorMsg, 0, errorMsg.length);
-				System.out.print("Error message: " + new String(errorMsg) + "\n");
 				throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
 			}
 
@@ -289,11 +265,10 @@ public class Server implements Runnable{
 
 			blockNumber++;
 
-			//while(!PacketManager.lastPacket(PacketManager.getData(readData))) { 
 			while(true) {
 
 				if(isRunning == false){
-					System.out.print("Server Shut Down\n");
+					System.out.print("\n\nServer Shut Down\n\n");
 					return;
 				}
 
@@ -351,11 +326,10 @@ public class Server implements Runnable{
 				//check for error packet
 				if(PacketManager.isErrorPacket(receivedAck)) {
 					PacketManager.errorPacketPrinter(receivePacket);
-					System.out.print("Received an error packet with code: " + receivedAck[3]
+					System.out.print("\n\nReceived an error packet with code: " + receivedAck[3]
 							+ " Exiting connection and terminating file transfer.\n");
 					byte[] errorMsg = new byte[receivedAck.length - 4];
 					System.arraycopy(receivedAck, 4, errorMsg, 0, errorMsg.length);
-					System.out.print("Error message: " + new String(errorMsg) + "\n");
 					throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
 				}
 
@@ -395,7 +369,7 @@ public class Server implements Runnable{
 
 			PacketManager.send(sendPacket, sendReceiveSocket);
 
-			System.out.print("Read completed succesfully.\n");
+			System.out.print("\n\nRead completed succesfully.\n\n");
 
 		}
 
@@ -413,11 +387,10 @@ public class Server implements Runnable{
 					("File " + filename + " already exists locally. "
 							+ "To avoid overwriting data the read request has been denied.");
 			if(fileNames.contains(filename)) { 
-				//TODO handleFileExists
+				PacketManager.handleFileExists(filename, clientHost, clientPort, sendReceiveSocket);
 				throw fileExists; 
 			}
-			synchronized (new File(ServerDirectory + filename)) {
-				
+
 			byte receivedData[] = new byte[ackSize + bufferSize]; 
 			int blockNumber = 0;
 			byte ackToBeSent[] = new byte[4];
@@ -449,17 +422,16 @@ public class Server implements Runnable{
 			PacketManager.DataPacketPrinter(receivePacket);
 			//check if last packet
 			if(PacketManager.isLast(receivePacket.getData())) {
-				System.out.print("The file from which the write data comes from is empty, write request considered complete.");
+				System.out.print("\n\nThe file from which the write data comes from is empty, write request considered complete.\n\n");
 				return;
 			}
 
 			//check for error packet
 			if(PacketManager.isErrorPacket(receivedData)) {
-				System.out.print("Received an error packet with code: " + receivedData[3]
-						+ " Exiting connection and terminating file transfer.\n");
+				System.out.print("\n\nReceived an error packet with code: " + receivedData[3]
+						+ " Exiting connection and terminating file transfer.\n\n");
 				byte[] errorMsg = new byte[receivedData.length - 4];
 				System.arraycopy(receivedData, 4, errorMsg, 0, errorMsg.length);
-				System.out.print("Error message: " + new String(errorMsg) + "\n");
 				throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
 			}
 
@@ -480,8 +452,6 @@ public class Server implements Runnable{
 								+ "Found " + PacketManager.getBlockNum(receivedData));
 			}
 
-			System.out.print("Packet Block Number: " + PacketManager.getBlockNum(receivedData) + "\n");
-
 			if(!PacketManager.diskSpaceCheck(ServerDirectory, PacketManager.filesize(PacketManager.getData(receivePacket.getData())))){
 				//if we dont have enough space to write the next block
 				PacketManager.handleDiskFull(ServerDirectory, clientHost, clientPort, sendReceiveSocket);
@@ -501,7 +471,7 @@ public class Server implements Runnable{
 			while(true) {
 
 				if(isRunning == false){
-					System.out.print("Server Shut Down\n");
+					System.out.print("\n\nServer Shut Down\n\n");
 					return;
 				}
 
@@ -533,11 +503,10 @@ public class Server implements Runnable{
 
 				//check for error packet
 				if(PacketManager.isErrorPacket(receivedData)) {
-					System.out.print("Received an error packet with code: " + receivedData[3]
-							+ " Exiting connection and terminating file transfer.\n");
+					System.out.print("\n\nReceived an error packet with code: " + receivedData[3]
+							+ " Exiting connection and terminating file transfer.\n\n");
 					byte[] errorMsg = new byte[receivedData.length - 4];
 					System.arraycopy(receivedData, 4, errorMsg, 0, errorMsg.length);
-					System.out.print("Error message: " + new String(errorMsg) + "\n");
 					throw new TFTPExceptions().new ErrorReceivedException(new String(errorMsg));
 				}
 
@@ -576,9 +545,10 @@ public class Server implements Runnable{
 				}
 
 			}
-			notifyAll();
-			}
-			System.out.print("Write complete.\n");
+			
+			System.out.print("\n\nWrite complete.\n\n");
+			populateFileNames();
+	
 		}
 	}
 }
