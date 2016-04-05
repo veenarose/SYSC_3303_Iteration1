@@ -72,9 +72,12 @@ public class NewServer implements Runnable{
 		while(isRunning) {
 			//receive incoming request and pass it onto a new thread
 			try {
+				receiveSocket.setSoTimeout(3000);
 				receiveSocket.receive(receivePacket);
+			} catch (SocketTimeoutException se){
+				continue;
 			} catch (IOException e) {
-				e.printStackTrace();
+				continue;
 			}
 			clientAddr = receivePacket.getAddress();
 			clientPort = receivePacket.getPort();
@@ -93,7 +96,7 @@ public class NewServer implements Runnable{
 		System.out.print("Server running...accepting incoming read or write requests.\n");
 		String userInput;
 		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-		while(true) {
+		while(isRunning) {
 			System.out.print("\nEnter 'quit' to shutdown the server.");
 			System.out.print("\nEnter 'files' to list the files stored in on the server.");
 			userInput = reader.readLine();
@@ -120,7 +123,7 @@ public class NewServer implements Runnable{
 		}
 
 		public void run() {
-			while(true) {
+			while(isRunning) {
 				try {
 					Thread.sleep(3000);                 //1000 milliseconds is one second.
 				} catch(InterruptedException ex) {
@@ -414,7 +417,8 @@ public class NewServer implements Runnable{
 				//TODO handleFileExists
 				throw fileExists; 
 			}
-
+			synchronized (new File(ServerDirectory + filename)) {
+				
 			byte receivedData[] = new byte[ackSize + bufferSize]; 
 			int blockNumber = 0;
 			byte ackToBeSent[] = new byte[4];
@@ -571,7 +575,8 @@ public class NewServer implements Runnable{
 				}
 
 			}
-
+			notifyAll();
+			}
 			System.out.print("Write complete.\n");
 		}
 	}
